@@ -3,6 +3,7 @@ import (
    _ "github.com/denisenkom/go-mssqldb"
    "github.com/Jeffail/gabs"
    "database/sql"
+   "strings"
    "net/url"
    . "fmt"
 )
@@ -30,10 +31,9 @@ func main() {
     db,_ := sql.Open("mssql", connectString)
 
     println("Trying query...")
-    entries := runQuery(db, "select * FROM INFORMATION_SCHEMA.Columns")
+    entries := runQueries(db, premade("columns") + ";" + premade("primaries"))
     full_json,_ := gabs.Consume(entries)
     println(full_json.StringIndent(""," "))
-
 
     println("closing connection")
     db.Close()
@@ -59,4 +59,31 @@ func runQuery(db *sql.DB, query string) []map[string]interface{} {
       entries = append(entries,entry)
     }
     return entries
+}
+
+//run multiple queries separated by semicolon
+func runQueries(db *sql.DB, query string) [][]map[string]interface{} {
+  queries := strings.Split(query,";")
+  var results[][]map[string]interface{}
+  for i := range queries {
+    results = append(results, runQuery(db,queries[i]))
+  }
+  return results
+}
+
+//some useful premade queries
+func premade(request string ) (string) {
+  switch request {
+    case "columns":
+      return "select * FROM INFORMATION_SCHEMA.Columns"
+    case "primaries":
+      return `select col.column_name, tab.table_name, tab.constraint_type, col.constraint_name
+              FROM   INFORMATION_SCHEMA.constraint_column_usage as col
+              join INFORMATION_SCHEMA.table_constraints as tab
+              on col.constraint_name = tab.constraint_name
+              where tab.constraint_type = 'primary key'
+              and tab.table_name = col.table_name;`
+    default:
+      return  ""
+  }
 }
