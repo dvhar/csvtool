@@ -1,6 +1,7 @@
 package main
 import (
     _ "github.com/denisenkom/go-mssqldb"
+    "github.com/GeertJohan/go.rice"
     //"github.com/Jeffail/gabs"
     "encoding/json"
     "database/sql"
@@ -20,10 +21,15 @@ type Qrows struct {
     Vals [][]interface{}
 }
 
+// -n to not connect to azure
+// -c to not run the server
+var noms = flag.Bool("n", false, "Don't connect to azure")
+var cmode = flag.Bool("c", false, "Run in text mode for debugging")
+
 func main() {
-    var cmode = flag.Bool("c", false, "Run in text mode for debugging")
+    var db *sql.DB
     flag.Parse()
-    db := sqlConnect()
+    if (! *noms) { db = sqlConnect() }
 
     //output to stdout for debugging
     if (*cmode) {
@@ -40,15 +46,14 @@ func main() {
         server(db)
     }
 
-    println("closing connection")
-    db.Close()
+    if (! *noms) {
+      println("closing connection")
+      db.Close() }
 }
 
 //webserver
 func server(db *sql.DB) {
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        Fprintf(w, "welcome to index")
-    })
+    http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query/", queryhandler(db))
     http.ListenAndServe(":8060", nil)
 }
@@ -88,25 +93,30 @@ func sqlConnect() (*sql.DB) {
 
 //return Qrows struct with query results
 func runQuery(db *sql.DB, query string) *Qrows {
-    rows,_ := db.Query(query)
-    columnNames,_ := rows.Columns()
-    columnValues := make([]interface{}, len(columnNames))
-    columnPointers := make([]interface{}, len(columnNames))
-    for i := 0; i < len(columnNames); i++ { columnPointers[i] = &columnValues[i] }
-    var entry []interface{}
-    var entries[][]interface{}
-    var rownum = 0
-    for rows.Next() {
-        rows.Scan(columnPointers...)
-        entry = make([]interface{},len(columnNames))
-        for i := 0; i < len(columnNames); i++ {
-            entry[i] = columnValues[i]
+    if (! *noms) {
+        rows,_ := db.Query(query)
+        columnNames,_ := rows.Columns()
+        columnValues := make([]interface{}, len(columnNames))
+        columnPointers := make([]interface{}, len(columnNames))
+        for i := 0; i < len(columnNames); i++ { columnPointers[i] = &columnValues[i] }
+        var entry []interface{}
+        var entries[][]interface{}
+        var rownum = 0
+        for rows.Next() {
+            rows.Scan(columnPointers...)
+            entry = make([]interface{},len(columnNames))
+            for i := 0; i < len(columnNames); i++ {
+                entry[i] = columnValues[i]
+            }
+            entries = append(entries,entry)
+            rownum++
         }
-        entries = append(entries,entry)
-        rownum++
+        ret := &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries}
+        return ret
+    } else {
+        ret := &Qrows{}
+        return ret
     }
-    ret := &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries}
-    return ret
 }
 
 //run multiple queries deliniated by semicolon

@@ -1,0 +1,2 @@
+"rice embed-go" to embed the website in a source file, then
+"go build" to build a binary with embedded website

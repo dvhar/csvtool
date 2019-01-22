@@ -3,7 +3,23 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
 
-ajaxport = 8060;
+/*
+function loadjson(where) {
+  var meshRequest = new XMLHttpRequest();
+  var jsondata;
+  meshRequest.open("GET", `/${where}/`, true);
+  meshRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  meshRequest.onreadystatechange = function() {
+    if (meshRequest.readyState == 4 && meshRequest.status == 200){
+      jsondata = meshRequest.responseText;
+      document.write(jsondata);
+      console.log(jsondata);
+    }
+  }
+  meshRequest.send(null);
+}
+*/
+
 
 class Main extends React.Component {
   render(){
