@@ -23,8 +23,10 @@ type Qrows struct {
 
 // -n to not connect to azure
 // -c to not run the server
+// -p to change port
 var noms = flag.Bool("n", false, "Don't connect to azure")
 var cmode = flag.Bool("c", false, "Run in text mode for debugging")
+var port = flag.String("p", "8060", "Run in text mode for debugging")
 
 func main() {
     var db *sql.DB
@@ -55,7 +57,7 @@ func main() {
 func server(db *sql.DB) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query/", queryhandler(db))
-    http.ListenAndServe(":8060", nil)
+    http.ListenAndServe(":"+*port, nil)
 }
 
 //returns handler function for query requests from the webgui

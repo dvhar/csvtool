@@ -3,29 +3,24 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
 
-/*
-function loadjson(where) {
-  var meshRequest = new XMLHttpRequest();
-  var jsondata;
-  meshRequest.open("GET", `/${where}/`, true);
-  meshRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-  meshRequest.onreadystatechange = function() {
-    if (meshRequest.readyState == 4 && meshRequest.status == 200){
-      jsondata = meshRequest.responseText;
-      document.write(jsondata);
-      console.log(jsondata);
-    }
-  }
-  meshRequest.send(null);
-}
-*/
-
-
 class Main extends React.Component {
+  getData(){
+      fetch('/query')
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(myJson) {
+          console.log(JSON.stringify(myJson));
+        });
+  }
+
   render(){
-    return (
-    <h1>hello world</h1>
-    )
+      return (
+      <>
+      <h1>hello world</h1>
+      <a onClick={()=>{this.getData()}}>try query</a>
+      </>
+      )
   }
 }
 
