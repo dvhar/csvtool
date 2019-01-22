@@ -10,10 +10,9 @@ import (
     "os"
 )
 
-var db = sqlConnect()
 
 func main() {
-
+    db := sqlConnect()
     server(db)
     println("closing connection")
     db.Close()
@@ -24,17 +23,19 @@ func server(db *sql.DB) {
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         Fprintf(w, "welcome to index")
     })
-    http.HandleFunc("/query/", queryhandler)
+    http.HandleFunc("/query/", queryhandler(db))
     http.ListenAndServe(":8060", nil)
 }
 
-//handle query requests from the webgui
-func queryhandler(w http.ResponseWriter, r *http.Request) {
-    println("Trying query...")
-    entries := runQueries(db, premade("columns") + premade("primaries"))
-    full_json,_ := gabs.Consume(entries)
-    Fprint(w, full_json.StringIndent(""," "))
-    println("finished query.")
+//returns handler function for query requests from the webgui
+func queryhandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        println("Trying query...")
+        entries := runQueries(db, premade("columns") + premade("primaries"))
+        full_json,_ := gabs.Consume(entries)
+        Fprint(w, full_json.StringIndent(""," "))
+        println("finished query.")
+    }
 }
 
 //initialize database connection
