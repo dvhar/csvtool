@@ -1,21 +1,49 @@
 package main
 import (
-   _ "github.com/denisenkom/go-mssqldb"
-   "github.com/Jeffail/gabs"
-   "database/sql"
-   "strings"
-   "net/url"
-   . "fmt"
-   "os"
+    _ "github.com/denisenkom/go-mssqldb"
+    "github.com/Jeffail/gabs"
+    "database/sql"
+    "strings"
+    "net/url"
+    "net/http"
+    . "fmt"
+    "os"
 )
 
+var db = sqlConnect()
+
 func main() {
+
+    server(db)
+    println("closing connection")
+    db.Close()
+}
+
+//main webserver
+func server(db *sql.DB) {
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        Fprintf(w, "welcome to index")
+    })
+    http.HandleFunc("/query/", queryhandler)
+    http.ListenAndServe(":8060", nil)
+}
+
+//handle query requests from the webgui
+func queryhandler(w http.ResponseWriter, r *http.Request) {
+    println("Trying query...")
+    entries := runQueries(db, premade("columns") + premade("primaries"))
+    full_json,_ := gabs.Consume(entries)
+    Fprint(w, full_json.StringIndent(""," "))
+    println("finished query.")
+}
+
+//initialize database connection
+func sqlConnect() (*sql.DB) {
     login := "dfhntz"
     pass := os.Getenv("MSSQL_CLI_PASSWORD")
     server := "dfhntz.database.windows.net"
     dbname := "testdb"
     port := 1433
-
     query := url.Values{}
     query.Add("database",dbname)
     query.Add("connection timeout","30")
@@ -26,18 +54,9 @@ func main() {
         RawQuery: query.Encode(),
     }
     connectString := u.String()
-
-
     println("open connection")
     db,_ := sql.Open("mssql", connectString)
-
-    println("Trying query...")
-    entries := runQueries(db, premade("columns") + premade("primaries"))
-    full_json,_ := gabs.Consume(entries)
-    println(full_json.StringIndent(""," "))
-
-    println("closing connection")
-    db.Close()
+    return db
 }
 
 //returns an array of maps with the query results
