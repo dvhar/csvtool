@@ -6,11 +6,12 @@ import (
    "strings"
    "net/url"
    . "fmt"
+   "os"
 )
 
 func main() {
     login := "dfhntz"
-    pass := "poop"
+    pass := os.Getenv("MSSQL_CLI_PASSWORD")
     server := "dfhntz.database.windows.net"
     dbname := "testdb"
     port := 1433
