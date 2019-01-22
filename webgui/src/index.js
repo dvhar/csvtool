@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
 
+ajaxport = 8060;
+
 class Main extends React.Component {
   render(){
     return (

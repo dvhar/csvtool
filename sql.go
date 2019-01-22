@@ -1,24 +1,50 @@
 package main
 import (
     _ "github.com/denisenkom/go-mssqldb"
-    "github.com/Jeffail/gabs"
+    //"github.com/Jeffail/gabs"
+    "encoding/json"
     "database/sql"
-    "strings"
-    "net/url"
     "net/http"
+    "net/url"
+    "strings"
     . "fmt"
+    "flag"
     "os"
 )
 
+//one Qrows struct holds the results of one query
+type Qrows struct {
+    Numrows int
+    Numcols int
+    Colnames []string
+    Vals [][]interface{}
+}
 
 func main() {
+    var cmode = flag.Bool("c", false, "Run in text mode for debugging")
+    flag.Parse()
     db := sqlConnect()
-    server(db)
+
+    //output to stdout for debugging
+    if (*cmode) {
+
+        println("running in text mode")
+        entries := runQueries(db, premade("columns") + premade("primaries"))
+        j,_ := json.Marshal(entries)
+        Println(string(j))
+
+    //run webserver
+    } else {
+
+        println("running in server mode")
+        server(db)
+    }
+
     println("closing connection")
     db.Close()
 }
 
-//main webserver
+//webserver
 func server(db *sql.DB) {
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         Fprintf(w, "welcome to index")
@@ -32,8 +58,8 @@ func queryhandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
         println("Trying query...")
         entries := runQueries(db, premade("columns") + premade("primaries"))
-        full_json,_ := gabs.Consume(entries)
-        Fprint(w, full_json.StringIndent(""," "))
+        full_json,_ := json.Marshal(entries)
+        Fprint(w, string(full_json))
         println("finished query.")
     }
 }
@@ -60,33 +86,34 @@ func sqlConnect() (*sql.DB) {
     return db
 }
 
-//returns an array of maps with the query results
-func runQuery(db *sql.DB, query string) []map[string]interface{} {
+//return Qrows struct with query results
+func runQuery(db *sql.DB, query string) *Qrows {
     rows,_ := db.Query(query)
     columnNames,_ := rows.Columns()
     columnValues := make([]interface{}, len(columnNames))
     columnPointers := make([]interface{}, len(columnNames))
-    for i := 0; i < len(columnNames); i++ {
-        columnPointers[i] = &columnValues[i]
-    }
-    var entry map[string]interface{}
-    var entries[]map[string]interface{}
+    for i := 0; i < len(columnNames); i++ { columnPointers[i] = &columnValues[i] }
+    var entry []interface{}
+    var entries[][]interface{}
+    var rownum = 0
     for rows.Next() {
         rows.Scan(columnPointers...)
-        entry = make(map[string]interface{})
+        entry = make([]interface{},len(columnNames))
         for i := 0; i < len(columnNames); i++ {
-            entry[columnNames[i]] = columnValues[i]
+            entry[i] = columnValues[i]
         }
         entries = append(entries,entry)
+        rownum++
     }
-    return entries
+    ret := &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries}
+    return ret
 }
 
 //run multiple queries deliniated by semicolon
-func runQueries(db *sql.DB, query string) [][]map[string]interface{} {
+func runQueries(db *sql.DB, query string) []*Qrows {
     if (strings.HasSuffix(query,";")) { query = query[:len(query)-1] }
     queries := strings.Split(query,";")
-    var results[][]map[string]interface{}
+    var results[]*Qrows
     for i := range queries {
         results = append(results, runQuery(db,queries[i]))
     }
