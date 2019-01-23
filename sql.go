@@ -26,7 +26,7 @@ type Qrows struct {
 // -p to change port
 var noms = flag.Bool("n", false, "Don't connect to azure")
 var cmode = flag.Bool("c", false, "Run in text mode for debugging")
-var port = flag.String("p", "8060", "Run in text mode for debugging")
+var port = flag.String("p", "8060", "Change port from 8060")
 
 func main() {
     var db *sql.DB
@@ -49,8 +49,9 @@ func main() {
     }
 
     if (! *noms) {
-      println("closing connection")
-      db.Close() }
+        println("closing connection")
+        db.Close()
+    }
 }
 
 //webserver
