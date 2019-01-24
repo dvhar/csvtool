@@ -62,19 +62,35 @@ class QueryRender extends React.Component {
     rows(rows){
         return( rows.map((row,i)=>{return this.row(row)}) )
     }
+    tableBut(name,idx){
+        return (
+            <div className="tableButton1" key={idx} onClick={()=>{ this.props.changeTable(name) }}>
+                {name}
+            </div>
+        )
+    }
     render(){
         return ( 
-            <div> 
-            <TableList
-                changeTable = {(tableName)=>{this.props.changeTable(tableName)}}
-            />
+        <div className="viewContainer">
+            <div className="dropmenu">
+                <div className="dropButton">
+                Table Names
+                </div>
+                <div className="dropmenu-content">
+                    {tableNames.map((name,i)=>{return this.tableBut(name,i)})}
+                </div>
+            </div>
+            <div className="filler">
+            </div>
+            <div className="tableDiv"> 
             <table className="table">
-                    <tbody>
                     {this.row(this.props.table.Colnames,'head')}
+                    <tbody>
                     {this.rows(this.props.table.Vals)}
                     </tbody>
                   </table>
             </div>
+        </div>
         )
     }
 }
@@ -97,7 +113,7 @@ class Main extends React.Component {
                 s = {this.state}
                 changeTable = {(name)=>{this.changeTable('metaTable',name)}}
                 table = {this.state.metaTable}
-                hide = {[0,1,2]}
+                hide = {[]}
             />
             </>
         )
