@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {log,getData,getUnique,getWhere,colIndex} from './utils.js';
+import {getData,getUnique,getWhere,colIndex} from './utils.js';
 import * as serviceWorker from './serviceWorker';
 
 var schemaData = getData();
@@ -48,9 +48,9 @@ class QueryRender extends React.Component {
             this.forceUpdate();
         }
     }
-    row(row,type){
+    row(row,type,idx){
         return( 
-            <tr className="tableRow"> 
+            <tr key={idx} className="tableRow"> 
                 {row.map((name,idx)=>{ 
                     if (this.state.hideColumns.indexOf(idx)<0)
                         if (type === 'head')
@@ -75,9 +75,9 @@ class QueryRender extends React.Component {
             </div>
             <div className="tableDiv"> 
             <table className="table">
-                {this.row(this.state.table.Colnames,'head')}
                 <tbody>
-                {this.state.table.Vals.map((row,i)=>{return this.row(row)})}
+                {this.row(this.state.table.Colnames,'head')}
+                {this.state.table.Vals.map((row,i)=>{return this.row(row,'entry',i)})}
                 </tbody>
             </table>
             </div>
