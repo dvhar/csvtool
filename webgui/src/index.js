@@ -7,7 +7,6 @@ import * as serviceWorker from './serviceWorker';
 
 var schemaData = getData();
 var tableNames =  getUnique(schemaData[0],"TABLE_NAME");
-var tableData = getWhere(schemaData[0],"TABLE_NAME",tableNames[0]);
 
 class TableList extends React.Component {
     tableBut(name,idx){
@@ -19,11 +18,10 @@ class TableList extends React.Component {
     }
 
     render(){
-        console.log(this.props.section);
         return (
             <div className="dropmenu">
                 <div className="dropButton">
-                {this.props.section}
+                {this.props.section+"\u25bc"}
                 </div>
                 <select size="10" className="dropmenu-content">
                     {tableNames.map((name,i)=>{return this.tableBut(name,i)})}
@@ -37,7 +35,7 @@ class QueryRender extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            hideColumns : this.props.hide,
+            hideColumns : this.props.hide || [],
             table : getWhere(this.props.table,"TABLE_NAME",this.props.section),
             section : this.props.section,
         }
@@ -68,7 +66,6 @@ class QueryRender extends React.Component {
                        table : getWhere(schemaData[0],"TABLE_NAME",section) });
     }
     render(){
-        console.log(this.state.section);
         return ( 
         <div className="viewContainer">
             <TableList 
@@ -95,6 +92,7 @@ class Main extends React.Component {
         super(props);
         this.state = {
             metaTable : schemaData[0],
+            metaTableNames : tableNames
         }
     }
 
@@ -102,16 +100,12 @@ class Main extends React.Component {
         return (
             <>
             <QueryRender 
-                s = {this.state}
                 table = {this.state.metaTable}
-                section = {tableNames[0]}
-                hide = {[]}
+                section = {this.state.metaTableNames[0]}
             />
             <QueryRender 
-                s = {this.state}
                 table = {this.state.metaTable}
-                section = {tableNames[1]}
-                hide = {[]}
+                section = {this.state.metaTableNames[1]}
             />
             </>
         )
