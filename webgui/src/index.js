@@ -12,21 +12,22 @@ var tableData = getWhere(schemaData[0],"TABLE_NAME",tableNames[0]);
 class TableList extends React.Component {
     tableBut(name,idx){
         return (
-            <div className="tableButton1" key={idx} onClick={()=>{ this.props.changeTable(name) }}>
+            <option className="tableButton1" key={idx} onClick={()=>{ this.props.changeTable(name) }}>
                 {name}
-            </div>
+            </option>
         )
     }
 
     render(){
+        console.log(this.props.section);
         return (
             <div className="dropmenu">
                 <div className="dropButton">
-                Table Names
+                {this.props.section}
                 </div>
-                <div className="dropmenu-content">
+                <select size="10" className="dropmenu-content">
                     {tableNames.map((name,i)=>{return this.tableBut(name,i)})}
-                </div>
+                </select>
             </div>
         )
     }
@@ -36,7 +37,9 @@ class QueryRender extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            hideColumns : this.props.hide
+            hideColumns : this.props.hide,
+            table : getWhere(this.props.table,"TABLE_NAME",this.props.section),
+            section : this.props.section,
         }
     }
     hideColumn(column,numeric){
@@ -45,8 +48,6 @@ class QueryRender extends React.Component {
         if (this.state.hideColumns.indexOf(column)<0){
             this.state.hideColumns.push(column);
             this.forceUpdate();
-            console.log(this.state.hideColumns);
-            console.log(column);
         }
     }
     cell(name,idx,type){
@@ -62,33 +63,27 @@ class QueryRender extends React.Component {
     rows(rows){
         return( rows.map((row,i)=>{return this.row(row)}) )
     }
-    tableBut(name,idx){
-        return (
-            <div className="tableButton1" key={idx} onClick={()=>{ this.props.changeTable(name) }}>
-                {name}
-            </div>
-        )
+    changeTable(section){
+        this.setState({section : section,
+                       table : getWhere(schemaData[0],"TABLE_NAME",section) });
     }
     render(){
+        console.log(this.state.section);
         return ( 
         <div className="viewContainer">
-            <div className="dropmenu">
-                <div className="dropButton">
-                Table Names
-                </div>
-                <div className="dropmenu-content">
-                    {tableNames.map((name,i)=>{return this.tableBut(name,i)})}
-                </div>
-            </div>
+            <TableList 
+                changeTable = {(section)=>{this.changeTable(section)}}
+                section = {this.state.section}
+            />
             <div className="filler">
             </div>
             <div className="tableDiv"> 
             <table className="table">
-                    {this.row(this.props.table.Colnames,'head')}
-                    <tbody>
-                    {this.rows(this.props.table.Vals)}
-                    </tbody>
-                  </table>
+                {this.row(this.state.table.Colnames,'head')}
+                <tbody>
+                {this.rows(this.state.table.Vals)}
+                </tbody>
+            </table>
             </div>
         </div>
         )
@@ -99,11 +94,8 @@ class Main extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            metaTable : tableData,
+            metaTable : schemaData[0],
         }
-    }
-    changeTable(tableKey,tableName){
-        this.setState({[tableKey] : getWhere(schemaData[0],"TABLE_NAME",tableName) });
     }
 
     render(){
@@ -111,8 +103,14 @@ class Main extends React.Component {
             <>
             <QueryRender 
                 s = {this.state}
-                changeTable = {(name)=>{this.changeTable('metaTable',name)}}
                 table = {this.state.metaTable}
+                section = {tableNames[0]}
+                hide = {[]}
+            />
+            <QueryRender 
+                s = {this.state}
+                table = {this.state.metaTable}
+                section = {tableNames[1]}
                 hide = {[]}
             />
             </>
