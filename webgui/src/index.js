@@ -48,18 +48,17 @@ class QueryRender extends React.Component {
             this.forceUpdate();
         }
     }
-    cell(name,idx,type){
-        if (this.state.hideColumns.indexOf(idx)<0)
-            if (type === 'head')
-                return( <th key={idx} className="tableCell" onClick={()=>{this.hideColumn(idx,true)}}> {name} </th>)
-            else
-                return( <td key={idx} className="tableCell"> {name} </td>)
-    }
     row(row,type){
-        return( <tr className="tableRow"> {row.map((name,idx)=>{ return this.cell(name,idx,type); })} </tr> )
-    }
-    rows(rows){
-        return( rows.map((row,i)=>{return this.row(row)}) )
+        return( 
+            <tr className="tableRow"> 
+                {row.map((name,idx)=>{ 
+                    if (this.state.hideColumns.indexOf(idx)<0)
+                        if (type === 'head')
+                            return( <th key={idx} className="tableCell" onClick={()=>{this.hideColumn(idx,true)}}> {name} </th>)
+                        else
+                            return( <td key={idx} className="tableCell"> {name} </td>) })}
+            </tr>
+        )
     }
     changeTable(section){
         this.setState({section : section,
@@ -78,7 +77,7 @@ class QueryRender extends React.Component {
             <table className="table">
                 {this.row(this.state.table.Colnames,'head')}
                 <tbody>
-                {this.rows(this.state.table.Vals)}
+                {this.state.table.Vals.map((row,i)=>{return this.row(row)})}
                 </tbody>
             </table>
             </div>
