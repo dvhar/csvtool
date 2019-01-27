@@ -1,0 +1,49 @@
+html {
+  background-color: #DDDDDD; }
+
+.dropmenu {
+  z-index: 10;
+  position: absolute;
+  background-color: #EEEEEE;
+  padding: .5em .5em;
+  display: inline-block;
+  min-width: 15em;
+  background: #2989d8;
+  background: linear-gradient(to bottom, #2989d8 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
+
+.dropButton {
+  display: block;
+  text-align: center;
+  padding: .2em .5em;
+  background-color: #EEEEEE;
+  border-radius: 4px; }
+
+.dropmenu-content {
+  display: none; }
+  .dropmenu-content div {
+    padding: .2em .5em;
+    background-color: #EEEEEE;
+    border-radius: 4px;
+    margin: .2em .2em; }
+
+.dropmenu:hover .dropmenu-content {
+  display: block; }
+
+.tableCell {
+  text-align: center;
+  padding: .2em .5em;
+  background-color: #EEEEEE;
+  border-radius: 4px;
+  min-width: 5em; }
+
+.tableRow {
+  padding: 1em; }
+
+.filler {
+  height: 3em; }
+
+.tableDiv {
+  position: static;
+  top: 3em;
+  max-height: calc(100vh - 100px);
+  overflow: auto; }

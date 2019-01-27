@@ -1,0 +1,77 @@
+//top bar back gradient
+$ttop: #2989d8;
+$ttp: #207cca;
+$bbt: #207cca;
+$bbot: #7db9e8;
+//top bar buttons
+$top-top: #FFD700;
+$top-bot: #FFFF70;
+$button1: #EEEEEE;
+
+html {
+      background-color: #DDDDDD;
+}
+
+@mixin sgradient($top,$tp,$bt,$bot) {
+    background: $top;
+    background: linear-gradient(to bottom, $top 1%,$tp 22%,$bt 22%,$bot 100%);
+}
+
+@mixin gradient($top,$bot) {
+    background-color:$top;
+    background: linear-gradient(to bottom, $top, $bot); }
+
+.dropmenu {
+    z-index: 10;
+    position: absolute;
+    background-color: $button1;
+    padding: .5em .5em;
+    display: inline-block;
+    min-width: 15em;
+    @include sgradient($ttop,$ttp,$bbt,$bbot);
+}
+
+.dropButton {
+    display: block;
+    text-align: center;
+    padding: .2em .5em;
+    background-color: $button1;
+    border-radius: 4px;
+}
+
+.dropmenu-content{
+    display: none;
+
+    div {
+        padding: .2em .5em;
+        background-color: $button1;
+        border-radius: 4px;
+        margin: .2em .2em;
+    }
+}
+
+.dropmenu:hover .dropmenu-content {
+    display: block;
+}
+
+.tableCell {
+    text-align: center;
+    padding: .2em .5em;
+    background-color: $button1;
+    border-radius: 4px;
+    min-width: 5em;
+}
+
+.tableRow {
+    padding: 1em;
+}
+
+.filler {
+    height: 3em;
+}
+.tableDiv {
+    position: static;
+    top: 3em;
+    max-height: calc(100vh - 100px);
+    overflow: auto;
+}
