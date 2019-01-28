@@ -2,11 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {getData,getUnique,getWhere,colIndex} from './utils.js';
+import {getUnique,getWhere,colIndex} from './utils.js';
 import * as serviceWorker from './serviceWorker';
 
-var schemaData = getData();
-var tableNames =  getUnique(schemaData[0],"TABLE_NAME");
 
 class TableList extends React.Component {
     tableBut(name,idx){
@@ -24,7 +22,7 @@ class TableList extends React.Component {
                 {this.props.section+"\u25bc"}
                 </div>
                 <select size="10" className="dropmenu-content">
-                    {tableNames.map((name,i)=>{return this.tableBut(name,i)})}
+                    {this.props.tableNames.map((name,i)=>{return this.tableBut(name,i)})}
                 </select>
             </div>
         )
@@ -62,7 +60,7 @@ class QueryRender extends React.Component {
     }
     changeTable(section){
         this.setState({section : section,
-                       table : getWhere(schemaData[0],"TABLE_NAME",section) });
+                       table : getWhere(this.props.table,"TABLE_NAME",section) });
     }
     render(){
         return ( 
@@ -70,6 +68,7 @@ class QueryRender extends React.Component {
             <TableList 
                 changeTable = {(section)=>{this.changeTable(section)}}
                 section = {this.state.section}
+                tableNames = {getUnique(this.props.table,"TABLE_NAME")}
             />
             <div className="filler">
             </div>
@@ -90,8 +89,8 @@ class Main extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            metaTable : schemaData[0],
-            metaTableNames : tableNames
+            metaTable : this.props.schemaData[0],
+            metaTableNames : this.props.tableNames
         }
     }
 
@@ -111,7 +110,22 @@ class Main extends React.Component {
     }
 }
 
-ReactDOM.render(<Main />, document.getElementById('root'));
+fetch('/query')
+.then((resp) => resp.json())
+.then(function(data) {
+    console.log('first async fetch func');
+    console.log(JSON.stringify(data));
+
+    ReactDOM.render(
+        <Main 
+            schemaData = {data}
+            tableNames = {getUnique(data[0],"TABLE_NAME")}
+        />, 
+        document.getElementById('root'));
+  })
+
+
+
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.

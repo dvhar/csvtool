@@ -1,16 +1,16 @@
 
-var offline = true;
+var offline = false;
 var testdata = require('./schema.json');
 
 export function getData(){
     if (!offline)
         fetch('/query')
-            .then(function(response) {
-                return response.json();
-            })
-            .then(function(myJson) {
-                return myJson;
-            });
+        .then((resp) => resp.json())
+        .then(function(data) {
+            console.log('first fetch func');
+            console.log(JSON.stringify(data));
+            return data;
+        })
     else {
         return testdata
     }
