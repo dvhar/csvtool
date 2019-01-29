@@ -5,7 +5,9 @@ import './style.css';
 import {getUnique,getWhere,colIndex} from './utils.js';
 import * as serviceWorker from './serviceWorker';
 
+var testserver = true;
 
+//drop down list for choosing section of metadata table
 class TableList extends React.Component {
     tableBut(name,idx){
         return (
@@ -29,13 +31,12 @@ class TableList extends React.Component {
     }
 }
 
-class QueryRender extends React.Component {
+//display html table of sql query
+class TableGrid extends React.Component {
     constructor(props){
         super(props);
         this.state = {
             hideColumns : this.props.hide || [],
-            table : getWhere(this.props.table,"TABLE_NAME",this.props.section),
-            section : this.props.section,
         }
     }
     hideColumn(column,numeric){
@@ -58,6 +59,30 @@ class QueryRender extends React.Component {
             </tr>
         )
     }
+    render(){
+        return(
+            <div className="tableDiv"> 
+            <table className="table">
+                <tbody>
+                {this.row(this.props.table.Colnames,'head')}
+                {this.props.table.Vals.map((row,i)=>{return this.row(row,'entry',i)})}
+                </tbody>
+            </table>
+            </div>
+        )
+    }
+
+}
+
+//query results section
+class QueryRender extends React.Component {
+    constructor(props){
+        super(props);
+        this.state = {
+            table : getWhere(this.props.table,"TABLE_NAME",this.props.section),
+            section : this.props.section,
+        }
+    }
     changeTable(section){
         this.setState({section : section,
                        table : getWhere(this.props.table,"TABLE_NAME",section) });
@@ -70,16 +95,10 @@ class QueryRender extends React.Component {
                 section = {this.state.section}
                 tableNames = {getUnique(this.props.table,"TABLE_NAME")}
             />
-            <div className="filler">
-            </div>
-            <div className="tableDiv"> 
-            <table className="table">
-                <tbody>
-                {this.row(this.state.table.Colnames,'head')}
-                {this.state.table.Vals.map((row,i)=>{return this.row(row,'entry',i)})}
-                </tbody>
-            </table>
-            </div>
+            <div className="filler"></div>
+            <TableGrid
+                table = {this.state.table}
+            />
         </div>
         )
     }
@@ -110,20 +129,29 @@ class Main extends React.Component {
     }
 }
 
-fetch('/query')
-.then((resp) => resp.json())
-.then(function(data) {
-    console.log('first async fetch func');
-    console.log(JSON.stringify(data));
-
+function startRender(initialData){
     ReactDOM.render(
         <Main 
-            schemaData = {data}
-            tableNames = {getUnique(data[0],"TABLE_NAME")}
+            schemaData = {initialData}
+            tableNames = {getUnique(initialData[0],"TABLE_NAME")}
         />, 
         document.getElementById('root'));
-  })
-
+}
+//running on the go server
+if (! testserver){
+    fetch('/query')
+    .then((resp) => resp.json())
+    .then(function(data) {
+        console.log('first async fetch func');
+        console.log(JSON.stringify(data));
+        startRender(data);
+      })
+}
+//running on the react test server
+else {
+    var data = require('./schema.json');
+    startRender(data);
+}
 
 
 
