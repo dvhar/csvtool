@@ -37,7 +37,7 @@ func main() {
     if (*cmode) {
 
         println("running in text mode")
-        entries := runQueries(db, premade("columns") + premade("primaries"))
+        entries := runQueries(db, premade("columns_abridged") + premade("primaries"))
         j,_ := json.Marshal(entries)
         Println(string(j))
 
@@ -65,7 +65,7 @@ func server(db *sql.DB) {
 func queryhandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
         println("Trying query...")
-        entries := runQueries(db, premade("columns") + premade("primaries"))
+        entries := runQueries(db, premade("columns_abridged") + premade("primaries"))
         full_json,_ := json.Marshal(entries)
         Fprint(w, string(full_json))
         println("finished query.")
@@ -137,17 +137,17 @@ func runQueries(db *sql.DB, query string) []*Qrows {
 func premade(request string ) (string) {
     switch request {
         case "columns_total":
-            return "select * FROM INFORMATION_SCHEMA.Columns;"
-        case "columns":
-            return `SELECT TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, IS_NULLABLE
-                    FROM INFORMATION_SCHEMA.COLUMNS;`
+            return "SELECT * FROM information_schema.Columns;"
+        case "columns_abridged":
+            return `SELECT table_name, column_name, ordinal_position, data_type, is_nullable
+                    FROM information_schema.columns;`
         case "primaries":
-            return `select col.column_name, tab.table_name, tab.constraint_type, col.constraint_name
-                    FROM   INFORMATION_SCHEMA.constraint_column_usage as col
-                    join INFORMATION_SCHEMA.table_constraints as tab
-                    on col.constraint_name = tab.constraint_name
-                    where tab.constraint_type = 'primary key'
-                    and tab.table_name = col.table_name;`
+            return `SELECT col.column_name, tab.table_name, tab.constraint_type, col.constraint_name
+                    FROM   information_schema.constraint_column_usage as col
+                    JOIN information_schema.table_constraints as tab
+                    ON col.constraint_name = tab.constraint_name
+                    WHERE tab.constraint_type = 'primary key'
+                    AND tab.table_name = col.table_name;`
         default:
             return  ""
     }

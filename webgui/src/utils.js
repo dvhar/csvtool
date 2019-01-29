@@ -17,7 +17,7 @@ export function getData(){
 }
 export function colIndex(queryResults,column){
     for (var i in queryResults.Colnames)
-        if (queryResults.Colnames[i] === column)
+        if (queryResults.Colnames[i].toUpperCase() === column.toUpperCase())
             return i;
     return -1;
 }
@@ -31,12 +31,13 @@ export function getUnique(queryResults,column){
     return uniqueList;
 }
 export function getWhere(queryResults,column,value){
+    if (value === "*") return queryResults;
     var subset = JSON.parse(JSON.stringify(queryResults));
     var idx = colIndex(queryResults,column);
     if (idx > -1){
         var ri = queryResults.Vals.length - 1;
         for (var i in queryResults.Vals){
-            if (queryResults.Vals[ri-i][idx] !== value){
+            if (queryResults.Vals[ri-i][idx].toUpperCase() !== value.toUpperCase()){
                 subset.Vals.splice(ri-i,1);
                 subset.Numrows--;
             }
