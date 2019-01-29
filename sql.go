@@ -136,8 +136,11 @@ func runQueries(db *sql.DB, query string) []*Qrows {
 //some useful premade queries
 func premade(request string ) (string) {
     switch request {
-        case "columns":
+        case "columns_total":
             return "select * FROM INFORMATION_SCHEMA.Columns;"
+        case "columns":
+            return `SELECT TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE, IS_NULLABLE
+                    FROM INFORMATION_SCHEMA.COLUMNS;`
         case "primaries":
             return `select col.column_name, tab.table_name, tab.constraint_type, col.constraint_name
                     FROM   INFORMATION_SCHEMA.constraint_column_usage as col

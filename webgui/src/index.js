@@ -16,7 +16,6 @@ class TableList extends React.Component {
             </option>
         )
     }
-
     render(){
         return (
             <div className="dropmenu">
@@ -36,9 +35,18 @@ class TableGrid extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            hideColumns : this.props.hide || [],
+            hideColumns : this.props.hideColumns || [],
+            childId : Math.random(),
+            parentId : Math.random()
         }
     }
+    resize(){
+        var inner = document.getElementById(this.state.childId);
+        var outter = document.getElementById(this.state.parentId);
+        outter.style.maxWidth = `${inner.offsetWidth+20}px`;
+    }
+    componentDidUpdate(){ this.resize(); }
+    componentDidMOunt(){ this.resize(); }
     hideColumn(column,numeric){
         if (!numeric)
             column = colIndex(this.props.table,column)|0;
@@ -61,8 +69,8 @@ class TableGrid extends React.Component {
     }
     render(){
         return(
-            <div className="tableDiv"> 
-            <table className="table">
+            <div className="tableDiv" id={this.state.parentId}> 
+            <table className="table" id={this.state.childId}>
                 <tbody>
                 {this.row(this.props.table.Colnames,'head')}
                 {this.props.table.Vals.map((row,i)=>{return this.row(row,'entry',i)})}
@@ -81,6 +89,7 @@ class QueryRender extends React.Component {
         this.state = {
             table : getWhere(this.props.table,"TABLE_NAME",this.props.section),
             section : this.props.section,
+            hideColumns : this.props.hideColumns || [],
         }
     }
     changeTable(section){
@@ -98,6 +107,7 @@ class QueryRender extends React.Component {
             <div className="filler"></div>
             <TableGrid
                 table = {this.state.table}
+                hideColumns = {this.state.hideColumns}
             />
         </div>
         )
@@ -119,6 +129,7 @@ class Main extends React.Component {
             <QueryRender 
                 table = {this.state.metaTable}
                 section = {this.state.metaTableNames[0]}
+                hideColumns = {[/*0,1,2,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22*/]}
             />
             <QueryRender 
                 table = {this.state.metaTable}
