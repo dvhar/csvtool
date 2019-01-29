@@ -126,12 +126,16 @@ class Main extends React.Component {
         return (
             <>
             <QueryRender 
-                table = {this.state.metaTable}
-                section = {this.state.metaTableNames[0]}
-                hideColumns = {[0]}
+                table = {this.props.schemaData[0]}
             />
             <QueryRender 
-                table = {this.state.metaTable}
+                table = {this.props.schemaData[1]}
+            />
+            <QueryRender 
+                table = {this.props.schemaData[2]}
+            />
+            <QueryRender 
+                table = {this.props.schemaData[3]}
             />
             </>
         )

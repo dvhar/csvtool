@@ -37,7 +37,10 @@ func main() {
     if (*cmode) {
 
         println("running in text mode")
-        entries := runQueries(db, premade("columns_abridged") + premade("primaries"))
+        entries := runQueries(db, premade("columns_abridged") +
+                        premade("primaries") + 
+                        premade("columns_total") + 
+                        premade("columns_withkey"))
         j,_ := json.Marshal(entries)
         Println(string(j))
 
@@ -58,7 +61,7 @@ func main() {
 func server(db *sql.DB) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query/", queryhandler(db))
-    http.ListenAndServe(":"+*port, nil)
+    http.ListenAndServe("localhost:"+*port, nil)
 }
 
 //returns handler function for query requests from the webgui
@@ -96,7 +99,9 @@ func sqlConnect() (*sql.DB) {
 
 //return Qrows struct with query results
 func runQuery(db *sql.DB, query string) *Qrows {
+    //if server connection allowed
     if (! *noms) {
+        checkCache(query)
         rows,_ := db.Query(query)
         columnNames,_ := rows.Columns()
         columnValues := make([]interface{}, len(columnNames))
@@ -164,8 +169,7 @@ func premade(request string ) (string) {
                     FROM   information_schema.constraint_column_usage as col
                     JOIN information_schema.table_constraints as tab
                     ON col.constraint_name = tab.constraint_name
-                    WHERE tab.constraint_type = 'primary key'
-                    AND tab.table_name = col.table_name;`
+                    WHERE tab.table_name = col.table_name;`
         default:
             return  ""
     }
