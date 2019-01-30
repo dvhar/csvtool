@@ -37,7 +37,8 @@ export function getWhere(queryResults,column,value){
     if (idx > -1){
         var ri = queryResults.Vals.length - 1;
         for (var i in queryResults.Vals){
-            if (queryResults.Vals[ri-i][idx].toUpperCase() !== value.toUpperCase()){
+            if (queryResults.Vals[ri-i][idx] == null ||
+                String(queryResults.Vals[ri-i][idx]).toUpperCase() !== String(value).toUpperCase()){
                 subset.Vals.splice(ri-i,1);
                 subset.Numrows--;
             }

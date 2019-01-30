@@ -4,9 +4,9 @@ html {
 .dropmenu {
   z-index: 10;
   background-color: #EEEEEE;
-  padding: .5em .5em;
+  padding: .2em .2em;
   display: inline-block;
-  min-width: 15em;
+  min-width: 12em;
   background: #2989d8;
   background: linear-gradient(to bottom, #2989d8 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
 

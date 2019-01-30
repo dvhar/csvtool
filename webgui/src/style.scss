@@ -24,9 +24,9 @@ html {
 .dropmenu {
     z-index: 10;
     background-color: $button1;
-    padding: .5em .5em;
+    padding: .2em .2em;
     display: inline-block;
-    min-width: 15em;
+    min-width: 12em;
     @include sgradient($ttop,$ttp,$bbt,$bbot);
 }
 
