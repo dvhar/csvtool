@@ -6,13 +6,14 @@ import {getUnique,getWhere,colIndex} from './utils.js';
 import * as serviceWorker from './serviceWorker';
 
 var testserver = true;
+var squel = require("squel");
 
 //drop down list for choosing section of metadata table
-class TableList extends React.Component {
+class TableDropDown extends React.Component {
     tableBut(name,idx){
         return (
-            <option className="tableButton1" key={idx} onClick={()=>{ this.props.changeTable(name) }}>
-                {name === "*" ? "All Tables" : name}
+            <option className="tableButton1" key={idx} onClick={()=>{ this.props.itemButton(name) }}>
+                {name === "*" ? this.props.allLabel: name}
             </option>
         )
     }
@@ -20,10 +21,10 @@ class TableList extends React.Component {
         return (
             <div className="dropmenu">
                 <div className="dropButton">
-                {this.props.section === "*"?"All Tables":this.props.section+"\u25bc"}
+                {this.props.selection === "*"?this.props.allLabel:this.props.selection+"\u25bc"}
                 </div>
                 <select size="10" className="dropmenu-content">
-                    {this.props.tableNames.concat(["*"]).map((name,i)=>{return this.tableBut(name,i)})}
+                    {this.props.dropItems.concat(["*"]).map((name,i)=>{return this.tableBut(name,i)})}
                 </select>
             </div>
         )
@@ -98,10 +99,11 @@ class QueryRender extends React.Component {
     render(){
         return ( 
         <div className="viewContainer">
-            <TableList 
-                changeTable = {(section)=>{this.changeTable(section)}}
-                section = {this.state.section}
-                tableNames = {getUnique(this.props.table,"TABLE_NAME")}
+            <TableDropDown 
+                selection = {this.state.section}
+                allLabel = {"All tables"}
+                itemButton = {(section)=>{this.changeTable(section)}}
+                dropItems = {getUnique(this.props.table,"TABLE_NAME")}
             />
             <div className="filler"></div>
             <TableGrid
