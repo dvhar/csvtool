@@ -10,22 +10,54 @@ var testserver = true;
 
 //drop down list for choosing section of table
 class TableDropDown extends React.Component {
-    tableBut(name,idx){
+    constructor(props){
+        super(props);
+        this.state = {
+            secondDrop : false,
+            firstChoice : "",
+            secondDropItems : [],
+        }
+    }
+    dropItem(choice,idx,order){
         return (
-            <option className="tableButton1" key={idx} onClick={()=>{ this.props.itemButton(name) }}>
-                {name === "*" ? this.props.allLabel: name}
+            <option className="tableButton1" key={idx} onClick={()=>{ 
+                    switch (order){
+                        case 'first':
+                            console.log(choice,idx,order);
+                            this.setState({secondDrop:true,
+                                           firstChoice: choice,
+                                           secondDropItems: getUnique(this.props.fullTable,choice) }); 
+                            break;
+                        case 'second':
+                            console.log(choice,idx,order);
+                            this.props.dropAction(this.state.firstChoice,choice);
+                            break;
+                    }
+                }}>
+                {choice}
             </option>
         )
     }
     render(){
+        var dropdowns = [
+                <select className="dropSelect" size={Math.min(20,this.props.firstDropItems.length+1)}>
+                    {this.props.firstDropItems.map((name,i)=>{return this.dropItem(name,i,'first')})}
+                </select>
+        ];
+        if (this.state.secondDrop)
+            dropdowns.push(
+                <select className="dropSelect" size={Math.min(20,this.state.secondDropItems.length)}>
+                    {this.state.secondDropItems.map((name,i)=>{return this.dropItem(name,i,'second')})}
+                </select>
+            );
         return (
             <div className="dropmenu">
                 <div className="dropButton">
                 {this.props.selection === "*"?this.props.allLabel:this.props.selection+"\u25bc"}
                 </div>
-                <select size="10" className="dropmenu-content">
-                    {["*"].concat(this.props.dropItems).map((name,i)=>{return this.tableBut(name,i)})}
-                </select>
+                <div className="dropmenu-content">
+                {dropdowns}
+                </div>
             </div>
         )
     }
@@ -92,18 +124,20 @@ class QueryRender extends React.Component {
             hideColumns : this.props.hideColumns || [],
         }
     }
-    changeTable(section){
-        this.setState({section : section,
-                       table : getWhere(this.props.table,"TABLE_NAME",section) });
+    narrowTable(column,value){
+        this.setState({section : value,
+                       table : getWhere(this.props.table,column,value) });
     }
     render(){
         return ( 
         <div className="viewContainer">
             <TableDropDown 
+                s = {this.state}
                 selection = {this.state.section}
-                allLabel = {"All tables"}
-                itemButton = {(section)=>{this.changeTable(section)}}
-                dropItems = {getUnique(this.props.table,"TABLE_NAME")}
+                allLabel = {"Narrow by column"}
+                dropAction = {(column,value)=>{this.narrowTable(column,value)}}
+                fullTable = {this.props.table}
+                firstDropItems = {this.props.table.Colnames}
             />
             <TableGrid
                 table = {this.state.table}
