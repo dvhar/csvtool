@@ -23,7 +23,6 @@ html {
 
 .dropmenu {
     z-index: 10;
-    position: absolute;
     background-color: $button1;
     padding: .5em .5em;
     display: inline-block;
@@ -41,6 +40,7 @@ html {
 
 .dropmenu-content{
     display: none;
+    position: absolute;
 
     div {
         padding: .2em .5em;

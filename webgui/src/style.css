@@ -3,7 +3,6 @@ html {
 
 .dropmenu {
   z-index: 10;
-  position: absolute;
   background-color: #EEEEEE;
   padding: .5em .5em;
   display: inline-block;
@@ -19,7 +18,8 @@ html {
   border-radius: 4px; }
 
 .dropmenu-content {
-  display: none; }
+  display: none;
+  position: absolute; }
   .dropmenu-content div {
     padding: .2em .5em;
     background-color: #EEEEEE;

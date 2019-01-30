@@ -6,9 +6,9 @@ import {getUnique,getWhere,colIndex} from './utils.js';
 import * as serviceWorker from './serviceWorker';
 
 var testserver = true;
-var squel = require("squel");
+//var squel = require("squel");
 
-//drop down list for choosing section of metadata table
+//drop down list for choosing section of table
 class TableDropDown extends React.Component {
     tableBut(name,idx){
         return (
@@ -24,7 +24,7 @@ class TableDropDown extends React.Component {
                 {this.props.selection === "*"?this.props.allLabel:this.props.selection+"\u25bc"}
                 </div>
                 <select size="10" className="dropmenu-content">
-                    {this.props.dropItems.concat(["*"]).map((name,i)=>{return this.tableBut(name,i)})}
+                    {["*"].concat(this.props.dropItems).map((name,i)=>{return this.tableBut(name,i)})}
                 </select>
             </div>
         )
@@ -105,7 +105,6 @@ class QueryRender extends React.Component {
                 itemButton = {(section)=>{this.changeTable(section)}}
                 dropItems = {getUnique(this.props.table,"TABLE_NAME")}
             />
-            <div className="filler"></div>
             <TableGrid
                 table = {this.state.table}
                 hideColumns = {this.state.hideColumns}
