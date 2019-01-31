@@ -146,37 +146,32 @@ class QueryRender extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            section : this.props.section || "*",
-            table : getWhere(this.props.table,"TABLE_NAME",(this.props.section || "*")),
-            hideColumns : new Int8Array(this.props.table.Numcols),
+            col : "",
+            val : "*",
         }
     }
-    narrowTable(column,value){
-        this.setState({section : value,
-                       table : getWhere(this.props.table,column,value) });
-    }
     toggleColumn(column){
-        this.state.hideColumns[column] ^= 1;
+        this.props.hideColumns[column] ^= 1;
         this.forceUpdate();
     }
     render(){
         return ( 
         <div className="viewContainer">
             <TableSelectRows 
-                title = {"Show columns with value"}
-                dropAction = {(column,value)=>{this.narrowTable(column,value)}}
+                title = {"Show with column value\u25bc"}
+                dropAction = {(column,value)=>{this.props.rows.col=column;this.props.rows.val=value;this.forceUpdate();}}
                 table = {this.props.table}
                 firstDropItems = {this.props.table.Colnames}
             />
             <TableSelectColumns
-                title = {"Show/Hide columns"}
+                title = {"Show/Hide columns\u25bc"}
                 table = {this.props.table}
-                hideColumns = {this.state.hideColumns}
+                hideColumns = {this.props.hideColumns}
                 toggleColumn = {(i)=>this.toggleColumn(i)}
-            />
+            />    
             <TableGrid
-                table = {this.state.table}
-                hideColumns = {this.state.hideColumns}
+                table = {getWhere(this.props.table,this.props.rows.col,this.props.rows.val)}
+                hideColumns = {this.props.hideColumns}
                 toggleColumn = {(i)=>this.toggleColumn(i)}
             />
         </div>
@@ -184,23 +179,52 @@ class QueryRender extends React.Component {
     }
 }
 
-class Main extends React.Component {
+class QuerySelect extends React.Component {
     constructor(props){
         super(props);
         this.state = {
+            showQuery : <></>,
         }
     }
+    changeQuery(i){
+        var tab = this.props.schemaData[i];
+        this.setState({
+                showQuery : <QueryRender 
+                        table = {tab} 
+                        hideColumns = {new Int8Array(tab.Numcols)}
+                        rows = {new Object({col:"",val:"*"})}
+                    />,
+            });
+    }
+    render(){
+        var menu = (
+            <div className="dropmenu">
+                <div className="dropButton">
+                    <h2>View database schema query{"\u25bc"}</h2> 
+                </div>
+                <div className="dropmenu-content">
+                <select size="4" className="dropSelect">
+                {this.props.metaTables.map((v,i)=>
+                   <option onClick={()=>{this.changeQuery(i)}}>{v}</option> 
+                    )}
+                </select>
+                </div>
+            </div>
+        );
+        return [menu,this.state.showQuery];
+    }
+}
 
+class Main extends React.Component {
+    constructor(props){
+        super(props);
+    }
     render(){
         return (
-            <>
-            <QueryRender 
-                table = {this.props.schemaData[2]}
-            />
-            <QueryRender 
-                table = {this.props.schemaData[3]}
-            />
-            </>
+        <QuerySelect
+            schemaData = {this.props.schemaData}
+            metaTables = {this.props.metaTables}
+        />
         )
     }
 }
@@ -209,7 +233,7 @@ function startRender(initialData){
     ReactDOM.render(
         <Main 
             schemaData = {initialData}
-            tableNames = {getUnique(initialData[0],"TABLE_NAME")}
+            metaTables = {["column info abridged","table key info","informationschema.colums","column info with keys"]}
         />, 
         document.getElementById('root'));
 }
