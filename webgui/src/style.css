@@ -33,6 +33,9 @@ html {
 .dropmenu:hover .dropmenu-content {
   display: block; }
 
+.hiddenColumn {
+  color: red; }
+
 .tableCell {
   text-align: center;
   padding: .2em .5em;

@@ -20,7 +20,7 @@ class TableSelectColumns extends React.Component {
     dropItem(choice,idx,order){
         if (choice !== null)
         return (
-            <option className="tableButton1" key={idx} onClick={()=>this.props.hideColumn(idx)}>
+            <option className={`tableButton1${this.props.hideColumns[idx]?" hiddenColumn":""}`} key={idx} onClick={()=>this.props.toggleColumn(idx)}>
                 {choice}
             </option>
         )
@@ -113,7 +113,7 @@ class TableGrid extends React.Component {
                 {row.map((name,idx)=>{ 
                     if (this.props.hideColumns[idx]===0)
                         if (type === 'head')
-                            return( <th key={idx} className="tableCell" onClick={()=>this.props.hideColumn(idx)}> {name} </th>)
+                            return( <th key={idx} className="tableCell" onClick={()=>this.props.toggleColumn(idx)}> {name} </th>)
                         else
                             return( <td key={idx} className="tableCell"> {name} </td>) })}
             </tr>
@@ -148,15 +148,15 @@ class QueryRender extends React.Component {
         this.state = {
             section : this.props.section || "*",
             table : getWhere(this.props.table,"TABLE_NAME",(this.props.section || "*")),
-            hideColumns : new Uint16Array(this.props.table.Numcols),
+            hideColumns : new Int8Array(this.props.table.Numcols),
         }
     }
     narrowTable(column,value){
         this.setState({section : value,
                        table : getWhere(this.props.table,column,value) });
     }
-    hideColumn(column){
-        this.state.hideColumns[column] = 1;
+    toggleColumn(column){
+        this.state.hideColumns[column] ^= 1;
         this.forceUpdate();
     }
     render(){
@@ -172,12 +172,12 @@ class QueryRender extends React.Component {
                 title = {"Show/Hide columns"}
                 table = {this.props.table}
                 hideColumns = {this.state.hideColumns}
-                hideColumn = {(i)=>this.hideColumn(i)}
+                toggleColumn = {(i)=>this.toggleColumn(i)}
             />
             <TableGrid
                 table = {this.state.table}
                 hideColumns = {this.state.hideColumns}
-                hideColumn = {(i)=>this.hideColumn(i)}
+                toggleColumn = {(i)=>this.toggleColumn(i)}
             />
         </div>
         )
