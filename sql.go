@@ -61,7 +61,8 @@ func main() {
 func server(db *sql.DB) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query/", queryhandler(db))
-    http.ListenAndServe("localhost:"+*port, nil)
+    http.ListenAndServe(":"+*port, nil)
+    //http.ListenAndServe("localhost:"+*port, nil)
 }
 
 //returns handler function for query requests from the webgui
@@ -101,7 +102,6 @@ func sqlConnect() (*sql.DB) {
 func runQuery(db *sql.DB, query string) *Qrows {
     //if server connection allowed
     if (! *noms) {
-        checkCache(query)
         rows,_ := db.Query(query)
         columnNames,_ := rows.Columns()
         columnValues := make([]interface{}, len(columnNames))

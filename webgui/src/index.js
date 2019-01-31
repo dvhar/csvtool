@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {getUnique,getWhere,colIndex} from './utils.js';
+import {getUnique,getWhere,colIndex,sortQuery} from './utils.js';
 import * as serviceWorker from './serviceWorker';
 
 var testserver = true;
@@ -113,7 +113,7 @@ class TableGrid extends React.Component {
                 {row.map((name,idx)=>{ 
                     if (this.props.hideColumns[idx]===0)
                         if (type === 'head')
-                            return( <th key={idx} className="tableCell" onClick={()=>this.props.toggleColumn(idx)}> {name} </th>)
+                            return( <th key={idx} className="tableCell" onClick={()=>{sortQuery(this.props.table,idx);this.forceUpdate();}}> {name} </th>)
                         else
                             return( <td key={idx} className="tableCell"> {name} </td>) })}
             </tr>
@@ -143,13 +143,6 @@ class TableGrid extends React.Component {
 //query results section
 //required props: table
 class QueryRender extends React.Component {
-    constructor(props){
-        super(props);
-        this.state = {
-            col : "",
-            val : "*",
-        }
-    }
     toggleColumn(column){
         this.props.hideColumns[column] ^= 1;
         this.forceUpdate();
@@ -203,7 +196,7 @@ class QuerySelect extends React.Component {
                     <h2>View database schema query{"\u25bc"}</h2> 
                 </div>
                 <div className="dropmenu-content">
-                <select size="4" className="dropSelect">
+                <select size={String(this.props.metaTables.length)} className="dropSelect">
                 {this.props.metaTables.map((v,i)=>
                    <option onClick={()=>{this.changeQuery(i)}}>{v}</option> 
                     )}

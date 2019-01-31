@@ -21,6 +21,9 @@ export function colIndex(queryResults,column){
             return i;
     return -1;
 }
+export function sortQuery(queryResults,column){
+    queryResults.Vals.sort(function(a,b){ return String(a[column]) > String(b[column]) ? 1 : -1; });
+}
 export function getUnique(queryResults,column){
     var uniqueList = [];
     var idx = colIndex(queryResults,column);
