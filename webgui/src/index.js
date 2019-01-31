@@ -9,6 +9,20 @@ var testserver = true;
 //var squel = require("squel");
 
 
+function dropdown(title,size,contents){
+    return(
+        <div className="dropmenu">
+            <div className="dropButton">
+                {title}
+            </div>
+            <div className="dropmenu-content">
+            <select size={String(size)} className="dropSelect">
+                {contents}
+            </select>
+            </div>
+        </div>
+    )
+}
 //drop down list for what columns to hide
 class TableSelectColumns extends React.Component {
     constructor(props){
@@ -27,16 +41,9 @@ class TableSelectColumns extends React.Component {
     }
     render(){
         return (
-            <div className="dropmenu">
-                <div className="dropButton">
-                {this.props.title}
-                </div>
-                <div className="dropmenu-content">
-                <select className="dropSelect" size={Math.min(20,this.props.table.Colnames.length)}>
-                    {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}}
-                </select>
-                </div>
-            </div>
+            dropdown(this.props.title,
+                     Math.min(20,this.props.table.Colnames.length),
+                     this.props.table.Colnames.map((name,i)=>this.dropItem(name,i)))
         )
     }
 }
@@ -190,20 +197,10 @@ class QuerySelect extends React.Component {
             });
     }
     render(){
-        var menu = (
-            <div className="dropmenu">
-                <div className="dropButton">
-                    <h2>View database schema query{"\u25bc"}</h2> 
-                </div>
-                <div className="dropmenu-content">
-                <select size={String(this.props.metaTables.length)} className="dropSelect">
-                {this.props.metaTables.map((v,i)=>
-                   <option onClick={()=>{this.changeQuery(i)}}>{v}</option> 
-                    )}
-                </select>
-                </div>
-            </div>
-        );
+        var menu = ( dropdown(<h2>View database schema query{"\u25bc"}</h2>,
+                              String(this.props.metaTables.length),
+                              this.props.metaTables.map((v,i)=> <option onClick={()=>{this.changeQuery(i)}}>{v}</option> )
+                    ));
         return [menu,this.state.showQuery];
     }
 }
