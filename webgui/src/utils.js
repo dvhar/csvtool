@@ -2,18 +2,27 @@
 var offline = false;
 var testdata = require('./schema.json');
 
-export function getData(){
-    if (!offline)
-        fetch('/query')
-        .then((resp) => resp.json())
-        .then(function(data) {
-            console.log('first fetch func');
-            console.log(JSON.stringify(data));
-            return data;
-        })
-    else {
-        return testdata
+export function validJson(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
     }
+    return true;
+}
+export function getData(rrequest){
+    var request = new Request('/query', {
+        method: 'POST',
+        mode: 'cors',
+        data: 'The sky is green',
+        redirect: 'follow',
+        headers: new Headers({
+            'Content-Type': 'text/plain'
+        })
+    });
+    fetch(request)
+    .then(res=>{if (validJson(res)) return res.json(); return {err:"not valid json",res:res}})
+    .then(res => console.log(res));
 }
 export function colIndex(queryResults,column){
     for (var i in queryResults.Colnames)

@@ -7,6 +7,7 @@ import (
     "database/sql"
     "net/http"
     "net/url"
+    "io/ioutil"
     "strings"
     . "fmt"
     "flag"
@@ -60,13 +61,23 @@ func main() {
 //webserver
 func server(db *sql.DB) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
-    http.HandleFunc("/query/", queryhandler(db))
+    http.HandleFunc("/query/", queryHandler(db))
+    http.HandleFunc("/premade/", premadeHandler(db))
     http.ListenAndServe(":"+*port, nil)
     //http.ListenAndServe("localhost:"+*port, nil)
 }
 
 //returns handler function for query requests from the webgui
-func queryhandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
+func queryHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        body, _ := ioutil.ReadAll(r.Body)
+        println(string(body))
+        println(formatRequest(r))
+        Fprint(w, "request recieved")
+    }
+}
+
+func premadeHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
         println("Trying query...")
         entries := runQueries(db, premade("columns_abridged") + premade("primaries"))
@@ -173,4 +184,25 @@ func premade(request string ) (string) {
         default:
             return  ""
     }
+}
+
+
+
+func formatRequest(r *http.Request) string {
+ var request []string
+ url := Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
+ request = append(request, url)
+ request = append(request, Sprintf("Host: %v", r.Host))
+ for name, headers := range r.Header {
+   name = strings.ToLower(name)
+   for _, h := range headers {
+     request = append(request, Sprintf("%v: %v", name, h))
+   }
+ }
+ if r.Method == "POST" {
+    r.ParseForm()
+    request = append(request, "\n")
+    request = append(request, r.Form.Encode())
+ }
+  return strings.Join(request, "\n")
 }

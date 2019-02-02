@@ -1,22 +1,6 @@
 html {
   background-color: #DDDDDD; }
 
-.dropmenu {
-  z-index: 10;
-  background-color: #EEEEEE;
-  padding: .2em .2em;
-  display: inline-block;
-  min-width: 12em;
-  background: #2989d8;
-  background: linear-gradient(to bottom, #2989d8 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
-
-.dropButton {
-  display: block;
-  text-align: center;
-  padding: .2em .5em;
-  background-color: #EEEEEE;
-  border-radius: 4px; }
-
 .dropmenu-content {
   display: none;
   position: absolute; }
@@ -36,6 +20,36 @@ html {
 .hiddenColumn {
   color: red; }
 
+.dropmenu {
+  z-index: 10;
+  display: inline-block;
+  min-width: 12em; }
+
+.dropButton {
+  display: block;
+  text-align: center; }
+
+.queryMenuDiv {
+  padding: .2em .2em;
+  background: #feccb1;
+  background: linear-gradient(to bottom, #feccb1 1%, #f17432 22%, #ea5507 22%, #fb955e 100%); }
+
+.queryMenuButton {
+  padding: .2em .5em;
+  background-color: #EEEEEE;
+  border-radius: 4px; }
+
+.tableModDiv {
+  background-color: #EEEEEE;
+  padding: .2em .2em;
+  background: #2989d8;
+  background: linear-gradient(to bottom, #2989d8 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
+
+.tableModButton {
+  padding: .2em .5em;
+  background-color: #EEEEEE;
+  border-radius: 4px; }
+
 .tableCell {
   text-align: center;
   padding: .2em .5em;
@@ -46,11 +60,18 @@ html {
 .tableRow {
   padding: 1em; }
 
-.filler {
-  height: 3em; }
-
 .tableDiv {
   position: static;
   top: 3em;
   max-height: calc(80vh - 100px);
-  overflow: auto; }
+  max-width: calc(95%);
+  overflow: auto;
+  margin: auto;
+  border: 2px solid black; }
+
+.queryMenuContainer {
+  text-align: center;
+  margin-bottom: 1em; }
+
+.tableModifiers {
+  text-align: center; }

@@ -2,22 +2,23 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {getUnique,getWhere,colIndex,sortQuery} from './utils.js';
+import {getData,getUnique,getWhere,colIndex,sortQuery} from './utils.js';
+import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 
 var testserver = true;
 //var squel = require("squel");
 
 
-function dropdown(title,size,contents){
+function Dropdown(props){
     return(
-        <div className="dropmenu">
-            <div className="dropButton">
-                {title}
+        <div className={`dropmenu ${props.classes[0]}`}>
+            <div className={`dropButton ${props.classes[1]}`}>
+                {props.title}
             </div>
             <div className="dropmenu-content">
-            <select size={String(size)} className="dropSelect">
-                {contents}
+            <select size={String(props.size)} className="dropSelect">
+                {props.contents}
             </select>
             </div>
         </div>
@@ -41,9 +42,12 @@ class TableSelectColumns extends React.Component {
     }
     render(){
         return (
-            dropdown(this.props.title,
-                     Math.min(20,this.props.table.Colnames.length),
-                     this.props.table.Colnames.map((name,i)=>this.dropItem(name,i)))
+            <Dropdown
+                title = {this.props.title}
+                size = {Math.min(20,this.props.table.Colnames.length)}
+                contents = {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
+                classes = {["tableModDiv","tableModButton"]}
+            />
         )
     }
 }
@@ -92,8 +96,8 @@ class TableSelectRows extends React.Component {
                 </select>
             );
         return (
-            <div className="dropmenu">
-                <div className="dropButton">
+            <div className="dropmenu tableModDiv">
+                <div className="dropButton tableModButton">
                 {this.props.title}
                 </div>
                 <div className="dropmenu-content">
@@ -141,14 +145,14 @@ class TableGrid extends React.Component {
     resize(){
         var inner = document.getElementById(this.state.childId);
         var outter = document.getElementById(this.state.parentId);
-        outter.style.maxWidth = `${inner.offsetWidth+20}px`;
+        var windoww = window.innerWidth;
+        outter.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*0.95)}px`;
     }
     componentDidUpdate(){ this.resize(); }
     componentDidMount(){ this.resize(); }
 }
 
 //query results section
-//required props: table
 class QueryRender extends React.Component {
     toggleColumn(column){
         this.props.hideColumns[column] ^= 1;
@@ -157,18 +161,20 @@ class QueryRender extends React.Component {
     render(){
         return ( 
         <div className="viewContainer">
-            <TableSelectRows 
-                title = {"Show with column value\u25bc"}
-                dropAction = {(column,value)=>{this.props.rows.col=column;this.props.rows.val=value;this.forceUpdate();}}
-                table = {this.props.table}
-                firstDropItems = {this.props.table.Colnames}
-            />
-            <TableSelectColumns
-                title = {"Show/Hide columns\u25bc"}
-                table = {this.props.table}
-                hideColumns = {this.props.hideColumns}
-                toggleColumn = {(i)=>this.toggleColumn(i)}
-            />    
+            <div className="tableModifiers">
+                <TableSelectRows 
+                    title = {"Show with column value\u25bc"}
+                    dropAction = {(column,value)=>{this.props.rows.col=column;this.props.rows.val=value;this.forceUpdate();}}
+                    table = {this.props.table}
+                    firstDropItems = {this.props.table.Colnames}
+                />
+                <TableSelectColumns
+                    title = {"Show/Hide columns\u25bc"}
+                    table = {this.props.table}
+                    hideColumns = {this.props.hideColumns}
+                    toggleColumn = {(i)=>this.toggleColumn(i)}
+                />    
+            </div>
             <TableGrid
                 table = {getWhere(this.props.table,this.props.rows.col,this.props.rows.val)}
                 hideColumns = {this.props.hideColumns}
@@ -186,7 +192,7 @@ class QuerySelect extends React.Component {
             showQuery : <></>,
         }
     }
-    changeQuery(i){
+    changePreloadedQuery(i){
         var tab = this.props.schemaData[i];
         this.setState({
                 showQuery : <QueryRender 
@@ -197,18 +203,34 @@ class QuerySelect extends React.Component {
             });
     }
     render(){
-        var menu = ( dropdown(<h2>View database schema query{"\u25bc"}</h2>,
-                              String(this.props.metaTables.length),
-                              this.props.metaTables.map((v,i)=> <option onClick={()=>{this.changeQuery(i)}}>{v}</option> )
-                    ));
-        return [menu,this.state.showQuery];
+        var preloadedMenu = ( <div className="queryMenuContainer"> 
+                         <Dropdown
+                            title = {<h2>View database schema query{"\u25bc"}</h2>}
+                            size = {this.props.metaTables.length}
+                            contents = {this.props.metaTables.map((v,i)=> <option onClick={()=>{this.changePreloadedQuery(i)}}>{v}</option> )}
+                            classes = {["queryMenuDiv","queryMenuButton"]}
+                         />
+                     </div>);
+
+        var metaDataMenu = ( <div className="queryMenuContainer"> 
+                         <Dropdown
+                            title = {<h2>View database schema query{"\u25bc"}</h2>}
+                            size = {premades.metaDataQueries.length}
+                            contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{getData({body:{query:v.query}})}}>{v.label}</option>)}
+                            classes = {["queryMenuDiv","queryMenuButton"]}
+                         />
+                     </div>);
+
+        return (
+            <div className="querySelect"> 
+            {metaDataMenu} 
+            {this.state.showQuery} 
+            </div>
+        );
     }
 }
 
 class Main extends React.Component {
-    constructor(props){
-        super(props);
-    }
     render(){
         return (
         <QuerySelect
@@ -229,7 +251,7 @@ function startRender(initialData){
 }
 //running on the go server
 if (! testserver){
-    fetch('/query')
+    fetch('/premade')
     .then((resp) => resp.json())
     .then(function(data) {
         console.log('first async fetch func');

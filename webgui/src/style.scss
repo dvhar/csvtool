@@ -8,6 +8,11 @@ $top-top: #FFD700;
 $top-bot: #FFFF70;
 $button1: #EEEEEE;
 
+$ojgradient1: #feccb1;
+$ojgradient2: #f17432;
+$ojgradient3: #ea5507;
+$ojgradient4: #fb955e;
+
 html {
       background-color: #DDDDDD;
 }
@@ -16,33 +21,14 @@ html {
     background: $top;
     background: linear-gradient(to bottom, $top 1%,$tp 22%,$bt 22%,$bot 100%);
 }
-
 @mixin gradient($top,$bot) {
     background-color:$top;
     background: linear-gradient(to bottom, $top, $bot); }
 
 //dropdown menu
-.dropmenu {
-    z-index: 10;
-    background-color: $button1;
-    padding: .2em .2em;
-    display: inline-block;
-    min-width: 12em;
-    @include sgradient($ttop,$ttp,$bbt,$bbot);
-}
-
-.dropButton {
-    display: block;
-    text-align: center;
-    padding: .2em .5em;
-    background-color: $button1;
-    border-radius: 4px;
-}
-
 .dropmenu-content{
     display: none;
     position: absolute;
-
     div {
         padding: .2em .5em;
         background-color: $button1;
@@ -50,18 +36,43 @@ html {
         margin: .2em .2em;
     }
 }
-
 .dropSelect {
     top: 0;
     float: left;
 }
-
 .dropmenu:hover .dropmenu-content {
     display: block;
 }
-
 .hiddenColumn {
     color: red;
+}
+.dropmenu {
+    z-index: 10;
+    display: inline-block;
+    min-width: 12em;
+}
+.dropButton {
+    display: block;
+    text-align: center;
+}
+.queryMenuDiv{
+    padding: .2em .2em;
+    @include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
+}
+.queryMenuButton{
+    padding: .2em .5em;
+    background-color: $button1;
+    border-radius: 4px;
+}
+.tableModDiv {
+    background-color: $button1;
+    padding: .2em .2em;
+    @include sgradient($ttop,$ttp,$bbt,$bbot);
+}
+.tableModButton {
+    padding: .2em .5em;
+    background-color: $button1;
+    border-radius: 4px;
 }
 
 //table display
@@ -72,17 +83,26 @@ html {
     border-radius: 4px;
     min-width: 5em;
 }
-
 .tableRow {
     padding: 1em;
-}
-
-.filler {
-    height: 3em;
 }
 .tableDiv {
     position: static;
     top: 3em;
     max-height: calc(80vh - 100px);
+    max-width: calc(95%);
     overflow: auto;
+    margin: auto;
+    border: 2px solid black;
+}
+
+//bigger query section
+.querySelect {
+}
+.queryMenuContainer {
+    text-align: center;
+    margin-bottom: 1em;
+}
+.tableModifiers {
+    text-align: center;
 }
