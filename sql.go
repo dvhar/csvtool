@@ -61,6 +61,7 @@ func main() {
 //webserver
 func server(db *sql.DB) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
+    http.HandleFunc("/query", queryHandler(db))
     http.HandleFunc("/query/", queryHandler(db))
     http.HandleFunc("/premade/", premadeHandler(db))
     http.ListenAndServe(":"+*port, nil)
@@ -70,10 +71,19 @@ func server(db *sql.DB) {
 //returns handler function for query requests from the webgui
 func queryHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
+        type Qr struct {
+            Query string
+        }
         body, _ := ioutil.ReadAll(r.Body)
-        println(string(body))
-        println(formatRequest(r))
-        Fprint(w, "request recieved")
+        //println(formatRequest(r))
+        //println(string(body))
+        var rec Qr
+        json.Unmarshal(body,&rec)
+        entries := runQueries(db, rec.Query)
+        full_json,_ := json.Marshal(entries)
+        //Printf("resp: %+v", full_json)
+        //println(string(full_json))
+        Fprint(w, string(full_json))
     }
 }
 

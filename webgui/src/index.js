@@ -216,7 +216,7 @@ class QuerySelect extends React.Component {
                          <Dropdown
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
-                            contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{getData({body:{query:v.query}})}}>{v.label}</option>)}
+                            contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{getData({body:{Query:v.query}})}}>{v.label}</option>)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                          />
                      </div>);

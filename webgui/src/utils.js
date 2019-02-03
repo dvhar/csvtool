@@ -14,15 +14,17 @@ export function getData(rrequest){
     var request = new Request('/query', {
         method: 'POST',
         mode: 'cors',
-        data: 'The sky is green',
+        cache: "no-cache",
+        //credentials: "same-origin", // include, *same-origin, omit
         redirect: 'follow',
-        headers: new Headers({
-            'Content-Type': 'text/plain'
-        })
+        referrer: "no-referrer",
+        headers: new Headers({ "Content-Type": "application/json", }),
+        body: JSON.stringify(rrequest.body),
     });
     fetch(request)
-    .then(res=>{if (validJson(res)) return res.json(); return {err:"not valid json",res:res}})
+    .then(res=>res.json())
     .then(res => console.log(res));
+    //.then(res=>{if (validJson(res)) return res.json(); return {err:"not valid json",res:res}})
 }
 export function colIndex(queryResults,column){
     for (var i in queryResults.Colnames)
