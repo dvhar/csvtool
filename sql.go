@@ -4,10 +4,12 @@ import (
     "github.com/GeertJohan/go.rice"
     //"github.com/Jeffail/gabs"
     "encoding/json"
+    "encoding/base64"
     "database/sql"
+    "crypto/sha1"
+    "io/ioutil"
     "net/http"
     "net/url"
-    "io/ioutil"
     "strings"
     . "fmt"
     "flag"
@@ -22,6 +24,9 @@ type Qrows struct {
     Vals [][]interface{}
 }
 
+//TODO: find out if program will run on multiple databases. Will need cache for each db
+var Qcache map[string]*Qrows
+
 // -n to not connect to azure
 // -c to not run the server
 // -p to change port
@@ -33,6 +38,7 @@ func main() {
     var db *sql.DB
     flag.Parse()
     if (! *noms) { db = sqlConnect() }
+    Qcache = make(map[string]*Qrows)
 
     //output to stdout for debugging
     if (*cmode) {
@@ -75,14 +81,14 @@ func queryHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
             Query string
         }
         body, _ := ioutil.ReadAll(r.Body)
-        println(formatRequest(r))
-        println(string(body))
+        //println(formatRequest(r))
+        //println(string(body))
         var rec Qr
         json.Unmarshal(body,&rec)
         entries := runQueries(db, rec.Query)
         full_json,_ := json.Marshal(entries)
         //Printf("resp: %+v", full_json)
-        println(string(full_json))
+        //println(string(full_json))
         Fprint(w, string(full_json))
     }
 }
@@ -119,10 +125,30 @@ func sqlConnect() (*sql.DB) {
     return db
 }
 
+//wrapper for runQuery() that caches results
+func runCachingQuery(db *sql.DB, query string) *Qrows {
+
+    hasher := sha1.New()
+    hasher.Write([]byte(query))
+    sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+    cachedResult, ok := Qcache[sha]
+    if ok {
+        println("returning cached result " + sha)
+        return cachedResult
+    } else {
+        Qcache[sha] = runQuery(db, query)
+        println("running new query for " + sha)
+        return Qcache[sha]
+    }
+}
+
+
 //return Qrows struct with query results
 func runQuery(db *sql.DB, query string) *Qrows {
+
     //if server connection allowed
     if (! *noms) {
+
         rows,_ := db.Query(query)
         columnNames,_ := rows.Columns()
         columnValues := make([]interface{}, len(columnNames))
@@ -154,7 +180,7 @@ func runQueries(db *sql.DB, query string) []*Qrows {
     queries := strings.Split(query,";")
     var results[]*Qrows
     for i := range queries {
-        results = append(results, runQuery(db,queries[i]))
+        results = append(results, runCachingQuery(db,queries[i]))
     }
     return results
 }

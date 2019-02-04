@@ -2,6 +2,8 @@ var sha1 = require("sha1");
 
 var testdata = require('./schema.json');
 
+/*
+// unused because chaching is done serverside
 export class dataFetcher {
     constructor(){
         this.cache = {};
@@ -10,7 +12,6 @@ export class dataFetcher {
         //var data = getData({body:{Query:"select thing from place"}})
         console.log(request.body.Query);
         var hash = sha1(request.body.Query);
-        var data;
         if (this.cache[hash] === undefined){
             return getData(request).then(res=>{
                 this.cache[hash] = JSON.parse(JSON.stringify({ query: request.body.Query, data: res }));
@@ -19,13 +20,14 @@ export class dataFetcher {
         }
         else {
             //this part should return a promise like the other part
-            data = this.cache[hash].data;
+            var data = this.cache[hash].data;
             console.log(data);
             return data;
         }
     }
     
 }
+*/
 
 export function validJson(str) {
     try {
