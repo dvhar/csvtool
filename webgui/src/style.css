@@ -1,5 +1,7 @@
 html {
-  background-color: #DDDDDD; }
+  min-height: 100%;
+  background-color: #DDDDDD;
+  background: linear-gradient(to bottom, #997d60 0%, #dab78c 45%, #c3a996 100%); }
 
 .dropmenu-content {
   display: none;
@@ -61,6 +63,7 @@ html {
   padding: 1em; }
 
 .tableDiv {
+  background: #ccc;
   position: static;
   top: 3em;
   max-height: calc(80vh - 100px);

@@ -199,8 +199,16 @@ class QuerySelect extends React.Component {
                         table = {tab} 
                         hideColumns = {new Int8Array(tab.Numcols)}
                         rows = {new Object({col:"",val:"*"})}
-                    />,
-            });
+                    />, });
+    }
+    showLoadedQuery(results){
+        this.setState({
+                showQuery : results.map(
+                    tab => <QueryRender 
+                               table = {tab} 
+                               hideColumns = {new Int8Array(tab.Numcols)}
+                               rows = {new Object({col:"",val:"*"})}
+                           />) });
     }
     render(){
         var preloadedMenu = ( <div className="queryMenuContainer"> 
@@ -217,7 +225,7 @@ class QuerySelect extends React.Component {
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
                             contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{
-                                getData({body:{Query:v.query}}).then(dat=>console.log(dat))
+                                getData({body:{Query:v.query}}).then(dat=>this.showLoadedQuery(dat))
                                 //fetcher.makeQuery({body:{Query:v.query}}).then(dat=>console.log(dat))
                             }}>{v.label}</option>)}
                             classes = {["queryMenuDiv","queryMenuButton"]}

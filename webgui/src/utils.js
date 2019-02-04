@@ -1,9 +1,8 @@
-var sha1 = require("sha1");
 
-var testdata = require('./schema.json');
 
 /*
 // unused because chaching is done serverside
+var sha1 = require("sha1");
 export class dataFetcher {
     constructor(){
         this.cache = {};
@@ -37,6 +36,7 @@ export function validJson(str) {
     }
     return true;
 }
+
 export function getData(rrequest){
     var request = new Request('/query', {
         method: 'POST',
@@ -54,15 +54,18 @@ export function getData(rrequest){
     //.then(res => {console.log(res); return res;});
     //.then(res=>{if (validJson(res)) return res.json(); return {err:"not valid json",res:res}})
 }
+
 export function colIndex(queryResults,column){
     for (var i in queryResults.Colnames)
         if (queryResults.Colnames[i].toUpperCase() === column.toUpperCase())
             return i;
     return -1;
 }
+
 export function sortQuery(queryResults,column){
     queryResults.Vals.sort(function(a,b){ return String(a[column]) > String(b[column]) ? 1 : -1; });
 }
+
 export function getUnique(queryResults,column){
     var uniqueList = [];
     var idx = colIndex(queryResults,column);
@@ -72,6 +75,7 @@ export function getUnique(queryResults,column){
                 uniqueList.push(queryResults.Vals[i][idx]);
     return uniqueList;
 }
+
 export function getWhere(queryResults,column,value){
     if (value === "*") return queryResults;
     var subset = JSON.parse(JSON.stringify(queryResults));

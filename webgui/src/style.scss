@@ -13,9 +13,7 @@ $ojgradient2: #f17432;
 $ojgradient3: #ea5507;
 $ojgradient4: #fb955e;
 
-html {
-      background-color: #DDDDDD;
-}
+$tablebg: #ccc;
 
 @mixin sgradient($top,$tp,$bt,$bot) {
     background: $top;
@@ -24,6 +22,12 @@ html {
 @mixin gradient($top,$bot) {
     background-color:$top;
     background: linear-gradient(to bottom, $top, $bot); }
+
+html {
+    min-height: 100%;
+    background-color: #DDDDDD;
+    background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
+}
 
 //dropdown menu
 .dropmenu-content{
@@ -87,6 +91,7 @@ html {
     padding: 1em;
 }
 .tableDiv {
+    background: $tablebg;
     position: static;
     top: 3em;
     max-height: calc(80vh - 100px);
