@@ -1,6 +1,31 @@
+var sha1 = require("sha1");
 
-var offline = false;
 var testdata = require('./schema.json');
+
+export class dataFetcher {
+    constructor(){
+        this.cache = {};
+    }
+    makeQuery(request){
+        //var data = getData({body:{Query:"select thing from place"}})
+        console.log(request.body.Query);
+        var hash = sha1(request.body.Query);
+        var data;
+        if (this.cache[hash] === undefined){
+            return getData(request).then(res=>{
+                this.cache[hash] = JSON.parse(JSON.stringify({ query: request.body.Query, data: res }));
+                return res;
+            })
+        }
+        else {
+            //this part should return a promise like the other part
+            data = this.cache[hash].data;
+            console.log(data);
+            return data;
+        }
+    }
+    
+}
 
 export function validJson(str) {
     try {
@@ -21,9 +46,10 @@ export function getData(rrequest){
         headers: new Headers({ "Content-Type": "application/json", }),
         body: JSON.stringify(rrequest.body),
     });
-    fetch(request)
+    return fetch(request)
     .then(res=>res.json())
-    .then(res => console.log(res));
+    //.then(res =>res);
+    //.then(res => {console.log(res); return res;});
     //.then(res=>{if (validJson(res)) return res.json(); return {err:"not valid json",res:res}})
 }
 export function colIndex(queryResults,column){

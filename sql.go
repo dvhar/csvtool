@@ -75,14 +75,14 @@ func queryHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
             Query string
         }
         body, _ := ioutil.ReadAll(r.Body)
-        //println(formatRequest(r))
-        //println(string(body))
+        println(formatRequest(r))
+        println(string(body))
         var rec Qr
         json.Unmarshal(body,&rec)
         entries := runQueries(db, rec.Query)
         full_json,_ := json.Marshal(entries)
         //Printf("resp: %+v", full_json)
-        //println(string(full_json))
+        println(string(full_json))
         Fprint(w, string(full_json))
     }
 }

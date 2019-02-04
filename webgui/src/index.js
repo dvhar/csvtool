@@ -2,10 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {getData,getUnique,getWhere,colIndex,sortQuery} from './utils.js';
+import {getData,getUnique,getWhere,dataFetcher,sortQuery} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 
+var fetcher = new dataFetcher();
+//fetcher.makeQuery( {body:{Query:"SELECT * FROM information_schema.Columns;"}} );
 var testserver = true;
 //var squel = require("squel");
 
@@ -216,7 +218,9 @@ class QuerySelect extends React.Component {
                          <Dropdown
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
-                            contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{getData({body:{Query:v.query}})}}>{v.label}</option>)}
+                            contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{
+                                fetcher.makeQuery({body:{Query:v.query}}).then(dat=>console.log(dat))
+                            }}>{v.label}</option>)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                          />
                      </div>);
