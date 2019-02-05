@@ -23,9 +23,11 @@ function DropdownTextbox(props){
             <br/>
             <button onClick={()=>{
                 var query = document.getElementById(textBoxId).value;
+                var savit = document.getElementById("saveCheck").checked;
                 console.log("you pressed my botton"); 
-                props.submit(query);
+                props.submit(query, savit);
             }}>Submit Query</button>
+            <input type="checkbox" id="saveCheck"/>Save queries to file
             </div>
         </div>
     )
@@ -185,6 +187,7 @@ class QueryRender extends React.Component {
         return ( 
         <div className="viewContainer">
             <div className="tableModifiers">
+                <div> {this.props.table.Query} </div>
                 <TableSelectRows 
                     title = {"Show with column value\u25bc"}
                     dropAction = {(column,value)=>{this.props.rows.col=column;this.props.rows.val=value;this.forceUpdate();}}
@@ -263,8 +266,8 @@ class QuerySelect extends React.Component {
                          <DropdownTextbox
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
                             classes = {["queryMenuDiv","queryMenuButton"]}
-                            submit = {(query)=>{
-                                getData({body:{Query:query}}).then(dat=>this.showLoadedQuery(dat))
+                            submit = {(query, savit)=>{
+                                getData({body:{Query:query, Savit:savit}}).then(dat=>this.showLoadedQuery(dat))
                             }}
                          />
                      </div>);

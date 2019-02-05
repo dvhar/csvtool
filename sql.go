@@ -24,6 +24,7 @@ type Qrows struct {
     Colnames []string
     Vals [][]interface{}
     Status int
+    Query string
 }
 type ReturnData struct {
     Entries []*Qrows
@@ -78,6 +79,7 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
     return func(w http.ResponseWriter, r *http.Request) {
         type Qr struct {
             Query string
+            Savit bool
         }
         body, _ := ioutil.ReadAll(r.Body)
         println(formatRequest(r))
@@ -105,6 +107,13 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
 
         fullData.Entries = entries
         full_json,_ := json.Marshal(fullData)
+
+        if rec.Savit {
+            println("saving query...")
+            file,_ := os.OpenFile("savedQueries.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+            file.WriteString(string(full_json))
+            file.Close()
+        }
         //Printf("resp: %+v", full_json)
         //println(string(full_json))
         Fprint(w, string(full_json))
@@ -170,7 +179,7 @@ func runCachingQuery(db *sql.DB, query string) (*Qrows,error) {
 
 //return Qrows struct with query results
 func runQuery(db *sql.DB, query string) (*Qrows,error) {
-    println("final query is ",query)
+    println(query)
 
     //if server connection allowed
     if (! *noms) {
@@ -194,7 +203,7 @@ func runQuery(db *sql.DB, query string) (*Qrows,error) {
                 rownum++
             }
             println("query success")
-            return &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries}, nil
+            return &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries, Query: query}, nil
         } else {
             println("query failed")
             return &Qrows{}, err
