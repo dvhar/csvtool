@@ -169,6 +169,7 @@ func runCachingQuery(db *sql.DB, query string) (*Qrows,error) {
 
 //return Qrows struct with query results
 func runQuery(db *sql.DB, query string) (*Qrows,error) {
+    println("final query is ",query)
 
     //if server connection allowed
     if (! *noms) {
@@ -206,7 +207,7 @@ func runQuery(db *sql.DB, query string) (*Qrows,error) {
 //run multiple queries deliniated by semicolon
 func runQueries(db *sql.DB, query string) ([]*Qrows, error) {
     if (strings.HasSuffix(query,";")) { query = query[:len(query)-1] }
-    queries := strings.Split(query,";")
+    queries := strings.Split(strings.Replace(query,"\\n","",-1),";")
     var results[]*Qrows
     for i := range queries {
         result,err := runCachingQuery(db,queries[i])

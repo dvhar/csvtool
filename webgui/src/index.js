@@ -10,7 +10,28 @@ var testserver = true;
 //var squel = require("squel");
 
 
-function Dropdown(props){
+function DropdownTextbox(props){
+    var textBoxId = Math.random();
+    return(
+        <div className={`dropmenu ${props.classes[0]}`}>
+            <div className={`dropButton ${props.classes[1]}`}>
+                {props.title}
+            </div>
+            <div className="dropmenu-content">
+            <textarea rows="10" cols="70" id={textBoxId}>
+            </textarea>
+            <br/>
+            <button onClick={()=>{
+                var query = document.getElementById(textBoxId).value;
+                console.log("you pressed my botton"); 
+                props.submit(query);
+            }}>Submit Query</button>
+            </div>
+        </div>
+    )
+}
+
+function DropdownMenu(props){
     return(
         <div className={`dropmenu ${props.classes[0]}`}>
             <div className={`dropButton ${props.classes[1]}`}>
@@ -42,7 +63,7 @@ class TableSelectColumns extends React.Component {
     }
     render(){
         return (
-            <Dropdown
+            <DropdownMenu
                 title = {this.props.title}
                 size = {Math.min(20,this.props.table.Colnames.length)}
                 contents = {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
@@ -216,7 +237,7 @@ class QuerySelect extends React.Component {
     }
     render(){
         var preloadedMenu = ( <div className="queryMenuContainer"> 
-                         <Dropdown
+                         <DropdownMenu
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {this.props.metaTables.length}
                             contents = {this.props.metaTables.map((v,i)=> <option onClick={()=>{this.changePreloadedQuery(i)}}>{v}</option> )}
@@ -225,20 +246,30 @@ class QuerySelect extends React.Component {
                      </div>);
 
         var metaDataMenu = ( <div className="queryMenuContainer"> 
-                         <Dropdown
+                         <DropdownMenu
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
                             contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{
                                 getData({body:{Query:v.query}}).then(dat=>this.showLoadedQuery(dat))
-                                //fetcher.makeQuery({body:{Query:v.query}}).then(dat=>console.log(dat))
                             }}>{v.label}</option>)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
+                         />
+                     </div>);
+
+        var customQueryEntry = ( <div className="queryMenuContainer"> 
+                         <DropdownTextbox
+                            title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
+                            classes = {["queryMenuDiv","queryMenuButton"]}
+                            submit = {(query)=>{
+                                getData({body:{Query:query}}).then(dat=>this.showLoadedQuery(dat))
+                            }}
                          />
                      </div>);
 
         return (
             <div className="querySelect"> 
             {metaDataMenu} 
+            {customQueryEntry} 
             {this.state.showQuery} 
             </div>
         );
