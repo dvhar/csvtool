@@ -11,6 +11,7 @@ import (
     "net/http"
     "net/url"
     "strings"
+    "errors"
     . "fmt"
     "flag"
     "os"
@@ -22,6 +23,10 @@ type Qrows struct {
     Numcols int
     Colnames []string
     Vals [][]interface{}
+}
+type ReturnData struct {
+    Entries []*Qrows
+    Status int
 }
 
 //TODO: find out if program will run on multiple databases. Will need cache for each db
@@ -36,15 +41,18 @@ var port = flag.String("p", "8060", "Change port from 8060")
 
 func main() {
     var db *sql.DB
+    var er error
     flag.Parse()
-    if (! *noms) { db = sqlConnect() }
+    if (! *noms) {
+        db,er = sqlConnect()
+    }
     Qcache = make(map[string]*Qrows)
 
     //output to stdout for debugging
     if (*cmode) {
 
         println("running in text mode")
-        entries := runQueries(db, premade("columns_abridged") +
+        entries,_ := runQueries(db, premade("columns_abridged") +
                         premade("primaries") + 
                         premade("columns_total") + 
                         premade("columns_withkey"))
@@ -55,7 +63,7 @@ func main() {
     } else {
 
         println("running in server mode")
-        server(db)
+        server(db,er)
     }
 
     if (! *noms) {
@@ -65,27 +73,58 @@ func main() {
 }
 
 //webserver
-func server(db *sql.DB) {
+func server(db *sql.DB, er error) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
-    http.HandleFunc("/query", queryHandler(db))
-    http.HandleFunc("/query/", queryHandler(db))
+    http.HandleFunc("/query", queryHandler(db,er))
+    http.HandleFunc("/query/", queryHandler(db,er))
+    http.HandleFunc("/premade", premadeHandler(db))
     http.HandleFunc("/premade/", premadeHandler(db))
+    http.HandleFunc("/messages", messageHandler(er))
+    http.HandleFunc("/messages/", messageHandler(er))
     http.ListenAndServe(":"+*port, nil)
     //http.ListenAndServe("localhost:"+*port, nil)
 }
 
 //returns handler function for query requests from the webgui
-func queryHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
+func messageHandler(er error) (func(http.ResponseWriter, *http.Request)) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        message := "connection successful"
+        if er != nil {
+            message = "connection failed"
+        }
+        Fprint(w, message)
+    }
+}
+
+//returns handler function for query requests from the webgui
+func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
         type Qr struct {
             Query string
         }
         body, _ := ioutil.ReadAll(r.Body)
-        //println(formatRequest(r))
-        //println(string(body))
+        println(formatRequest(r))
+        println(string(body))
         var rec Qr
+        var entries []*Qrows
+        var fullData ReturnData
+        var err error
         json.Unmarshal(body,&rec)
-        entries := runQueries(db, rec.Query)
+        fullData.Status = 0
+
+        //return null query if no connection
+        if er != nil {
+            println("no database connection")
+            entries = append(entries,&Qrows{})
+        //attempt query if there is a connection
+        } else {
+            println("requesting query")
+            entries,err = runQueries(db, rec.Query)
+            if err != nil {
+                fullData.Status |= 1
+            }
+        }
+        fullData.Entries = entries
         full_json,_ := json.Marshal(entries)
         //Printf("resp: %+v", full_json)
         //println(string(full_json))
@@ -96,7 +135,7 @@ func queryHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
 func premadeHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
         println("Trying query...")
-        entries := runQueries(db, premade("columns_abridged") + premade("primaries"))
+        entries,_ := runQueries(db, premade("columns_abridged") + premade("primaries"))
         full_json,_ := json.Marshal(entries)
         Fprint(w, string(full_json))
         println("finished query.")
@@ -104,7 +143,8 @@ func premadeHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
 }
 
 //initialize database connection
-func sqlConnect() (*sql.DB) {
+func sqlConnect() (*sql.DB, error) {
+    //TODO: handle bad connections - currently has trouble with null pointer if no connection
     login := "dfhntz"
     pass := os.Getenv("MSSQL_CLI_PASSWORD")
     server := "dfhntz.database.windows.net"
@@ -120,13 +160,18 @@ func sqlConnect() (*sql.DB) {
         RawQuery: query.Encode(),
     }
     connectString := u.String()
-    println("open connection")
-    db,_ := sql.Open("mssql", connectString)
-    return db
+    db,err := sql.Open("mssql", connectString)
+    if err != nil {
+        println("connection error")
+        return db, err
+    } else {
+        println("db connection successful")
+        return db, nil
+    }
 }
 
 //wrapper for runQuery() that caches results
-func runCachingQuery(db *sql.DB, query string) *Qrows {
+func runCachingQuery(db *sql.DB, query string) (*Qrows,error) {
 
     hasher := sha1.New()
     hasher.Write([]byte(query))
@@ -134,55 +179,68 @@ func runCachingQuery(db *sql.DB, query string) *Qrows {
     cachedResult, ok := Qcache[sha]
     if ok {
         println("returning cached result " + sha)
-        return cachedResult
+        return cachedResult, nil
     } else {
-        Qcache[sha] = runQuery(db, query)
-        println("running new query for " + sha)
-        return Qcache[sha]
+        println("attempting new query for " + sha)
+        result, err := runQuery(db, query)
+        if err == nil {
+            Qcache[sha] = result
+        }
+        return result, err
     }
 }
 
 
 //return Qrows struct with query results
-func runQuery(db *sql.DB, query string) *Qrows {
+func runQuery(db *sql.DB, query string) (*Qrows,error) {
 
     //if server connection allowed
     if (! *noms) {
 
-        rows,_ := db.Query(query)
-        columnNames,_ := rows.Columns()
-        columnValues := make([]interface{}, len(columnNames))
-        columnPointers := make([]interface{}, len(columnNames))
-        for i := 0; i < len(columnNames); i++ { columnPointers[i] = &columnValues[i] }
-        var entry []interface{}
-        var entries[][]interface{}
-        var rownum = 0
-        for rows.Next() {
-            rows.Scan(columnPointers...)
-            entry = make([]interface{},len(columnNames))
-            for i := 0; i < len(columnNames); i++ {
-                entry[i] = columnValues[i]
+        rows,err := db.Query(query)
+        if err == nil {
+            columnNames,_ := rows.Columns()
+            columnValues := make([]interface{}, len(columnNames))
+            columnPointers := make([]interface{}, len(columnNames))
+            for i := 0; i < len(columnNames); i++ { columnPointers[i] = &columnValues[i] }
+            var entry []interface{}
+            var entries[][]interface{}
+            var rownum = 0
+            for rows.Next() {
+                rows.Scan(columnPointers...)
+                entry = make([]interface{},len(columnNames))
+                for i := 0; i < len(columnNames); i++ {
+                    entry[i] = columnValues[i]
+                }
+                entries = append(entries,entry)
+                rownum++
             }
-            entries = append(entries,entry)
-            rownum++
+            println("query success")
+            return &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries}, nil
+        } else {
+            println("query failed")
+            return &Qrows{}, err
         }
-        ret := &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries}
-        return ret
     } else {
-        ret := &Qrows{}
-        return ret
+        println("query null because db not connected")
+        err := errors.New("no connection")
+        return &Qrows{},err
     }
 }
 
 //run multiple queries deliniated by semicolon
-func runQueries(db *sql.DB, query string) []*Qrows {
+func runQueries(db *sql.DB, query string) ([]*Qrows, error) {
     if (strings.HasSuffix(query,";")) { query = query[:len(query)-1] }
     queries := strings.Split(query,";")
     var results[]*Qrows
     for i := range queries {
-        results = append(results, runCachingQuery(db,queries[i]))
+        result,err := runCachingQuery(db,queries[i])
+        results = append(results, result)
+        if err != nil {
+            return results, err
+        }
     }
-    return results
+    return results, nil
 }
 
 //some useful premade queries

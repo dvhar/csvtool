@@ -252,29 +252,18 @@ class Main extends React.Component {
     }
 }
 
-function startRender(initialData){
+function startRender(testdata){
     ReactDOM.render(
         <Main 
-            schemaData = {initialData}
+            schemaData = {testdata}
             metaTables = {["column info abridged","table key info","informationschema.colums","column info with keys"]}
         />, 
         document.getElementById('root'));
 }
-//running on the go server
-if (! testserver){
-    fetch('/premade')
-    .then((resp) => resp.json())
-    .then(function(data) {
-        console.log('first async fetch func');
-        console.log(JSON.stringify(data));
-        startRender(data);
-      })
-}
-//running on the react test server
-else {
-    var data = require('./schema.json');
-    startRender(data);
-}
+
+
+var testdata = require('./schema.json');
+startRender(testdata);
 
 
 
