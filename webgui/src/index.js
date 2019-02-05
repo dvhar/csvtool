@@ -202,8 +202,12 @@ class QuerySelect extends React.Component {
                     />, });
     }
     showLoadedQuery(results){
-        this.setState({
-                showQuery : results.map(
+        if (results.Status & 1){
+            alert("Could not make query. Bad connection?");
+        }
+        else if (results.Status === 0)
+            this.setState({
+                showQuery : results.Entries.map(
                     tab => <QueryRender 
                                table = {tab} 
                                hideColumns = {new Int8Array(tab.Numcols)}

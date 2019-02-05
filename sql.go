@@ -43,29 +43,18 @@ func main() {
     var db *sql.DB
     var er error
     flag.Parse()
+    Qcache = make(map[string]*Qrows)
+
+    //if connecting to database
     if (! *noms) {
         db,er = sqlConnect()
     }
-    Qcache = make(map[string]*Qrows)
 
-    //output to stdout for debugging
-    if (*cmode) {
+    println("Starting server")
+    server(db,er)
 
-        println("running in text mode")
-        entries,_ := runQueries(db, premade("columns_abridged") +
-                        premade("primaries") + 
-                        premade("columns_total") + 
-                        premade("columns_withkey"))
-        j,_ := json.Marshal(entries)
-        Println(string(j))
 
-    //run webserver
-    } else {
-
-        println("running in server mode")
-        server(db,er)
-    }
-
+    //clost database connection if there is one
     if (! *noms) {
         println("closing connection")
         db.Close()
@@ -79,21 +68,8 @@ func server(db *sql.DB, er error) {
     http.HandleFunc("/query/", queryHandler(db,er))
     http.HandleFunc("/premade", premadeHandler(db))
     http.HandleFunc("/premade/", premadeHandler(db))
-    http.HandleFunc("/messages", messageHandler(er))
-    http.HandleFunc("/messages/", messageHandler(er))
     http.ListenAndServe(":"+*port, nil)
     //http.ListenAndServe("localhost:"+*port, nil)
-}
-
-//returns handler function for query requests from the webgui
-func messageHandler(er error) (func(http.ResponseWriter, *http.Request)) {
-    return func(w http.ResponseWriter, r *http.Request) {
-        message := "connection successful"
-        if er != nil {
-            message = "connection failed"
-        }
-        Fprint(w, message)
-    }
 }
 
 //returns handler function for query requests from the webgui
@@ -116,6 +92,7 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
         if er != nil {
             println("no database connection")
             entries = append(entries,&Qrows{})
+
         //attempt query if there is a connection
         } else {
             println("requesting query")
@@ -124,8 +101,9 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
                 fullData.Status |= 1
             }
         }
+
         fullData.Entries = entries
-        full_json,_ := json.Marshal(entries)
+        full_json,_ := json.Marshal(fullData)
         //Printf("resp: %+v", full_json)
         //println(string(full_json))
         Fprint(w, string(full_json))
@@ -144,7 +122,6 @@ func premadeHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
 
 //initialize database connection
 func sqlConnect() (*sql.DB, error) {
-    //TODO: handle bad connections - currently has trouble with null pointer if no connection
     login := "dfhntz"
     pass := os.Getenv("MSSQL_CLI_PASSWORD")
     server := "dfhntz.database.windows.net"
@@ -163,11 +140,10 @@ func sqlConnect() (*sql.DB, error) {
     db,err := sql.Open("mssql", connectString)
     if err != nil {
         println("connection error")
-        return db, err
     } else {
         println("db connection successful")
-        return db, nil
     }
+    return db, err
 }
 
 //wrapper for runQuery() that caches results
@@ -223,8 +199,7 @@ func runQuery(db *sql.DB, query string) (*Qrows,error) {
         }
     } else {
         println("query null because db not connected")
-        err := errors.New("no connection")
-        return &Qrows{},err
+        return &Qrows{}, errors.New("no connection")
     }
 }
 
