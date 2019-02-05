@@ -18,7 +18,7 @@ function DropdownTextbox(props){
                 {props.title}
             </div>
             <div className="dropmenu-content">
-            <textarea rows="10" cols="70" id={textBoxId}>
+            <textarea rows="10" cols="70" id={textBoxId} placeholder={`If running multiple queries, separate them with a semicolon;`}>
             </textarea>
             <br/>
             <button onClick={()=>{
@@ -152,6 +152,8 @@ class TableGrid extends React.Component {
         )
     }
     render(){
+        if (this.props.table.Vals === null)
+            this.props.table.Vals = [];
         return(
             <div className="tableDiv" id={this.state.parentId}> 
             <table className="table" id={this.state.childId}>
@@ -226,7 +228,7 @@ class QuerySelect extends React.Component {
         if (results.Status & 1){
             alert("Could not make query. Bad connection?");
         }
-        else if (results.Status === 0)
+        else if (results.Status === 0){
             this.setState({
                 showQuery : results.Entries.map(
                     tab => <QueryRender 
@@ -234,6 +236,7 @@ class QuerySelect extends React.Component {
                                hideColumns = {new Int8Array(tab.Numcols)}
                                rows = {new Object({col:"",val:"*"})}
                            />) });
+        }
     }
     render(){
         var preloadedMenu = ( <div className="queryMenuContainer"> 

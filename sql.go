@@ -23,6 +23,7 @@ type Qrows struct {
     Numcols int
     Colnames []string
     Vals [][]interface{}
+    Status int
 }
 type ReturnData struct {
     Entries []*Qrows

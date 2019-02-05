@@ -1,6 +1,6 @@
 export var metaDataQueries = [
         { "key":"columns_total", 
-          "label":"informationSchema.columns", 
+          "label":"list of columns", 
           "query":"SELECT * FROM information_schema.Columns;" 
         },
 
@@ -36,5 +36,10 @@ export var metaDataQueries = [
           "label":"column info abridged",
           "query": `SELECT table_name, column_name, ordinal_position, data_type, is_nullable
                     FROM information_schema.columns;`,
+        },
+
+        { "key":"information_shema.tables",
+          "label":"list of tables",
+          "query": `SELECT * from information_schema.tables`,
         }
     ]

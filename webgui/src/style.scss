@@ -14,6 +14,7 @@ $ojgradient3: #ea5507;
 $ojgradient4: #fb955e;
 
 $tablebg: #ccc;
+$dropdownbg: brown;
 
 @mixin sgradient($top,$tp,$bt,$bot) {
     background: $top;
@@ -33,6 +34,8 @@ html {
 .dropmenu-content{
     display: none;
     position: absolute;
+    padding: 1em;
+    background: $dropdownbg;
     div {
         padding: .2em .5em;
         background-color: $button1;
