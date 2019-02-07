@@ -37,19 +37,26 @@ var Qcache map[string]*Qrows
 // -n to not connect to azure
 // -c to not run the server
 // -p to change port
-var noms = flag.Bool("n", false, "Don't connect to azure")
-var cmode = flag.Bool("c", false, "Run in text mode for debugging")
-var port = flag.String("p", "8060", "Change port from 8060")
+var dbNoCon = flag.Bool("no", false, "Don't connect to database")
+var localPort = flag.String("port", "8060", "Change localhost port")
+
+var dbserver = flag.String("s", os.Getenv("MSSQL_CLI_SERVER"), "Database URL")
+var dbname = flag.String("d", os.Getenv("MSSQL_CLI_DATABASE"), "Database name")
+var dblogin = flag.String("u", os.Getenv("MSSQL_CLI_USER"), "Database login user")
+var dbpass = flag.String("p", "", "Databasee login password")
 
 func main() {
     var db *sql.DB
     var er error
     flag.Parse()
+    if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
+
     Qcache = make(map[string]*Qrows)
 
+
     //if connecting to database
-    if (! *noms) {
-        db,er = sqlConnect()
+    if (! *dbNoCon) {
+        db,er = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
     }
 
     println("Starting server")
@@ -57,7 +64,7 @@ func main() {
 
 
     //close database connection if there is one
-    if (! *noms) {
+    if (! *dbNoCon) {
         println("closing connection")
         db.Close()
     }
@@ -70,7 +77,7 @@ func server(db *sql.DB, er error) {
     http.HandleFunc("/query/", queryHandler(db,er))
     http.HandleFunc("/premade", premadeHandler(db))
     http.HandleFunc("/premade/", premadeHandler(db))
-    http.ListenAndServe(":"+*port, nil)
+    http.ListenAndServe(":"+*localPort, nil)
     //http.ListenAndServe("localhost:"+*port, nil)
 }
 
@@ -133,14 +140,10 @@ func premadeHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
 }
 
 //initialize database connection
-func sqlConnect() (*sql.DB, error) {
-    login := "dfhntz"
-    pass := os.Getenv("MSSQL_CLI_PASSWORD")
-    server := "dfhntz.database.windows.net"
-    dbname := "testdb"
+func sqlConnect(login, pass, server, name string) (*sql.DB, error) {
     port := 1433
     query := url.Values{}
-    query.Add("database",dbname)
+    query.Add("database",name)
     query.Add("connection timeout","30")
     u := &url.URL{
         Scheme:   "sqlserver",
@@ -184,7 +187,7 @@ func runQuery(db *sql.DB, query string) (*Qrows,error) {
     println(query)
 
     //if server connection allowed
-    if (! *noms) {
+    if (! *dbNoCon) {
 
         rows,err := db.Query(query)
         if err == nil {
