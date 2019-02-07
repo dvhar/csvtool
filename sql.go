@@ -56,7 +56,7 @@ func main() {
     server(db,er)
 
 
-    //clost database connection if there is one
+    //close database connection if there is one
     if (! *noms) {
         println("closing connection")
         db.Close()
@@ -77,18 +77,20 @@ func server(db *sql.DB, er error) {
 //returns handler function for query requests from the webgui
 func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
-        type Qr struct {
+
+        //struct that matches incoming json requests
+        type Qrequest struct {
             Query string
             Savit bool
         }
         body, _ := ioutil.ReadAll(r.Body)
         println(formatRequest(r))
         println(string(body))
-        var rec Qr
+        var req Qrequest
         var entries []*Qrows
         var fullData ReturnData
         var err error
-        json.Unmarshal(body,&rec)
+        json.Unmarshal(body,&req)
         fullData.Status = 0
 
         //return null query if no connection
@@ -99,7 +101,7 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
         //attempt query if there is a connection
         } else {
             println("requesting query")
-            entries,err = runQueries(db, rec.Query)
+            entries,err = runQueries(db, req.Query)
             if err != nil {
                 fullData.Status |= 1
             }
@@ -108,7 +110,7 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
         fullData.Entries = entries
         full_json,_ := json.Marshal(fullData)
 
-        if rec.Savit {
+        if req.Savit {
             println("saving query...")
             file,_ := os.OpenFile("savedQueries.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
             file.WriteString(string(full_json))
