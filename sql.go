@@ -19,6 +19,22 @@ import (
     "os"
 )
 
+//command line flags
+var dbNoCon = flag.Bool("no", false, "Don't connect to database")
+var localPort = flag.String("port", "8060", "Change localhost port")
+var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
+var dbserver = flag.String("s", os.Getenv("MSSQL_CLI_SERVER"), "Database URL")
+var dbname = flag.String("d", os.Getenv("MSSQL_CLI_DATABASE"), "Database name")
+var dblogin = flag.String("u", os.Getenv("MSSQL_CLI_USER"), "Database login user")
+var dbpass = flag.String("p", "", "Database login password")
+
+const (
+    CON_BLANK = 1 << iota
+    CON_ERROR = 1 << iota
+    CON_CHANGED = 1 << iota
+    CON_UNCHANGED = 1 << iota
+)
+
 //one Qrows struct holds the results of one query
 type Qrows struct {
     Numrows int
@@ -28,30 +44,28 @@ type Qrows struct {
     Status int
     Query string
 }
+//status 0 is good
 type ReturnData struct {
     Entries []*Qrows
     Status int
 }
 
+//status 0 is blank
+type Connection struct {
+    Db *sql.DB
+    Err error
+    Status int
+    Login string
+    Server string
+    Database string
+}
+
 //TODO: find out if program will run on multiple databases. Will need cache for each db
 var Qcache map[string]*Qrows
-
-// -n to not connect to azure
-// -c to not run the server
-// -p to change port
-var dbNoCon = flag.Bool("no", false, "Don't connect to database")
-var localPort = flag.String("port", "8060", "Change localhost port")
-var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
-
-var dbserver = flag.String("s", os.Getenv("MSSQL_CLI_SERVER"), "Database URL")
-var dbname = flag.String("d", os.Getenv("MSSQL_CLI_DATABASE"), "Database name")
-var dblogin = flag.String("u", os.Getenv("MSSQL_CLI_USER"), "Database login user")
-var dbpass = flag.String("p", "", "Databasee login password")
+var dbCon Connection
 
 func main() {
-    //set up vars for db connection
-    var db *sql.DB
-    var er error
+    //get password and other flags
     flag.Parse()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
@@ -61,7 +75,7 @@ func main() {
 
     //if connecting to database
     if (! *dbNoCon) {
-        db,er = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
+        dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
     }
 
     println("Starting server")
@@ -72,32 +86,33 @@ func main() {
     serverUrl := host + port
     done := make(chan bool)
 
-    go server(db,serverUrl,done,er)
+    //start server and browser
+    go server(serverUrl,done)
     launch("localhost"+port);
     <-done
 
 
     //close database connection if there is one
-    if (! *dbNoCon) {
+    if (dbCon.Status & CON_BLANK != 0) {
         println("closing connection")
-        db.Close()
+        dbCon.Db.Close()
     }
 }
 
 //webserver
-func server(db *sql.DB, serverUrl string, done chan bool, er error) {
+func server(serverUrl string, done chan bool) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
-    http.HandleFunc("/query", queryHandler(db,er))
-    http.HandleFunc("/query/", queryHandler(db,er))
-    http.HandleFunc("/premade", premadeHandler(db))
-    http.HandleFunc("/premade/", premadeHandler(db))
+    http.HandleFunc("/query", queryHandler())
+    http.HandleFunc("/query/", queryHandler())
+    http.HandleFunc("/login", loginHandler())
+    http.HandleFunc("/login/", loginHandler())
 
     http.ListenAndServe(serverUrl, nil)
     done <- true
 }
 
 //returns handler function for query requests from the webgui
-func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request)) {
+func queryHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
 
         //struct that matches incoming json requests
@@ -106,8 +121,8 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
             Savit bool
         }
         body, _ := ioutil.ReadAll(r.Body)
-        println(formatRequest(r))
-        println(string(body))
+            println(formatRequest(r))
+            println(string(body))
         var req Qrequest
         var entries []*Qrows
         var fullData ReturnData
@@ -116,14 +131,14 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
         fullData.Status = 0
 
         //return null query if no connection
-        if er != nil {
+        if dbCon.Err != nil {
             println("no database connection")
             entries = append(entries,&Qrows{})
 
         //attempt query if there is a connection
         } else {
             println("requesting query")
-            entries,err = runQueries(db, req.Query)
+            entries,err = runQueries(dbCon.Db, req.Query)
             if err != nil {
                 fullData.Status |= 1
             }
@@ -132,48 +147,107 @@ func queryHandler(db *sql.DB, er error) (func(http.ResponseWriter, *http.Request
         fullData.Entries = entries
         full_json,_ := json.Marshal(fullData)
 
+        //save queries to json file
         if req.Savit {
             println("saving query...")
             file,_ := os.OpenFile("savedQueries.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
             file.WriteString(string(full_json))
             file.Close()
         }
-        //Printf("resp: %+v", full_json)
-        //println(string(full_json))
+            //Printf("resp: %+v", full_json)
+            //println(string(full_json))
         Fprint(w, string(full_json))
     }
 }
 
-func premadeHandler(db *sql.DB) (func(http.ResponseWriter, *http.Request)) {
+func loginHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
-        println("Trying query...")
-        entries,_ := runQueries(db, premade("columns_abridged") + premade("primaries"))
-        full_json,_ := json.Marshal(entries)
+
+        //struct that matches incoming json requests
+        type Lrequest struct {
+            Login string
+            Pass string
+            Server string
+            Database string
+            Action int
+        }
+        //struct for return json.
+        type Lreturn struct {
+            Login string
+            Server string
+            Database string
+            Status int
+        }
+        var ret Lreturn
+        ret.Status = dbCon.Status
+        ret.Login = dbCon.Login
+        ret.Server = dbCon.Server
+        ret.Database = dbCon.Database
+
+        //handle request
+        body, _ := ioutil.ReadAll(r.Body)
+        var req Lrequest
+            println(formatRequest(r))
+            println(string(body))
+        json.Unmarshal(body,&req)
+        newCon := sqlConnect(req.Login, req.Pass, req.Server, req.Database)
+
+        //prepare response
+        if newCon.Err == nil {
+            dbCon = newCon
+            ret.Status = dbCon.Status
+            ret.Login = dbCon.Login
+            ret.Server = dbCon.Server
+            ret.Database = dbCon.Database
+            println("Connected to "+dbCon.Database)
+        } else {
+            ret.Status = CON_UNCHANGED
+        }
+
+        full_json,_ := json.Marshal(ret)
         Fprint(w, string(full_json))
-        println("finished query.")
     }
 }
 
 //initialize database connection
-func sqlConnect(login, pass, server, name string) (*sql.DB, error) {
-    port := 1433
-    query := url.Values{}
-    query.Add("database",name)
-    query.Add("connection timeout","30")
-    u := &url.URL{
-        Scheme:   "sqlserver",
-        User:     url.UserPassword(login, pass),
-        Host:     Sprintf("%s:%d", server, port),
-        RawQuery: query.Encode(),
-    }
-    connectString := u.String()
-    db,err := sql.Open("mssql", connectString)
-    if err != nil {
-        println("connection error")
+func sqlConnect(login, pass, server, name string) Connection {
+    var ret Connection
+
+    //check parameters
+    if login == "" || pass == "" || server == "" || name == "" {
+
+        ret.Status = CON_BLANK
+        ret.Err = errors.New("No Login Credentials")
+
     } else {
-        println("db connection successful")
+        //setup and make connection
+        port := 1433
+        query := url.Values{}
+        query.Add("database",name)
+        query.Add("connection timeout","30")
+        u := &url.URL{
+            Scheme:   "sqlserver",
+            User:     url.UserPassword(login, pass),
+            Host:     Sprintf("%s:%d", server, port),
+            RawQuery: query.Encode(),
+        }
+        connectString := u.String()
+        db,err := sql.Open("mssql", connectString)
+
+        //prepare return struct
+        ret = Connection{ Db: db, Err: err}
+        if err != nil {
+            println("connection error")
+            ret.Status = CON_ERROR
+        } else {
+            println("db connection successful")
+            ret.Status = CON_CHANGED
+            ret.Login = login
+            ret.Database = name
+            ret.Server = server
+        }
     }
-    return db, err
+    return ret
 }
 
 //wrapper for runQuery() that caches results
@@ -201,8 +275,8 @@ func runCachingQuery(db *sql.DB, query string) (*Qrows,error) {
 func runQuery(db *sql.DB, query string) (*Qrows,error) {
     println(query)
 
-    //if server connection allowed
-    if (! *dbNoCon) {
+    //if connected to SQL server
+    if (dbCon.Status & CON_CHANGED != 0) {
 
         rows,err := db.Query(query)
         if err == nil {
