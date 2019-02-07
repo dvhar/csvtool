@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {getData,getUnique,getWhere,sortQuery} from './utils.js';
+import {postRequest,getUnique,getWhere,sortQuery} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 
@@ -256,7 +256,7 @@ class QuerySelect extends React.Component {
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
                             contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{
-                                getData({body:{Query:v.query}}).then(dat=>this.showLoadedQuery(dat))
+                                postRequest({path:"/query/",body:{Query:v.query}}).then(dat=>this.showLoadedQuery(dat))
                             }}>{v.label}</option>)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                          />
@@ -267,7 +267,7 @@ class QuerySelect extends React.Component {
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                             submit = {(query, savit)=>{
-                                getData({body:{Query:query, Savit:savit}}).then(dat=>this.showLoadedQuery(dat))
+                                postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>this.showLoadedQuery(dat))
                             }}
                          />
                      </div>);

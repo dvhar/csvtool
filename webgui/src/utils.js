@@ -8,11 +8,11 @@ export class dataFetcher {
         this.cache = {};
     }
     makeQuery(request){
-        //var data = getData({body:{Query:"select thing from place"}})
+        //var data = postRequest({body:{Query:"select thing from place"}})
         console.log(request.body.Query);
         var hash = sha1(request.body.Query);
         if (this.cache[hash] === undefined){
-            return getData(request).then(res=>{
+            return postRequest(request).then(res=>{
                 this.cache[hash] = JSON.parse(JSON.stringify({ query: request.body.Query, data: res }));
                 return res;
             })
@@ -37,8 +37,9 @@ export function validJson(str) {
     return true;
 }
 
-export function getData(rrequest){
-    var request = new Request('/query', {
+
+export function postRequest(request){
+    var req = new Request(request.path, {
         method: 'POST',
         mode: 'cors',
         cache: "no-cache",
@@ -46,9 +47,9 @@ export function getData(rrequest){
         redirect: 'follow',
         referrer: "no-referrer",
         headers: new Headers({ "Content-Type": "application/json", }),
-        body: JSON.stringify(rrequest.body),
+        body: JSON.stringify(request.body),
     });
-    return fetch(request)
+    return fetch(req)
     .then(res=>res.json())
     //.then(res =>res);
     //.then(res => {console.log(res); return res;});
