@@ -10,10 +10,12 @@ import (
     "io/ioutil"
     "net/http"
     "net/url"
+    "runtime"
     "strings"
     "errors"
     . "fmt"
     "flag"
+    "os/exec"
     "os"
 )
 
@@ -39,6 +41,7 @@ var Qcache map[string]*Qrows
 // -p to change port
 var dbNoCon = flag.Bool("no", false, "Don't connect to database")
 var localPort = flag.String("port", "8060", "Change localhost port")
+var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
 
 var dbserver = flag.String("s", os.Getenv("MSSQL_CLI_SERVER"), "Database URL")
 var dbname = flag.String("d", os.Getenv("MSSQL_CLI_DATABASE"), "Database name")
@@ -46,11 +49,13 @@ var dblogin = flag.String("u", os.Getenv("MSSQL_CLI_USER"), "Database login user
 var dbpass = flag.String("p", "", "Databasee login password")
 
 func main() {
+    //set up vars for db connection
     var db *sql.DB
     var er error
     flag.Parse()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
+    //initialize query data cache
     Qcache = make(map[string]*Qrows)
 
 
@@ -60,7 +65,16 @@ func main() {
     }
 
     println("Starting server")
-    server(db,er)
+    //set up server url and goroutine channel
+    host := "localhost"
+    port := ":" + *localPort
+    if *danger { host = "" }
+    serverUrl := host + port
+    done := make(chan bool)
+
+    go server(db,serverUrl,done,er)
+    launch("localhost"+port);
+    <-done
 
 
     //close database connection if there is one
@@ -71,14 +85,15 @@ func main() {
 }
 
 //webserver
-func server(db *sql.DB, er error) {
+func server(db *sql.DB, serverUrl string, done chan bool, er error) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query", queryHandler(db,er))
     http.HandleFunc("/query/", queryHandler(db,er))
     http.HandleFunc("/premade", premadeHandler(db))
     http.HandleFunc("/premade/", premadeHandler(db))
-    http.ListenAndServe(":"+*localPort, nil)
-    //http.ListenAndServe("localhost:"+*port, nil)
+
+    http.ListenAndServe(serverUrl, nil)
+    done <- true
 }
 
 //returns handler function for query requests from the webgui
@@ -271,8 +286,7 @@ func premade(request string ) (string) {
     }
 }
 
-
-
+//show request from browser
 func formatRequest(r *http.Request) string {
  var request []string
  url := Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
@@ -290,4 +304,22 @@ func formatRequest(r *http.Request) string {
     request = append(request, r.Form.Encode())
  }
   return strings.Join(request, "\n")
+}
+
+//launch browser
+func launch(url string) error {
+    var cmd string
+    var args []string
+
+    switch runtime.GOOS {
+    case "windows":
+        cmd = "cmd"
+        args = []string{"/c", "start"}
+    case "darwin":
+        cmd = "open"
+    default: // "linux", "freebsd", "openbsd", "netbsd"
+        cmd = "xdg-open"
+    }
+    args = append(args, url)
+    return exec.Command(cmd, args...).Start()
 }
