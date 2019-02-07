@@ -16,6 +16,10 @@ $ojgradient4: #fb955e;
 $tablebg: #ccc;
 $dropdownbg: brown;
 
+$loginTopBut: #a6e8a3;
+$topbarbg: #ffe889;
+$loginbg: #fdffe5;
+
 @mixin sgradient($top,$tp,$bt,$bot) {
     background: $top;
     background: linear-gradient(to bottom, $top 1%,$tp 22%,$bt 22%,$bot 100%);
@@ -113,4 +117,37 @@ html {
 }
 .tableModifiers {
     text-align: center;
+}
+
+//top bar
+.topBar {
+    background: $topbarbg;
+    min-height: 2em;
+    padding: 0.2em;
+    display: flex;
+    justify-content: left;
+
+}
+
+//login section
+.loginBox {
+}
+.loginButtonDiv {
+    padding-left: 9em;
+}
+.LoginShow {
+    padding: 0.3em;
+    background: $loginbg;
+    top: 2.2em;
+    position: absolute;
+    display: none;
+}
+.show { display: block; }
+.LoginShow label {
+    width: 9em;
+    display: inline-block;
+    text-align: right;
+}
+.LoginShow input {
+    min-width: 20em;
 }

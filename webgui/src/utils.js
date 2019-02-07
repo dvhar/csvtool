@@ -50,7 +50,7 @@ export function postRequest(request){
         body: JSON.stringify(request.body),
     });
     return fetch(req)
-    .then(res=>res.json())
+    .then(res=>{if (res.status >= 400) return {Status: res.status}; else return res.json()})
     //.then(res =>res);
     //.then(res => {console.log(res); return res;});
     //.then(res=>{if (validJson(res)) return res.json(); return {err:"not valid json",res:res}})

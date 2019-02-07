@@ -80,3 +80,31 @@ html {
 
 .tableModifiers {
   text-align: center; }
+
+.topBar {
+  background: #ffe889;
+  min-height: 2em;
+  padding: 0.2em;
+  display: flex;
+  justify-content: left; }
+
+.loginButtonDiv {
+  padding-left: 9em; }
+
+.LoginShow {
+  padding: 0.3em;
+  background: #fdffe5;
+  top: 2.2em;
+  position: absolute;
+  display: none; }
+
+.show {
+  display: block; }
+
+.LoginShow label {
+  width: 9em;
+  display: inline-block;
+  text-align: right; }
+
+.LoginShow input {
+  min-width: 20em; }

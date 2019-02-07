@@ -282,13 +282,79 @@ class QuerySelect extends React.Component {
     }
 }
 
+class TopMenuBar extends React.Component {
+    render(){
+        return (
+            <div className="topBar">
+            <LoginForm/>
+            <div id="loginSuccess"></div>
+            </div>
+        )
+    }
+}
+
+
+class LoginForm extends React.Component {
+    toggleForm(){
+        document.getElementById("LoginShow").classList.toggle("show");
+    }
+    render(){
+        return (
+            <>
+            <button className="loginButton dropContent" onClick={()=>this.toggleForm()}>
+            Login to Database
+            </button>
+            <div id="LoginShow" className="LoginShow  dropContent">
+                <label className="dropContent">Database url:</label> 
+                <input className="dropContent" id="dbUrl"/> <br/>
+                <label className="dropContent">Database name:</label> 
+                <input className="dropContent" id="dbName"/> <br/>
+                <label className="dropContent">login name:</label> 
+                <input className="dropContent" id="dbLogin"/> <br/>
+                <label className="dropContent">login password:</label> 
+                <input className="dropContent" id="dbPass" type="password"/> <br/>
+                <div className="loginButtonDiv dropContent">
+                    <button className="dropContent" onClick={()=>{
+                        var dbUrl = document.getElementById("dbUrl").value;
+                        var dbName = document.getElementById("dbName").value;
+                        var dbLogin = document.getElementById("dbLogin").value;
+                        var dbPass = document.getElementById("dbPass").value;
+                        postRequest({path:"/login/",body:{Login: dbLogin, Pass:dbPass, Database: dbName, Server: dbUrl}})
+                        .then(dat=>{
+                            console.log(dat)
+                            var message;
+                            switch (dat.Status){
+                                case 4:  
+                                    message = `logged in to ${dat.Database}.`;
+                                    document.getElementById("loginSuccess").innerHTML = message; 
+                                    document.getElementById("LoginShow").classList.remove('show');
+                                    break;
+                                default: 
+                                    message = "Nothing happened. Possible bad credentials or connection.";
+                                    document.getElementById("loginError").innerHTML = message; 
+                                    break;
+                            }
+                        })
+                    }}
+                    >Submit</button><br/>
+                <span id="loginError"></span>
+                </div>
+            </div>
+            </>
+        )
+    }
+}
+
 class Main extends React.Component {
     render(){
         return (
+        <>
+        <TopMenuBar/>
         <QuerySelect
             schemaData = {this.props.schemaData}
             metaTables = {this.props.metaTables}
         />
+        </>
         )
     }
 }
@@ -302,6 +368,18 @@ function startRender(testdata){
         document.getElementById('root'));
 }
 
+//dropdown closing
+window.onclick = function(event) {
+  if (!event.target.matches('.dropContent')) {
+    var dropdowns = document.getElementsByClassName("dropContent");
+    for (var i = 0; i < dropdowns.length; i++) {
+      var openDropdown = dropdowns[i];
+      if (openDropdown.classList.contains('show')) {
+        openDropdown.classList.remove('show');
+      }
+    }
+  }
+}
 
 var testdata = require('./schema.json');
 startRender(testdata);
