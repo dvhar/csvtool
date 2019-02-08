@@ -50,6 +50,7 @@ type ReturnData struct {
     Entries []*Qrows
     Status int
     Message string
+    OriginalQuery string
 }
 
 //status 0 is blank
@@ -127,31 +128,33 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             println(string(body))
         var req Qrequest
         var entries []*Qrows
-        var fullData ReturnData
+        var fullReturnData ReturnData
         var err error
         json.Unmarshal(body,&req)
-        fullData.Status = 0
+        fullReturnData.Status = 0
+        fullReturnData.OriginalQuery = req.Query
 
         //return null query if no connection
         if dbCon.Err != nil {
             println("no database connection")
             entries = append(entries,&Qrows{})
-            fullData.Message = "No database connection"
+            fullReturnData.Message = "No database connection"
 
         //attempt query if there is a connection
         } else {
             println("requesting query")
             entries,err = runQueries(dbCon.Db, req.Query)
             if err != nil {
-                fullData.Status |= 1
-                fullData.Message = "Error querying database"
+                fullReturnData.Status |= 1
+                fullReturnData.Message = "Error querying database"
             } else {
-                fullData.Message = "Query successful"
+                fullReturnData.Status |= 2
+                fullReturnData.Message = "Query successful"
             }
         }
 
-        fullData.Entries = entries
-        full_json,_ := json.Marshal(fullData)
+        fullReturnData.Entries = entries
+        full_json,_ := json.Marshal(fullReturnData)
 
         //save queries to json file
         if req.Savit {

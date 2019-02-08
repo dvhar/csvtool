@@ -350,7 +350,7 @@ class Main extends React.Component {
         if (results.Status & 1){
             alert("Could not make query. Bad connection?");
         }
-        else if (results.Status === 0){
+        else if (results.Status & 2){
             this.setState({
                 showQuery : results.Entries.map(
                     tab => <QueryRender 
@@ -364,6 +364,8 @@ class Main extends React.Component {
         postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
             this.setState({topMessage : dat.Message});
             this.showLoadedQuery(dat);
+            if (dat.Status & 2)
+                this.setState({ queryHistory : this.state.queryHistory.concat(dat.OriginalQuery) });
         });
     }
 
