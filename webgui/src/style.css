@@ -95,6 +95,12 @@ html {
   width: 100%;
   top: 0; }
 
+.topMessage {
+  color: #ffff99; }
+
+.topButton {
+  margin-right: 1em; }
+
 .loginButtonDiv {
   padding-left: 9em; }
 
@@ -105,9 +111,6 @@ html {
   position: absolute;
   display: none; }
 
-.show {
-  display: block; }
-
 .LoginShow label {
   width: 9em;
   display: inline-block;
@@ -116,12 +119,26 @@ html {
 .LoginShow input {
   min-width: 20em; }
 
+.saveShow {
+  padding: 0.3em;
+  background: #fdffe5;
+  top: 2.2em;
+  position: absolute;
+  display: none; }
+
+.saveShow label {
+  display: inline-block; }
+
+.saveShow input {
+  min-width: 40em; }
+
 .historyArrows {
-  display: inline-block;
   right: 0;
   position: inherit;
-  font-weight: 900;
   color: #ffff99; }
 
 .arrow {
   font-size: x-large; }
+
+.show {
+  display: block; }

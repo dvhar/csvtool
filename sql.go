@@ -3,8 +3,9 @@ import (
     _ "github.com/denisenkom/go-mssqldb"
     "github.com/GeertJohan/go.rice"
     //"github.com/Jeffail/gabs"
-    "encoding/json"
     "encoding/base64"
+    "encoding/json"
+    "path/filepath"
     "database/sql"
     "crypto/sha1"
     "io/ioutil"
@@ -109,6 +110,8 @@ func server(serverUrl string, done chan bool) {
     http.HandleFunc("/query/", queryHandler())
     http.HandleFunc("/login", loginHandler())
     http.HandleFunc("/login/", loginHandler())
+    http.HandleFunc("/info", infoHandler())
+    http.HandleFunc("/info/", infoHandler())
 
     http.ListenAndServe(serverUrl, nil)
     done <- true
@@ -122,6 +125,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         type Qrequest struct {
             Query string
             Savit bool
+            Savepath string
         }
         body, _ := ioutil.ReadAll(r.Body)
             println(formatRequest(r))
@@ -157,6 +161,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         full_json,_ := json.Marshal(fullReturnData)
 
         //save queries to json file
+        //TODO: handle requests that specify path
         if req.Savit {
             println("saving query...")
             file,_ := os.OpenFile("savedQueries.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
@@ -230,6 +235,35 @@ func loginHandler() (func(http.ResponseWriter, *http.Request)) {
                 ret.Message = "Not logged in"
         }
         full_json,_ = json.Marshal(ret)
+        Fprint(w, string(full_json))
+    }
+}
+
+func infoHandler() (func(http.ResponseWriter, *http.Request)) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        //request and response types
+        type Irequest struct {
+            Info string
+        }
+        type Ireturn struct {
+            Path string
+            Status int
+        }
+        body, _ := ioutil.ReadAll(r.Body)
+        var req Irequest
+        var ret Ireturn
+        json.Unmarshal(body,&req)
+
+        //currently only returns path
+        switch (req.Info){
+            case "savepath":
+                ret.Path, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+                ret.Status = 1
+            default:
+                ret.Path, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+                ret.Status = 0
+        }
+        full_json,_ := json.Marshal(ret)
         Fprint(w, string(full_json))
     }
 }

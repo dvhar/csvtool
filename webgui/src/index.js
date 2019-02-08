@@ -271,7 +271,10 @@ class TopMenuBar extends React.Component {
             <LoginForm
                 updateTopMessage = {this.props.updateTopMessage}
             />
-            <div id="topMessage">{this.props.s.topMessage}</div>
+            <Saver
+                filepath = {this.props.s.filepath}
+            />
+            <div id="topMessage" className="topMessage">{this.props.s.topMessage}</div>
             <History
                 position = {this.props.s.historyPosition} 
                 last = {this.props.s.queryHistory.length - 1}
@@ -297,14 +300,34 @@ class History extends React.Component {
     }
 }
 
-class LoginForm extends React.Component {
-    toggleForm(){
-        document.getElementById("LoginShow").classList.toggle("show");
+class Saver extends React.Component {
+    toggleForm(){ document.getElementById("saveShow").classList.toggle("show");
+                  document.getElementById("LoginShow").classList.remove("show"); }
+    render(){
+        return(
+            <>
+            <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>
+            <div id="saveShow" className="saveShow dropContent">
+                <label className="dropContent">Save location:</label> 
+                <input id="savePath" className="dropContent" defaultValue={this.props.filepath + "/dataSave.json"}/>
+                <button onClick={()=>{
+                    //TODO: send save query with path
+                    var path = document.getElementById("savePath").value;
+                    console.log(path);
+                }}>save</button>
+            </div>
+            </>
+        )
     }
+}
+
+class LoginForm extends React.Component {
+    toggleForm(){ document.getElementById("LoginShow").classList.toggle("show");
+                  document.getElementById("saveShow").classList.remove("show"); }
     render(){
         return (
             <>
-            <button className="loginButton dropContent" onClick={()=>this.toggleForm()}>
+            <button className="loginButton dropContent topButton" onClick={()=>this.toggleForm()}>
             Login to Database
             </button>
             <div id="LoginShow" className="LoginShow  dropContent">
@@ -351,19 +374,24 @@ class Main extends React.Component {
     constructor(props) {
         super(props);
 
+        this.state = {
+            topMessage : "",
+            filepath : "",
+            queryHistory: ['',],
+            historyPosition : 0,
+            showQuery : <></>,
+        }
+
         //get initial login state
         postRequest({path:"/login/",body:{Action: "check"}})
         .then(dat=>{
             console.log(dat);
             this.setState({topMessage: dat.Status===16?  dat.Message : "No connection"})
         });
+        //get initial file path
+        postRequest({path:"/info/",body:{Info : "savepath"}})
+        .then(dat=>this.setState({ filepath : (dat.Status & 1) ? dat.Path : ""}));
 
-        this.state = {
-            topMessage : "",
-            queryHistory: ['',],
-            historyPosition : 0,
-            showQuery : <></>,
-        }
     }
 
     showLoadedQuery(results){
