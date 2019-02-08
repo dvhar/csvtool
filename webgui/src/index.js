@@ -8,19 +8,18 @@ import * as serviceWorker from './serviceWorker';
 
 //var squel = require("squel");
 
-function DropdownTextbox(props){
-    var textBoxId = Math.random();
+function DropdownQueryTextbox(props){
     return(
         <div className={`dropmenu ${props.classes[0]}`}>
             <div className={`dropButton ${props.classes[1]}`}>
                 {props.title}
             </div>
             <div className="dropmenu-content">
-            <textarea rows="10" cols="70" id={textBoxId} placeholder={`If running multiple queries, separate them with a semicolon;`}>
+            <textarea rows="10" cols="70" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
             </textarea>
             <br/>
             <button onClick={()=>{
-                var query = document.getElementById(textBoxId).value;
+                var query = document.getElementById("textBoxId").value;
                 var savit = document.getElementById("saveCheck").checked;
                 props.submit(query, savit);
             }}>Submit Query</button>
@@ -30,7 +29,7 @@ function DropdownTextbox(props){
     )
 }
 
-function DropdownMenu(props){
+function DropdownQueryMenu(props){
     return(
         <div className={`dropmenu ${props.classes[0]}`}>
             <div className={`dropButton ${props.classes[1]}`}>
@@ -38,17 +37,37 @@ function DropdownMenu(props){
             </div>
             <div className="dropmenu-content">
             <select size={String(props.size)} className="dropSelect" id="premadeMultiSelect" multiple>
-                {props.contents}
+                {props.contents.map((v,i)=><option key={i} data-key={v.key} data-idx={i}>{v.label}</option>)}
             </select>
             <button onClick={()=>{
+                    var queries = "";
                     var selected = document.getElementById("premadeMultiSelect").selectedOptions;
-                    console.log(selected);
+                    for (var i in selected)
+                        if (i == Number(i))
+                            queries += premades.metaDataQueries[selected[i].getAttribute("data-idx")].query;
+                    props.submit(queries);
                 }}
             >Submit</button>
             </div>
         </div>
     )
 }
+
+function DropdownGenericMenu(props){
+    return(
+        <div className={`dropmenu ${props.classes[0]}`}>
+            <div className={`dropButton ${props.classes[1]}`}>
+                {props.title}
+            </div>
+            <div className="dropmenu-content">
+            <select size={String(props.size)} className="dropSelect">
+                {props.contents}
+            </select>
+            </div>
+        </div>
+    )
+}
+
 //drop down list for what columns to hide
 class TableSelectColumns extends React.Component {
     constructor(props){
@@ -67,7 +86,7 @@ class TableSelectColumns extends React.Component {
     }
     render(){
         return (
-            <DropdownMenu
+            <DropdownGenericMenu
                 title = {this.props.title}
                 size = {Math.min(20,this.props.table.Colnames.length)}
                 contents = {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
@@ -234,38 +253,30 @@ class QuerySelect extends React.Component {
                            />) });
         }
     }
+    submitQuery(query, savit=false){
+        postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
+            this.props.updateTopMessage(dat.Message);
+            this.showLoadedQuery(dat);
+        });
+    }
+
     render(){
         var metaDataMenu = ( <div className="queryMenuContainer"> 
-                         <DropdownMenu
+                         <DropdownQueryMenu
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
                             //make this run multi-select queries
-                            submit = {(query)=>{
-                                postRequest({path:"/query/",body:{Query:query}}).then(dat=>{
-                                    this.props.updateTopMessage(dat.Message);
-                                    this.showLoadedQuery(dat)
-                                })}}
-                            //replacing this onclick with submit
-                            contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{
-                                postRequest({path:"/query/",body:{Query:v.query}}).then(dat=>{
-                                    this.props.updateTopMessage(dat.Message);
-                                    this.showLoadedQuery(dat);
-                                })
-                            }}>{v.label}</option>)}
+                            contents = {premades.metaDataQueries}
+                            submit = {(query, savit)=>this.submitQuery(query, savit)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                          />
                      </div>);
 
         var customQueryEntry = ( <div className="queryMenuContainer"> 
-                         <DropdownTextbox
+                         <DropdownQueryTextbox
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
                             classes = {["queryMenuDiv","queryMenuButton"]}
-                            submit = {(query, savit)=>{
-                                postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
-                                    this.props.updateTopMessage(dat.Message);
-                                    this.showLoadedQuery(dat)
-                                })
-                            }}
+                            submit = {(query, savit)=>this.submitQuery(query, savit)}
                          />
                      </div>);
 

@@ -40,6 +40,6 @@ export var metaDataQueries = [
 
         { "key":"information_shema.tables",
           "label":"list of tables",
-          "query": `SELECT * from information_schema.tables`,
+          "query": `SELECT * from information_schema.tables;`,
         }
     ]
