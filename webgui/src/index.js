@@ -37,9 +37,14 @@ function DropdownMenu(props){
                 {props.title}
             </div>
             <div className="dropmenu-content">
-            <select size={String(props.size)} className="dropSelect">
+            <select size={String(props.size)} className="dropSelect" id="premadeMultiSelect" multiple>
                 {props.contents}
             </select>
+            <button onClick={()=>{
+                    var selected = document.getElementById("premadeMultiSelect").selectedOptions;
+                    console.log(selected);
+                }}
+            >Submit</button>
             </div>
         </div>
     )
@@ -234,8 +239,18 @@ class QuerySelect extends React.Component {
                          <DropdownMenu
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
+                            //make this run multi-select queries
+                            submit = {(query)=>{
+                                postRequest({path:"/query/",body:{Query:query}}).then(dat=>{
+                                    this.props.updateTopMessage(dat.Message);
+                                    this.showLoadedQuery(dat)
+                                })}}
+                            //replacing this onclick with submit
                             contents = {premades.metaDataQueries.map((v,i)=><option onClick={()=>{
-                                postRequest({path:"/query/",body:{Query:v.query}}).then(dat=>this.showLoadedQuery(dat))
+                                postRequest({path:"/query/",body:{Query:v.query}}).then(dat=>{
+                                    this.props.updateTopMessage(dat.Message);
+                                    this.showLoadedQuery(dat);
+                                })
                             }}>{v.label}</option>)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                          />
@@ -246,7 +261,10 @@ class QuerySelect extends React.Component {
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                             submit = {(query, savit)=>{
-                                postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>this.showLoadedQuery(dat))
+                                postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
+                                    this.props.updateTopMessage(dat.Message);
+                                    this.showLoadedQuery(dat)
+                                })
                             }}
                          />
                      </div>);
@@ -351,6 +369,7 @@ class Main extends React.Component {
         />
         <QuerySelect
             metaTables = {this.props.metaTables}
+            updateTopMessage = {(message)=>this.setState({topMessage:message})}
         />
         </>
         )

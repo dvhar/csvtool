@@ -49,6 +49,7 @@ type Qrows struct {
 type ReturnData struct {
     Entries []*Qrows
     Status int
+    Message string
 }
 
 //status 0 is blank
@@ -135,6 +136,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         if dbCon.Err != nil {
             println("no database connection")
             entries = append(entries,&Qrows{})
+            fullData.Message = "No database connection"
 
         //attempt query if there is a connection
         } else {
@@ -142,6 +144,9 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             entries,err = runQueries(dbCon.Db, req.Query)
             if err != nil {
                 fullData.Status |= 1
+                fullData.Message = "Error querying database"
+            } else {
+                fullData.Message = "Query successful"
             }
         }
 
