@@ -233,33 +233,6 @@ class QueryRender extends React.Component {
 }
 
 class QuerySelect extends React.Component {
-    constructor(props){
-        super(props);
-        this.state = {
-            showQuery : <></>,
-        }
-    }
-    showLoadedQuery(results){
-        if (results.Status & 1){
-            alert("Could not make query. Bad connection?");
-        }
-        else if (results.Status === 0){
-            this.setState({
-                showQuery : results.Entries.map(
-                    tab => <QueryRender 
-                               table = {tab} 
-                               hideColumns = {new Int8Array(tab.Numcols)}
-                               rows = {new Object({col:"",val:"*"})}
-                           />) });
-        }
-    }
-    submitQuery(query, savit=false){
-        postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
-            this.props.updateTopMessage(dat.Message);
-            this.showLoadedQuery(dat);
-        });
-    }
-
     render(){
         var metaDataMenu = ( <div className="queryMenuContainer"> 
                          <DropdownQueryMenu
@@ -267,7 +240,7 @@ class QuerySelect extends React.Component {
                             size = {premades.metaDataQueries.length}
                             //make this run multi-select queries
                             contents = {premades.metaDataQueries}
-                            submit = {(query, savit)=>this.submitQuery(query, savit)}
+                            submit = {(query, savit)=>this.props.submitQuery(query, savit)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                          />
                      </div>);
@@ -276,7 +249,7 @@ class QuerySelect extends React.Component {
                          <DropdownQueryTextbox
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
                             classes = {["queryMenuDiv","queryMenuButton"]}
-                            submit = {(query, savit)=>this.submitQuery(query, savit)}
+                            submit = {(query, savit)=>this.props.submitQuery(query, savit)}
                          />
                      </div>);
 
@@ -284,7 +257,7 @@ class QuerySelect extends React.Component {
             <div className="querySelect"> 
             {metaDataMenu} 
             {customQueryEntry} 
-            {this.state.showQuery} 
+            {this.props.showQuery} 
             </div>
         );
     }
@@ -368,7 +341,30 @@ class Main extends React.Component {
 
         this.state = {
             topMessage : "",
+            queryHistory: [],
+            showQuery : <></>,
         }
+    }
+
+    showLoadedQuery(results){
+        if (results.Status & 1){
+            alert("Could not make query. Bad connection?");
+        }
+        else if (results.Status === 0){
+            this.setState({
+                showQuery : results.Entries.map(
+                    tab => <QueryRender 
+                               table = {tab} 
+                               hideColumns = {new Int8Array(tab.Numcols)}
+                               rows = {new Object({col:"",val:"*"})}
+                           />) });
+        }
+    }
+    submitQuery(query, savit=false){
+        postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
+            this.setState({topMessage : dat.Message});
+            this.showLoadedQuery(dat);
+        });
     }
 
     render(){
@@ -379,8 +375,10 @@ class Main extends React.Component {
             updateTopMessage = {(message)=>this.setState({topMessage:message})}
         />
         <QuerySelect
+            showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
+            submitQuery = {(query, savit)=>this.submitQuery(query, savit)}
+            showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
-            updateTopMessage = {(message)=>this.setState({topMessage:message})}
         />
         </>
         )
