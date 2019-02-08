@@ -271,12 +271,31 @@ class TopMenuBar extends React.Component {
             <LoginForm
                 updateTopMessage = {this.props.updateTopMessage}
             />
-            <div id="topMessage">{this.props.topMessage}</div>
+            <div id="topMessage">{this.props.s.topMessage}</div>
+            <History
+                position = {this.props.s.historyPosition} 
+                last = {this.props.s.queryHistory.length - 1}
+                viewHistory = {this.props.viewHistory}
+            />
             </div>
         )
     }
 }
 
+class History extends React.Component {
+    render(){
+        return(
+            <div className="historyArrows">
+            {['◀ ',`${this.props.position}/${this.props.last}`,' ▶'].map((v,i)=> <span className={`${i===1?"":"arrow"}`} onClick={()=>{
+                if (i === 0 && this.props.position > 1)
+                    this.props.viewHistory(this.props.position - 1);
+                if (i === 2 && this.props.position < this.props.last)
+                    this.props.viewHistory(this.props.position + 1);
+            }}>{v}</span>)}
+            </div>
+        )
+    }
+}
 
 class LoginForm extends React.Component {
     toggleForm(){
@@ -341,7 +360,8 @@ class Main extends React.Component {
 
         this.state = {
             topMessage : "",
-            queryHistory: [],
+            queryHistory: ['',],
+            historyPosition : 0,
             showQuery : <></>,
         }
     }
@@ -360,25 +380,33 @@ class Main extends React.Component {
                            />) });
         }
     }
-    submitQuery(query, savit=false){
+    submitQuery(query, savit=false, backtrack=false){
         postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
             this.setState({topMessage : dat.Message});
+            if ((dat.Status & 2) && (!backtrack)){
+                this.setState({ historyPosition : this.state.queryHistory.length,
+                                queryHistory : this.state.queryHistory.concat(dat.OriginalQuery),   });
+            }
             this.showLoadedQuery(dat);
-            if (dat.Status & 2)
-                this.setState({ queryHistory : this.state.queryHistory.concat(dat.OriginalQuery) });
         });
+    }
+    viewHistory(position){
+        this.setState({ historyPosition : position });
+        this.submitQuery(this.state.queryHistory[position], false, true);
     }
 
     render(){
         return (
         <>
         <TopMenuBar
-            topMessage = {this.state.topMessage}
+            s = {this.state}
             updateTopMessage = {(message)=>this.setState({topMessage:message})}
+            submitQuery = {(query, savit, backtrack)=>this.submitQuery(query, savit, backtrack)}
+            viewHistory = {(position)=>this.viewHistory(position)}
         />
         <QuerySelect
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
-            submitQuery = {(query, savit)=>this.submitQuery(query, savit)}
+            submitQuery = {(query, savit)=>this.submitQuery(query, savit, false)}
             showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
         />

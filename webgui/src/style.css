@@ -115,3 +115,13 @@ html {
 
 .LoginShow input {
   min-width: 20em; }
+
+.historyArrows {
+  display: inline-block;
+  right: 0;
+  position: inherit;
+  font-weight: 900;
+  color: #ffff99; }
+
+.arrow {
+  font-size: x-large; }

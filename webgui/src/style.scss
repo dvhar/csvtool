@@ -19,6 +19,7 @@ $dropdownbg: brown;
 $loginTopBut: #a6e8a3;
 $topbarbg: #ffe889;
 $loginbg: #fdffe5;
+$historyArrows: #ffff99;
 
 @mixin sgradient($top,$tp,$bt,$bot) {
     background: $top;
@@ -154,4 +155,16 @@ html {
 }
 .LoginShow input {
     min-width: 20em;
+}
+
+//history arrows
+.historyArrows {
+    display: inline-block;
+    right: 0;
+    position: inherit;
+    font-weight: 900;
+    color: $historyArrows;
+}
+.arrow {
+    font-size: x-large;
 }
