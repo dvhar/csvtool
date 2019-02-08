@@ -6,9 +6,7 @@ import {postRequest,getUnique,getWhere,sortQuery} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 
-var testserver = true;
 //var squel = require("squel");
-
 
 function DropdownTextbox(props){
     var textBoxId = Math.random();
@@ -24,7 +22,6 @@ function DropdownTextbox(props){
             <button onClick={()=>{
                 var query = document.getElementById(textBoxId).value;
                 var savit = document.getElementById("saveCheck").checked;
-                console.log("you pressed my botton"); 
                 props.submit(query, savit);
             }}>Submit Query</button>
             <input type="checkbox" id="saveCheck"/>Save queries to file
@@ -218,15 +215,6 @@ class QuerySelect extends React.Component {
             showQuery : <></>,
         }
     }
-    changePreloadedQuery(i){
-        var tab = this.props.schemaData[i];
-        this.setState({
-                showQuery : <QueryRender 
-                        table = {tab} 
-                        hideColumns = {new Int8Array(tab.Numcols)}
-                        rows = {new Object({col:"",val:"*"})}
-                    />, });
-    }
     showLoadedQuery(results){
         if (results.Status & 1){
             alert("Could not make query. Bad connection?");
@@ -242,15 +230,6 @@ class QuerySelect extends React.Component {
         }
     }
     render(){
-        var preloadedMenu = ( <div className="queryMenuContainer"> 
-                         <DropdownMenu
-                            title = {<h2>View database schema query{"\u25bc"}</h2>}
-                            size = {this.props.metaTables.length}
-                            contents = {this.props.metaTables.map((v,i)=> <option onClick={()=>{this.changePreloadedQuery(i)}}>{v}</option> )}
-                            classes = {["queryMenuDiv","queryMenuButton"]}
-                         />
-                     </div>);
-
         var metaDataMenu = ( <div className="queryMenuContainer"> 
                          <DropdownMenu
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
@@ -284,10 +263,13 @@ class QuerySelect extends React.Component {
 
 class TopMenuBar extends React.Component {
     render(){
+
         return (
             <div className="topBar">
-            <LoginForm/>
-            <div id="loginSuccess"></div>
+            <LoginForm
+                updateTopMessage = {this.props.updateTopMessage}
+            />
+            <div id="topMessage">{this.props.topMessage}</div>
             </div>
         )
     }
@@ -319,26 +301,25 @@ class LoginForm extends React.Component {
                         var dbName = document.getElementById("dbName").value;
                         var dbLogin = document.getElementById("dbLogin").value;
                         var dbPass = document.getElementById("dbPass").value;
-                        postRequest({path:"/login/",body:{Login: dbLogin, Pass:dbPass, Database: dbName, Server: dbUrl}})
+                        postRequest({path:"/login/",body:{Login: dbLogin, Pass:dbPass, Database: dbName, Server: dbUrl, Action: "login"}})
                         .then(dat=>{
                             console.log(dat)
                             var message;
                             switch (dat.Status){
                                 case 4:  
-                                    message = `logged in to ${dat.Database}.`;
-                                    document.getElementById("loginSuccess").innerHTML = message; 
+                                    this.props.updateTopMessage(dat.Message);
                                     document.getElementById("LoginShow").classList.remove('show');
                                     break;
                                 default: 
-                                    message = "Nothing happened. Possible bad credentials or connection.";
-                                    document.getElementById("loginError").innerHTML = message; 
+                                    this.props.updateTopMessage(dat.Message);
+                                    document.getElementById("LoginMessage").innerHTML = "Nothing happened. Maybe bad credentials or connection.";
                                     break;
                             }
                         })
                     }}
                     >Submit</button><br/>
-                <span id="loginError"></span>
                 </div>
+                <span id="LoginMessage"></span>
             </div>
             </>
         )
@@ -346,12 +327,29 @@ class LoginForm extends React.Component {
 }
 
 class Main extends React.Component {
+    constructor(props) {
+        super(props);
+
+        //get initial login state
+        postRequest({path:"/login/",body:{Action: "check"}})
+        .then(dat=>{
+            console.log(dat);
+            this.setState({topMessage: dat.Status===16?  dat.Message : "No connection"})
+        });
+
+        this.state = {
+            topMessage : "",
+        }
+    }
+
     render(){
         return (
         <>
-        <TopMenuBar/>
+        <TopMenuBar
+            topMessage = {this.state.topMessage}
+            updateTopMessage = {(message)=>this.setState({topMessage:message})}
+        />
         <QuerySelect
-            schemaData = {this.props.schemaData}
             metaTables = {this.props.metaTables}
         />
         </>
@@ -359,10 +357,9 @@ class Main extends React.Component {
     }
 }
 
-function startRender(testdata){
+function startRender(){
     ReactDOM.render(
         <Main 
-            schemaData = {testdata}
             metaTables = {["column info abridged","table key info","informationschema.colums","column info with keys"]}
         />, 
         document.getElementById('root'));
@@ -371,6 +368,7 @@ function startRender(testdata){
 //dropdown closing
 window.onclick = function(event) {
   if (!event.target.matches('.dropContent')) {
+    document.getElementById("LoginMessage").innerHTML = ""; 
     var dropdowns = document.getElementsByClassName("dropContent");
     for (var i = 0; i < dropdowns.length; i++) {
       var openDropdown = dropdowns[i];
@@ -381,8 +379,7 @@ window.onclick = function(event) {
   }
 }
 
-var testdata = require('./schema.json');
-startRender(testdata);
+startRender();
 
 
 

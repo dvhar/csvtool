@@ -110,6 +110,7 @@ html {
 
 //bigger query section
 .querySelect {
+    margin-top: 3em;
 }
 .queryMenuContainer {
     text-align: center;
@@ -122,11 +123,14 @@ html {
 //top bar
 .topBar {
     background: $topbarbg;
+    background: linear-gradient(to bottom, #f0b7a1 0%,#8c3310 50%,#752201 51%,#bf6e4e 100%);
     min-height: 2em;
     padding: 0.2em;
     display: flex;
     justify-content: left;
-
+    position: fixed;
+    width: 100%;
+    top: 0;
 }
 
 //login section

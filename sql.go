@@ -33,6 +33,7 @@ const (
     CON_ERROR = 1 << iota
     CON_CHANGED = 1 << iota
     CON_UNCHANGED = 1 << iota
+    CON_CHECKED = 1 << iota
 )
 
 //one Qrows struct holds the results of one query
@@ -169,7 +170,7 @@ func loginHandler() (func(http.ResponseWriter, *http.Request)) {
             Pass string
             Server string
             Database string
-            Action int
+            Action string
         }
         //struct for return json.
         type Lreturn struct {
@@ -177,6 +178,7 @@ func loginHandler() (func(http.ResponseWriter, *http.Request)) {
             Server string
             Database string
             Status int
+            Message string
         }
         var ret Lreturn
         ret.Status = dbCon.Status
@@ -187,24 +189,39 @@ func loginHandler() (func(http.ResponseWriter, *http.Request)) {
         //handle request
         body, _ := ioutil.ReadAll(r.Body)
         var req Lrequest
+        var full_json []uint8
             println(formatRequest(r))
             println(string(body))
         json.Unmarshal(body,&req)
-        newCon := sqlConnect(req.Login, req.Pass, req.Server, req.Database)
 
-        //prepare response
-        if newCon.Err == nil {
-            dbCon = newCon
-            ret.Status = dbCon.Status
-            ret.Login = dbCon.Login
-            ret.Server = dbCon.Server
-            ret.Database = dbCon.Database
-            println("Connected to "+dbCon.Database)
-        } else {
-            ret.Status = CON_UNCHANGED
+        switch(req.Action){
+            case "login":
+                newCon := sqlConnect(req.Login, req.Pass, req.Server, req.Database)
+                //prepare response
+                if newCon.Err == nil {
+                    dbCon = newCon
+                    ret.Status = dbCon.Status
+                    ret.Login = dbCon.Login
+                    ret.Server = dbCon.Server
+                    ret.Database = dbCon.Database
+                    println("Connected to "+dbCon.Database)
+                } else {
+                    ret.Status = CON_UNCHANGED
+                }
+
+            case "check":
+                ret.Status = CON_CHECKED
         }
 
-        full_json,_ := json.Marshal(ret)
+        switch(dbCon.Status){
+            case CON_CHANGED:
+                ret.Message = "Logged in to " + dbCon.Database
+            case CON_ERROR:
+                ret.Message = "Connection Error"
+            default:
+                ret.Message = "Not logged in"
+        }
+        full_json,_ = json.Marshal(ret)
         Fprint(w, string(full_json))
     }
 }

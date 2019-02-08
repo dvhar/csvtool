@@ -74,6 +74,9 @@ html {
   margin: auto;
   border: 2px solid black; }
 
+.querySelect {
+  margin-top: 3em; }
+
 .queryMenuContainer {
   text-align: center;
   margin-bottom: 1em; }
@@ -83,10 +86,14 @@ html {
 
 .topBar {
   background: #ffe889;
+  background: linear-gradient(to bottom, #f0b7a1 0%, #8c3310 50%, #752201 51%, #bf6e4e 100%);
   min-height: 2em;
   padding: 0.2em;
   display: flex;
-  justify-content: left; }
+  justify-content: left;
+  position: fixed;
+  width: 100%;
+  top: 0; }
 
 .loginButtonDiv {
   padding-left: 9em; }
