@@ -273,6 +273,9 @@ class TopMenuBar extends React.Component {
             />
             <Saver
                 filepath = {this.props.s.filepath}
+                changeSavePath = {this.props.changeSavePath}
+                currentQuery = {this.props.s.queryHistory[this.props.s.historyPosition]}
+                updateTopMessage = {this.props.updateTopMessage}
             />
             <div id="topMessage" className="topMessage">{this.props.s.topMessage}</div>
             <History
@@ -304,21 +307,29 @@ class Saver extends React.Component {
     toggleForm(){ document.getElementById("saveShow").classList.toggle("show");
                   document.getElementById("LoginShow").classList.remove("show"); }
     render(){
+        console.log(this.props.filepath);
         return(
             <>
             <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>
             <div id="saveShow" className="saveShow dropContent">
                 <label className="dropContent">Save location:</label> 
-                <input id="savePath" className="dropContent" defaultValue={this.props.filepath + "/dataSave.json"}/>
+                <input id="savePath" className="dropContent"/>
                 <button onClick={()=>{
-                    //TODO: send save query with path
                     var path = document.getElementById("savePath").value;
-                    console.log(path);
+                    postRequest({path:"/query/",body:{Query:this.props.currentQuery, Savit:true, SavePath:path}})
+                    .then(dat=>{
+                        console.log(dat);
+                        this.props.updateTopMessage(dat.Message);
+                    });
+                    this.props.changeSavePath(path);
                 }}>save</button>
             </div>
             </>
         )
     }
+    defValue(){ document.getElementById("savePath").value = this.props.filepath; }
+    componentDidMount(){ this.defValue(); }
+    componentDidUpdate(){ this.defValue(); }
 }
 
 class LoginForm extends React.Component {
@@ -390,10 +401,12 @@ class Main extends React.Component {
         });
         //get initial file path
         postRequest({path:"/info/",body:{Info : "savepath"}})
-        .then(dat=>this.setState({ filepath : (dat.Status & 1) ? dat.Path : ""}));
+        .then(dat=>{
+            console.log(dat); 
+            this.setState({ filepath : dat.Status&1===1 ? dat.Path + "/savedQueries.json" : ""});
+        });
 
     }
-
     showLoadedQuery(results){
         if (results.Status & 1){
             alert("Could not make query. Bad connection?");
@@ -431,6 +444,7 @@ class Main extends React.Component {
             updateTopMessage = {(message)=>this.setState({topMessage:message})}
             submitQuery = {(query, savit, backtrack)=>this.submitQuery(query, savit, backtrack)}
             viewHistory = {(position)=>this.viewHistory(position)}
+            changeSavePath = {(path)=>this.setState({ filepath : path })}
         />
         <QuerySelect
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}

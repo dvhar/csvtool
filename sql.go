@@ -125,7 +125,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         type Qrequest struct {
             Query string
             Savit bool
-            Savepath string
+            SavePath string
         }
         body, _ := ioutil.ReadAll(r.Body)
             println(formatRequest(r))
@@ -161,15 +161,44 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         full_json,_ := json.Marshal(fullReturnData)
 
         //save queries to json file
-        //TODO: handle requests that specify path
         if req.Savit {
             println("saving query...")
-            file,_ := os.OpenFile("savedQueries.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
-            file.WriteString(string(full_json))
-            file.Close()
+            savePath := req.SavePath
+            pathStat, err := os.Stat(savePath)
+
+            //if given a real path
+            if err == nil {
+                if pathStat.Mode().IsDir() {
+                    savePath = savePath + "sqlSaved.json"
+                } //else given a real file
+            } else {
+                _, err := os.Stat(filepath.Dir(savePath))
+                //if base path doesn't exist
+                if err != nil {
+                    fullReturnData.Status |= 4
+                    fullReturnData.Message = "Invalid path: " + savePath
+                    println("invalid path")
+                } //else given new file
+            }
+
+            //save file
+            if fullReturnData.Status & 4 == 0 {
+                file, err := os.OpenFile(savePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+                if err == nil {
+                    file.WriteString(string(full_json))
+                    file.Close()
+                    fullReturnData.Status |= 16
+                    fullReturnData.Message = "Saved to "+savePath
+                    println("Saved to "+savePath)
+                } else {
+                    fullReturnData.Status |= (4|8)
+                    fullReturnData.Message = "File IO error"
+                    println("File IO error")
+                }
+            }
         }
-            //Printf("resp: %+v", full_json)
-            //println(string(full_json))
+        //update json with save message
+        full_json,_ = json.Marshal(fullReturnData)
         Fprint(w, string(full_json))
     }
 }
@@ -257,10 +286,11 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
         //currently only returns path
         switch (req.Info){
             case "savepath":
-                ret.Path, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+                ret.Path, _ = os.Getwd()
+                println("savepath: " + ret.Path)
                 ret.Status = 1
             default:
-                ret.Path, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+                ret.Path, _ = os.Getwd()
                 ret.Status = 0
         }
         full_json,_ := json.Marshal(ret)
