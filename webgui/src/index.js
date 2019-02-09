@@ -20,10 +20,8 @@ function DropdownQueryTextbox(props){
             <br/>
             <button onClick={()=>{
                 var query = document.getElementById("textBoxId").value;
-                var savit = document.getElementById("saveCheck").checked;
-                props.submit(query, savit);
+                props.submit(query);
             }}>Submit Query</button>
-            <input type="checkbox" id="saveCheck"/>Save queries to file
             </div>
         </div>
     )
@@ -240,7 +238,7 @@ class QuerySelect extends React.Component {
                             size = {premades.metaDataQueries.length}
                             //make this run multi-select queries
                             contents = {premades.metaDataQueries}
-                            submit = {(query, savit)=>this.props.submitQuery(query, savit)}
+                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
                             classes = {["queryMenuDiv","queryMenuButton"]}
                          />
                      </div>);
@@ -249,7 +247,7 @@ class QuerySelect extends React.Component {
                          <DropdownQueryTextbox
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
                             classes = {["queryMenuDiv","queryMenuButton"]}
-                            submit = {(query, savit)=>this.props.submitQuery(query, savit)}
+                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
                          />
                      </div>);
 
@@ -272,10 +270,13 @@ class TopMenuBar extends React.Component {
                 updateTopMessage = {this.props.updateTopMessage}
             />
             <Saver
-                filepath = {this.props.s.filepath}
+                savepath = {this.props.s.savepath}
                 changeSavePath = {this.props.changeSavePath}
                 currentQuery = {this.props.s.queryHistory[this.props.s.historyPosition]}
                 updateTopMessage = {this.props.updateTopMessage}
+            />
+            <Opener
+                submitQuery = {this.props.submitQuery}
             />
             <div id="topMessage" className="topMessage">{this.props.s.topMessage}</div>
             <History
@@ -303,11 +304,30 @@ class History extends React.Component {
     }
 }
 
+class Opener extends React.Component {
+    toggleForm(){ document.getElementById("openShow").classList.toggle("show");
+                  document.getElementById("LoginShow").classList.remove("show"); }
+    render(){
+        return(
+            <>
+            <button className="topButton dropContent" id="openButton" onClick={()=>this.toggleForm()}>Open</button>
+            <div id="openShow" className="saveShow dropContent">
+                <label className="dropContent">Save location:</label> 
+                <input id="openPath" className="dropContent"/>
+                <button onClick={()=>{
+                    var path = document.getElementById("openPath").value;
+                    this.props.submitQuery("",2,false,path);
+                }}>open file</button>
+            </div>
+            </>
+        )
+    }
+}
+
 class Saver extends React.Component {
     toggleForm(){ document.getElementById("saveShow").classList.toggle("show");
                   document.getElementById("LoginShow").classList.remove("show"); }
     render(){
-        console.log(this.props.filepath);
         return(
             <>
             <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>
@@ -316,18 +336,15 @@ class Saver extends React.Component {
                 <input id="savePath" className="dropContent"/>
                 <button onClick={()=>{
                     var path = document.getElementById("savePath").value;
-                    postRequest({path:"/query/",body:{Query:this.props.currentQuery, Savit:true, SavePath:path}})
-                    .then(dat=>{
-                        console.log(dat);
-                        this.props.updateTopMessage(dat.Message);
-                    });
+                    postRequest({path:"/query/",body:{Query:this.props.currentQuery, FileIO:1, FilePath:path}})
+                    .then(dat=>{ this.props.updateTopMessage(dat.Message); });
                     this.props.changeSavePath(path);
                 }}>save</button>
             </div>
             </>
         )
     }
-    defValue(){ document.getElementById("savePath").value = this.props.filepath; }
+    defValue(){ document.getElementById("savePath").value = this.props.savepath; }
     componentDidMount(){ this.defValue(); }
     componentDidUpdate(){ this.defValue(); }
 }
@@ -339,7 +356,7 @@ class LoginForm extends React.Component {
         return (
             <>
             <button className="loginButton dropContent topButton" onClick={()=>this.toggleForm()}>
-            Login to Database
+            Login
             </button>
             <div id="LoginShow" className="LoginShow  dropContent">
                 <label className="dropContent">Database url:</label> 
@@ -358,7 +375,6 @@ class LoginForm extends React.Component {
                         var dbPass = document.getElementById("dbPass").value;
                         postRequest({path:"/login/",body:{Login: dbLogin, Pass:dbPass, Database: dbName, Server: dbUrl, Action: "login"}})
                         .then(dat=>{
-                            console.log(dat)
                             var message;
                             switch (dat.Status){
                                 case 4:  
@@ -387,7 +403,7 @@ class Main extends React.Component {
 
         this.state = {
             topMessage : "",
-            filepath : "",
+            savepath : "",
             queryHistory: ['',],
             historyPosition : 0,
             showQuery : <></>,
@@ -403,13 +419,16 @@ class Main extends React.Component {
         postRequest({path:"/info/",body:{Info : "savepath"}})
         .then(dat=>{
             console.log(dat); 
-            this.setState({ filepath : dat.Status&1===1 ? dat.Path + "/savedQueries.json" : ""});
+            this.setState({ savepath : dat.Status&1===1 ? dat.Path + "/savedQueries.json" : ""});
         });
 
     }
     showLoadedQuery(results){
         if (results.Status & 1){
-            alert("Could not make query. Bad connection?");
+            if (results.Message === undefined || results.Message === "")
+                alert("Could not make query. Bad connection?");
+            else
+                alert(results.Message);
         }
         else if (results.Status & 2){
             this.setState({
@@ -421,11 +440,11 @@ class Main extends React.Component {
                            />) });
         }
     }
-    submitQuery(query, savit=false, backtrack=false){
-        postRequest({path:"/query/",body:{Query:query, Savit:savit}}).then(dat=>{
-            this.setState({topMessage : dat.Message});
+    submitQuery(query, fileIO=0, backtrack=false, openPath=""){
+        postRequest({path:"/query/",body:{Query:query, FileIO:fileIO, FilePath:openPath}}).then(dat=>{
             if ((dat.Status & 2) && (!backtrack)){
-                this.setState({ historyPosition : this.state.queryHistory.length,
+                this.setState({ topMessage : dat.Message,
+                                historyPosition : this.state.queryHistory.length,
                                 queryHistory : this.state.queryHistory.concat(dat.OriginalQuery),   });
             }
             this.showLoadedQuery(dat);
@@ -433,7 +452,7 @@ class Main extends React.Component {
     }
     viewHistory(position){
         this.setState({ historyPosition : position });
-        this.submitQuery(this.state.queryHistory[position], false, true);
+        this.submitQuery(this.state.queryHistory[position], 0, true);
     }
 
     render(){
@@ -442,13 +461,13 @@ class Main extends React.Component {
         <TopMenuBar
             s = {this.state}
             updateTopMessage = {(message)=>this.setState({topMessage:message})}
-            submitQuery = {(query, savit, backtrack)=>this.submitQuery(query, savit, backtrack)}
+            submitQuery = {(query, fileIO, backtrack, openpath)=>this.submitQuery(query, fileIO, backtrack, openpath)}
             viewHistory = {(position)=>this.viewHistory(position)}
-            changeSavePath = {(path)=>this.setState({ filepath : path })}
+            changeSavePath = {(path)=>this.setState({ savepath : path })}
         />
         <QuerySelect
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
-            submitQuery = {(query, savit)=>this.submitQuery(query, savit, false)}
+            submitQuery = {(query, fileIO)=>this.submitQuery(query, fileIO, false)}
             showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
         />

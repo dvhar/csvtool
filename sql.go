@@ -124,8 +124,8 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //struct that matches incoming json requests
         type Qrequest struct {
             Query string
-            Savit bool
-            SavePath string
+            FileIO int
+            FilePath string
         }
         body, _ := ioutil.ReadAll(r.Body)
             println(formatRequest(r))
@@ -137,6 +137,24 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         json.Unmarshal(body,&req)
         fullReturnData.Status = 0
         fullReturnData.OriginalQuery = req.Query
+
+        //handle request to open file
+        if req.FileIO == 2 {
+            openPath := req.FilePath
+            fileData, err := ioutil.ReadFile(openPath)
+            if err != nil {
+                fullReturnData.Status |= 1
+                fullReturnData.Message = "Error opening file"
+                println("Error opening file")
+            } else {
+                json.Unmarshal(fileData,&fullReturnData)
+                fullReturnData.Message = "Opened file"
+                println("Opened file")
+            }
+            full_json,_ := json.Marshal(fullReturnData)
+            Fprint(w, string(full_json))
+            return
+        }
 
         //return null query if no connection
         if dbCon.Err != nil {
@@ -161,9 +179,9 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         full_json,_ := json.Marshal(fullReturnData)
 
         //save queries to json file
-        if req.Savit {
+        if req.FileIO == 1 {
             println("saving query...")
-            savePath := req.SavePath
+            savePath := req.FilePath
             pathStat, err := os.Stat(savePath)
 
             //if given a real path
@@ -187,7 +205,6 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
                 if err == nil {
                     file.WriteString(string(full_json))
                     file.Close()
-                    fullReturnData.Status |= 16
                     fullReturnData.Message = "Saved to "+savePath
                     println("Saved to "+savePath)
                 } else {
@@ -232,8 +249,8 @@ func loginHandler() (func(http.ResponseWriter, *http.Request)) {
         body, _ := ioutil.ReadAll(r.Body)
         var req Lrequest
         var full_json []uint8
-            println(formatRequest(r))
-            println(string(body))
+        //println(formatRequest(r))
+        println(string(body))
         json.Unmarshal(body,&req)
 
         switch(req.Action){
