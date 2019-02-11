@@ -163,17 +163,17 @@ html {
 }
 
 //save section
-.saveShow {
+.fileSelectShow {
     padding: 0.3em;
     background: $loginbg;
     top: 2.2em;
     position: absolute;
     display: none;
 }
-.saveShow label {
+.fileSelectShow label {
     display: inline-block;
 }
-.saveShow input {
+.fileSelectShow input {
     min-width: 40em;
 }
 

@@ -277,6 +277,7 @@ class TopMenuBar extends React.Component {
             />
             <Opener
                 submitQuery = {this.props.submitQuery}
+                openpath = {this.props.s.openpath}
             />
             <div id="topMessage" className="topMessage">{this.props.s.topMessage}</div>
             <History
@@ -312,7 +313,7 @@ class Opener extends React.Component {
         return(
             <>
             <button className="topButton dropContent" id="openButton" onClick={()=>this.toggleForm()}>Open</button>
-            <div id="openShow" className="saveShow dropContent">
+            <div id="openShow" className="fileSelectShow dropContent">
                 <label className="dropContent">Open file:</label> 
                 <input id="openPath" className="dropContent"/>
                 <button onClick={()=>{
@@ -323,6 +324,9 @@ class Opener extends React.Component {
             </>
         )
     }
+    defValue(){ document.getElementById("openPath").value = this.props.openpath; }
+    componentDidMount(){ this.defValue(); }
+    componentDidUpdate(){ this.defValue(); }
 }
 
 class Saver extends React.Component {
@@ -333,7 +337,7 @@ class Saver extends React.Component {
         return(
             <>
             <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>
-            <div id="saveShow" className="saveShow dropContent">
+            <div id="saveShow" className="fileSelectShow dropContent">
                 <label className="dropContent">Save file:</label> 
                 <input id="savePath" className="dropContent"/>
                 <button onClick={()=>{
@@ -407,6 +411,7 @@ class Main extends React.Component {
         this.state = {
             topMessage : "",
             savepath : "",
+            openpath : "",
             queryHistory: ['',],
             historyPosition : 0,
             showQuery : <></>,
@@ -419,10 +424,11 @@ class Main extends React.Component {
             this.setState({topMessage: dat.Status===16?  dat.Message : "No connection"})
         });
         //get initial file path
-        postRequest({path:"/info/",body:{Info : "savepath"}})
+        postRequest({path:"/info/",body:{}})
         .then(dat=>{
             console.log(dat); 
-            this.setState({ savepath : dat.Status&1===1 ? dat.Path + "/savedQueries.json" : ""});
+            this.setState({ savepath : dat.Status&1===1 ? dat.SavePath : "",
+                            openpath : dat.Status&1===1 ? dat.OpenPath : "" });
         });
 
     }

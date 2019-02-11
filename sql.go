@@ -63,18 +63,34 @@ type Connection struct {
     Server string
     Database string
 }
+//file io data
+type FilePaths struct {
+    SavePath string
+    OpenPath string
+    Status int
+}
 
 //TODO: find out if program will run on multiple databases. Will need cache for each db
 var Qcache map[string]*Qrows
 var dbCon Connection
+var FPaths FilePaths
 
 func main() {
     //get password and other flags
     flag.Parse()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
-    //initialize query data cache
+    //initialize query data cache and file paths
     Qcache = make(map[string]*Qrows)
+    cwd, err := os.Getwd()
+    if err == nil {
+        FPaths.OpenPath = cwd + "/"
+        FPaths.SavePath  = cwd + "/sqlSaved.json"
+        FPaths.Status = 1
+    } else {
+        FPaths.Status = 2
+    }
+
 
 
     //if connecting to database
@@ -140,8 +156,8 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
         //handle request to open file
         if req.FileIO == 2 {
-            openPath := req.FilePath
-            fileData, err := ioutil.ReadFile(openPath)
+            FPaths.OpenPath = req.FilePath
+            fileData, err := ioutil.ReadFile(FPaths.OpenPath)
             if err != nil {
                 fullReturnData.Status |= 1
                 fullReturnData.Message = "Error opening file"
@@ -202,6 +218,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             //save file
             if fullReturnData.Status & 4 == 0 {
                 file, err := os.OpenFile(savePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+                FPaths.SavePath = savePath
                 if err == nil {
                     file.WriteString(string(full_json))
                     file.Close()
@@ -214,6 +231,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
                 }
             }
         }
+
         //update json with save message
         full_json,_ = json.Marshal(fullReturnData)
         Fprint(w, string(full_json))
@@ -292,7 +310,8 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
             Info string
         }
         type Ireturn struct {
-            Path string
+            SavePath string
+            OpenPath string
             Status int
         }
         body, _ := ioutil.ReadAll(r.Body)
@@ -300,16 +319,12 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
         var ret Ireturn
         json.Unmarshal(body,&req)
 
-        //currently only returns path
-        switch (req.Info){
-            case "savepath":
-                ret.Path, _ = os.Getwd()
-                println("savepath: " + ret.Path)
-                ret.Status = 1
-            default:
-                ret.Path, _ = os.Getwd()
-                ret.Status = 0
-        }
+        //currently only returns paths
+        ret.SavePath = FPaths.SavePath
+        ret.OpenPath = FPaths.OpenPath
+        ret.Status = FPaths.Status
+        println("s: "+ ret.SavePath + "\no: " +ret.OpenPath)
+
         full_json,_ := json.Marshal(ret)
         Fprint(w, string(full_json))
     }
