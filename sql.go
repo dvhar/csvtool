@@ -338,7 +338,8 @@ func sqlConnect(login, pass, server, name string) Connection {
             RawQuery: query.Encode(),
         }
         connectString := u.String()
-        db,err := sql.Open("mssql", connectString)
+        db,_ := sql.Open("mssql", connectString)
+        err := db.Ping()
 
         //prepare return struct
         ret = Connection{ Db: db, Err: err}
