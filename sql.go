@@ -29,13 +29,6 @@ var dbname = flag.String("d", os.Getenv("MSSQL_CLI_DATABASE"), "Database name")
 var dblogin = flag.String("u", os.Getenv("MSSQL_CLI_USER"), "Database login user")
 var dbpass = flag.String("p", "", "Database login password")
 
-const (
-    CON_BLANK = 1 << iota
-    CON_ERROR = 1 << iota
-    CON_CHANGED = 1 << iota
-    CON_UNCHANGED = 1 << iota
-    CON_CHECKED = 1 << iota
-)
 
 //one Qrows struct holds the results of one query
 type Qrows struct {
@@ -46,7 +39,14 @@ type Qrows struct {
     Status int
     Query string
 }
-//status 0 is good
+
+const (
+    DAT_ERROR = 1 << iota
+    DAT_GOOD = 1 << iota
+    DAT_BADPATH = 1 << iota
+    DAT_IOERR = 1 << iota
+    DAT_BLANK = 0
+)
 type ReturnData struct {
     Entries []*Qrows
     Status int
@@ -54,7 +54,13 @@ type ReturnData struct {
     OriginalQuery string
 }
 
-//status 0 is blank
+const (
+    CON_ERROR = 1 << iota
+    CON_CHANGED = 1 << iota
+    CON_UNCHANGED = 1 << iota
+    CON_CHECKED = 1 << iota
+    CON_BLANK = 0
+)
 type Connection struct {
     Db *sql.DB
     Err error
@@ -63,7 +69,15 @@ type Connection struct {
     Server string
     Database string
 }
+
 //file io data
+const (
+    FP_SERROR = 1 << iota
+    FP_SCHANGED = 1 << iota
+    FP_OERROR = 1 << iota
+    FP_OCHANGED = 1 << iota
+    FP_CWD = 0
+)
 type FilePaths struct {
     SavePath string
     OpenPath string
@@ -86,9 +100,9 @@ func main() {
     if err == nil {
         FPaths.OpenPath = cwd + "/"
         FPaths.SavePath  = cwd + "/sqlSaved.json"
-        FPaths.Status = 1
+        FPaths.Status = 0
     } else {
-        FPaths.Status = 2
+        FPaths.Status = FP_OERROR | FP_SERROR
     }
 
 
@@ -151,15 +165,16 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         var fullReturnData ReturnData
         var err error
         json.Unmarshal(body,&req)
-        fullReturnData.Status = 0
+        fullReturnData.Status = DAT_BLANK
         fullReturnData.OriginalQuery = req.Query
 
         //handle request to open file
         if req.FileIO == 2 {
             FPaths.OpenPath = req.FilePath
+            FPaths.Status |= FP_OCHANGED
             fileData, err := ioutil.ReadFile(FPaths.OpenPath)
             if err != nil {
-                fullReturnData.Status |= 1
+                fullReturnData.Status |= DAT_ERROR
                 fullReturnData.Message = "Error opening file"
                 println("Error opening file")
             } else {
@@ -183,10 +198,10 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             println("requesting query")
             entries,err = runQueries(dbCon.Db, req.Query)
             if err != nil {
-                fullReturnData.Status |= 1
+                fullReturnData.Status |= DAT_ERROR
                 fullReturnData.Message = "Error querying database"
             } else {
-                fullReturnData.Status |= 2
+                fullReturnData.Status |= DAT_GOOD
                 fullReturnData.Message = "Query successful"
             }
         }
@@ -209,14 +224,14 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
                 _, err := os.Stat(filepath.Dir(savePath))
                 //if base path doesn't exist
                 if err != nil {
-                    fullReturnData.Status |= 4
+                    fullReturnData.Status |= DAT_BADPATH
                     fullReturnData.Message = "Invalid path: " + savePath
                     println("invalid path")
                 } //else given new file
             }
 
             //save file
-            if fullReturnData.Status & 4 == 0 {
+            if fullReturnData.Status & DAT_BADPATH == 0 {
                 file, err := os.OpenFile(savePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
                 FPaths.SavePath = savePath
                 if err == nil {
@@ -225,10 +240,11 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
                     fullReturnData.Message = "Saved to "+savePath
                     println("Saved to "+savePath)
                 } else {
-                    fullReturnData.Status |= (4|8)
+                    fullReturnData.Status |= (DAT_BADPATH | DAT_IOERR)
                     fullReturnData.Message = "File IO error"
                     println("File IO error")
                 }
+                FPaths.Status = FP_SCHANGED
             }
         }
 

@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {postRequest,getUnique,getWhere,sortQuery} from './utils.js';
+import {postRequest,getUnique,getWhere,sortQuery,bit} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 
@@ -421,14 +421,14 @@ class Main extends React.Component {
         postRequest({path:"/login/",body:{Action: "check"}})
         .then(dat=>{
             console.log(dat);
-            this.setState({topMessage: dat.Status===16?  dat.Message : "No connection"})
+            this.setState({topMessage: dat.Status===bit.CON_CHECKED?  dat.Message : "No connection"})
         });
         //get initial file path
         postRequest({path:"/info/",body:{}})
         .then(dat=>{
             console.log(dat); 
-            this.setState({ savepath : dat.Status&1===1 ? dat.SavePath : "",
-                            openpath : dat.Status&1===1 ? dat.OpenPath : "" });
+            this.setState({ savepath : dat.Status & bit.FP_SERROR===1 ? "" : dat.SavePath,
+                            openpath : dat.Status & bit.FP_SERROR===1 ? "" : dat.OpenPath });
         });
 
     }
@@ -439,7 +439,7 @@ class Main extends React.Component {
             else
                 alert(results.Message);
         }
-        else if (results.Status & 2){
+        else if (results.Status & bit.DAT_GOOD){
             this.setState({
                 showQuery : results.Entries.map(
                     tab => <QueryRender 
@@ -451,7 +451,8 @@ class Main extends React.Component {
     }
     submitQuery(query, fileIO=0, backtrack=false, openPath=""){
         postRequest({path:"/query/",body:{Query:query, FileIO:fileIO, FilePath:openPath}}).then(dat=>{
-            if ((dat.Status & 2) && (!backtrack)){
+            console.log(dat);
+            if ((dat.Status & bit.DAT_GOOD) && (!backtrack)){
                 this.setState({ topMessage : dat.Message,
                                 historyPosition : this.state.queryHistory.length,
                                 queryHistory : this.state.queryHistory.concat(dat.OriginalQuery),   });

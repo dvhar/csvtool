@@ -93,3 +93,23 @@ export function getWhere(queryResults,column,value){
         return subset;
     } else return null;
 }
+
+export const bit = {
+    DAT_BLANK      : 0,
+    DAT_ERROR      : 1,
+    DAT_GOOD       : 1 << 1,
+    DAT_BADPATH    : 1 << 2,
+    DAT_IOERR      : 1 << 3,
+
+    CON_ERROR      : 1,
+    CON_CHANGED    : 1 << 1,
+    CON_UNCHANGED  : 1 << 2,
+    CON_CHECKED    : 1 << 3,
+    CON_BLANK      : 0,
+
+    FP_CWD          : 0,
+    FP_SERROR       : 1 << 1,
+    FP_SCHANGED     : 1 << 2,
+    FP_OERROR       : 1 << 3,
+    FP_OCHANGED     : 1 << 4,
+}
