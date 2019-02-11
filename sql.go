@@ -250,7 +250,7 @@ func loginHandler() (func(http.ResponseWriter, *http.Request)) {
         var req Lrequest
         var full_json []uint8
         //println(formatRequest(r))
-        println(string(body))
+        println("got login request")
         json.Unmarshal(body,&req)
 
         switch(req.Action){
