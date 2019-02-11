@@ -306,18 +306,19 @@ class History extends React.Component {
 
 class Opener extends React.Component {
     toggleForm(){ document.getElementById("openShow").classList.toggle("show");
+                  document.getElementById("saveShow").classList.remove("show");
                   document.getElementById("LoginShow").classList.remove("show"); }
     render(){
         return(
             <>
             <button className="topButton dropContent" id="openButton" onClick={()=>this.toggleForm()}>Open</button>
             <div id="openShow" className="saveShow dropContent">
-                <label className="dropContent">Save location:</label> 
+                <label className="dropContent">Open file:</label> 
                 <input id="openPath" className="dropContent"/>
                 <button onClick={()=>{
                     var path = document.getElementById("openPath").value;
                     this.props.submitQuery("",2,false,path);
-                }}>open file</button>
+                }}>open</button>
             </div>
             </>
         )
@@ -326,13 +327,14 @@ class Opener extends React.Component {
 
 class Saver extends React.Component {
     toggleForm(){ document.getElementById("saveShow").classList.toggle("show");
+                  document.getElementById("openShow").classList.remove("show");
                   document.getElementById("LoginShow").classList.remove("show"); }
     render(){
         return(
             <>
             <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>
             <div id="saveShow" className="saveShow dropContent">
-                <label className="dropContent">Save location:</label> 
+                <label className="dropContent">Save file:</label> 
                 <input id="savePath" className="dropContent"/>
                 <button onClick={()=>{
                     var path = document.getElementById("savePath").value;
@@ -351,6 +353,7 @@ class Saver extends React.Component {
 
 class LoginForm extends React.Component {
     toggleForm(){ document.getElementById("LoginShow").classList.toggle("show");
+                  document.getElementById("openShow").classList.remove("show");
                   document.getElementById("saveShow").classList.remove("show"); }
     render(){
         return (
