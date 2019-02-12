@@ -273,7 +273,7 @@ class TopMenuBar extends React.Component {
                 savepath = {this.props.s.savepath}
                 changeSavePath = {this.props.changeSavePath}
                 currentQuery = {this.props.s.queryHistory[this.props.s.historyPosition]}
-                updateTopMessage = {this.props.updateTopMessage}
+                submitQuery = {this.props.submitQuery}
             />
             <Opener
                 submitQuery = {this.props.submitQuery}
@@ -318,7 +318,7 @@ class Opener extends React.Component {
                 <input id="openPath" className="dropContent"/>
                 <button onClick={()=>{
                     var path = document.getElementById("openPath").value;
-                    this.props.submitQuery("",2,false,path);
+                    this.props.submitQuery("", 2, false, path);
                 }}>open</button>
             </div>
             </>
@@ -342,9 +342,8 @@ class Saver extends React.Component {
                 <input id="savePath" className="dropContent"/>
                 <button onClick={()=>{
                     var path = document.getElementById("savePath").value;
-                    postRequest({path:"/query/",body:{Query:this.props.currentQuery, FileIO:1, FilePath:path}})
-                    .then(dat=>{ this.props.updateTopMessage(dat.Message); });
-                    this.props.changeSavePath(path);
+                    this.props.submitQuery(this.props.currentQuery, 1, false, path);
+                    this.props.changeSavePath(path); //see if this is needed
                 }}>save</button>
             </div>
             </>
@@ -428,12 +427,12 @@ class Main extends React.Component {
         .then(dat=>{
             console.log(dat); 
             this.setState({ savepath : dat.Status & bit.FP_SERROR===1 ? "" : dat.SavePath,
-                            openpath : dat.Status & bit.FP_SERROR===1 ? "" : dat.OpenPath });
+                            openpath : dat.Status & bit.FP_OERROR===1 ? "" : dat.OpenPath });
         });
 
     }
     showLoadedQuery(results){
-        if (results.Status & 1){
+        if (results.Status & bit.DAT_ERROR){
             if (results.Message === undefined || results.Message === "")
                 alert("Could not make query. Bad connection?");
             else
@@ -451,7 +450,7 @@ class Main extends React.Component {
     }
     submitQuery(query, fileIO=0, backtrack=false, openPath=""){
         postRequest({path:"/query/",body:{Query:query, FileIO:fileIO, FilePath:openPath}}).then(dat=>{
-            console.log(dat);
+            //console.log(dat);
             if ((dat.Status & bit.DAT_GOOD) && (!backtrack)){
                 this.setState({ topMessage : dat.Message,
                                 historyPosition : this.state.queryHistory.length,
@@ -477,7 +476,7 @@ class Main extends React.Component {
         />
         <QuerySelect
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
-            submitQuery = {(query, fileIO)=>this.submitQuery(query, fileIO, false)}
+            submitQuery = {(query, fileIO)=>this.submitQuery(query, fileIO)}
             showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
         />

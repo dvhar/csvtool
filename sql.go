@@ -40,6 +40,7 @@ type Qrows struct {
     Query string
 }
 
+//query return data struct and codes
 const (
     DAT_ERROR = 1 << iota
     DAT_GOOD = 1 << iota
@@ -54,6 +55,7 @@ type ReturnData struct {
     OriginalQuery string
 }
 
+//database connection struct and codes
 const (
     CON_ERROR = 1 << iota
     CON_CHANGED = 1 << iota
@@ -70,7 +72,7 @@ type Connection struct {
     Database string
 }
 
-//file io data
+//file io struct and codes
 const (
     FP_SERROR = 1 << iota
     FP_SCHANGED = 1 << iota
@@ -107,22 +109,24 @@ func main() {
 
 
 
-    //if connecting to database
-    if (! *dbNoCon) {
-        dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
-    }
-
+    //set up server url and start server in goroutine
     println("Starting server")
-    //set up server url and goroutine channel
     host := "localhost"
     port := ":" + *localPort
     if *danger { host = "" }
     serverUrl := host + port
     done := make(chan bool)
-
-    //start server and browser
     go server(serverUrl,done)
+
+    //launch web browser for gui
     launch("localhost"+port);
+
+    //if connecting to database
+    if (! *dbNoCon) {
+        println("attempting database connection")
+        dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
+    }
+
     <-done
 
 
@@ -237,14 +241,14 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
                 if err == nil {
                     file.WriteString(string(full_json))
                     file.Close()
+                    FPaths.Status = FP_SCHANGED
                     fullReturnData.Message = "Saved to "+savePath
                     println("Saved to "+savePath)
                 } else {
-                    fullReturnData.Status |= (DAT_BADPATH | DAT_IOERR)
+                    fullReturnData.Status = (DAT_BADPATH | DAT_IOERR)
                     fullReturnData.Message = "File IO error"
                     println("File IO error")
                 }
-                FPaths.Status = FP_SCHANGED
             }
         }
 
@@ -265,7 +269,7 @@ func loginHandler() (func(http.ResponseWriter, *http.Request)) {
             Database string
             Action string
         }
-        //struct for return json.
+        //struct for return json
         type Lreturn struct {
             Login string
             Server string
@@ -375,7 +379,7 @@ func sqlConnect(login, pass, server, name string) Connection {
         //prepare return struct
         ret = Connection{ Db: db, Err: err}
         if err != nil {
-            println("connection error")
+            println("db connection error")
             ret.Status = CON_ERROR
         } else {
             println("db connection successful")
