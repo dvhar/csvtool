@@ -1,6 +1,7 @@
 
-#all: sql.lnx sql.exe sql.mac rice-box.go
 all: sql.lnx rice-box.go
+
+cross: sql.lnx sql.exe sql.mac rice-box.go
 
 rice-box.go:
 	rice embed-go

@@ -119,7 +119,7 @@ func main() {
     go server(serverUrl,done)
 
     //launch web browser for gui
-    launch("localhost"+port);
+    launch("http://localhost"+port);
 
     //if connecting to database
     if (! *dbNoCon) {
