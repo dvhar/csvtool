@@ -42,4 +42,87 @@ export var metaDataQueries = [
           "label":"list of tables",
           "query": `SELECT * from information_schema.tables;`,
         }
-    ]
+    ];
+
+
+export var medicalTableNames = [
+    "tblHealthHomePatients",
+    "rPatient",
+    "Provider",
+    "PharmacyClaims",
+    "rFacilityClaim",
+    "rProfessionalClaim",
+    "rCMAttributeItem",
+    "rCMAttribute",
+    "FacilityClaimDetail",
+    "FacilityClaimMoney",
+    "FacilityClaimDetailMoney",
+    "rServiceClaimDiagnosis",
+    ];
+
+/*
+  ProviderID may be called PrescriberID or FacilityProviderID, depending on the table. HCHProvID is a ProviderID.
+  A ServiceClaimDiagnosis will have either an associated FacilityClaimID or ProfessionalClaimID but not both.
+*/
+
+export var medicalTables = [
+    { "name" : "tblHealthHomePatients",
+      "pkey" : "newID",
+      "fkeys": ["HCHProvID"],
+    },
+
+    { "name" : "rPatient",
+      "pkey" : "newID",
+      "fkeys": [],
+    },
+
+    { "name" : "Provider",
+      "pkey" : "PrividerID",
+      "fkeys": [],
+    },
+
+    { "name" : "PharmacyClaims",
+      "pkey" : "PharmacyClaimID",
+      "fkeys": ["newID","PrescriberID"],
+    },
+
+    { "name" : "rFacilityClaim",
+      "pkey" : "FacilityClaimID",
+      "fkeys": ["newID"],
+    },
+
+    { "name" : "rProfessionalClaim",
+      "pkey" : "ProfessionalClaimID",
+      "fkeys": ["ProviderID"],
+    },
+
+    { "name" : "rCMAttributeItem",
+      "pkey" : "CMAttributeItemID",
+      "fkeys": ["CMAttributeID","newID"],
+    },
+
+    { "name" : "rCMAttribute",
+      "pkey" : "CMAttributeID",
+      "fkeys": [],
+    },
+
+    { "name" : "FacilityClaimDetail",
+      "pkey" : "FacilityClaimDetailID",
+      "fkeys": ["FacilityClaimID"],
+    },
+
+    { "name" : "FacilityClaimMoney",
+      "pkey" : null,
+      "fkeys": [],
+    },
+
+    { "name" : "FacilityClaimDetailMoney"
+      "pkey" : null,
+      "fkeys": [],
+    },
+
+    { "name" : "rServiceClaimDiagnosis",
+      "pkey" : "ServiceClaimDiagnosisID",
+      "fkeys": ["FacilityClaimID","ProfessionalClaimID","newID"],
+    },
+];

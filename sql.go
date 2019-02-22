@@ -18,6 +18,7 @@ import (
     "flag"
     "os/exec"
     "os"
+    "unsafe"
 )
 
 //command line flags
@@ -30,12 +31,13 @@ var dblogin = flag.String("u", os.Getenv("MSSQL_CLI_USER"), "Database login user
 var dbpass = flag.String("p", "", "Database login password")
 
 
-//one Qrows struct holds the results of one query
-type Qrows struct {
+//one SqlSingleQueryResult struct holds the results of one query
+type SqlSingleQueryResult struct {
     Numrows int
     Numcols int
+    Ram uint64
     Colnames []string
-    Vals [][]interface{}
+    Vals [][]string
     Status int
     Query string
 }
@@ -49,7 +51,7 @@ const (
     DAT_BLANK = 0
 )
 type ReturnData struct {
-    Entries []*Qrows
+    Entries []*SqlSingleQueryResult
     Status int
     Message string
     OriginalQuery string
@@ -87,9 +89,10 @@ type FilePaths struct {
 }
 
 //TODO: find out if program will run on multiple databases. Will need cache for each db
-var Qcache map[string]*Qrows
+var Qcache map[string]*SqlSingleQueryResult
 var dbCon Connection
 var FPaths FilePaths
+var ramUsed uint64
 
 func main() {
     //get password and other flags
@@ -97,7 +100,7 @@ func main() {
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
     //initialize query data cache and file paths
-    Qcache = make(map[string]*Qrows)
+    Qcache = make(map[string]*SqlSingleQueryResult)
     cwd, err := os.Getwd()
     if err == nil {
         FPaths.OpenPath = cwd + "/"
@@ -125,16 +128,11 @@ func main() {
     if (! *dbNoCon) {
         println("attempting database connection")
         dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
+        defer dbCon.Db.Close()
     }
 
     <-done
 
-
-    //close database connection if there is one
-    if (dbCon.Status & CON_BLANK != 0) {
-        println("closing connection")
-        dbCon.Db.Close()
-    }
 }
 
 //webserver
@@ -165,7 +163,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             println(formatRequest(r))
             println(string(body))
         var req Qrequest
-        var entries []*Qrows
+        var entries []*SqlSingleQueryResult
         var fullReturnData ReturnData
         var err error
         json.Unmarshal(body,&req)
@@ -194,7 +192,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //return null query if no connection
         if dbCon.Err != nil {
             println("no database connection")
-            entries = append(entries,&Qrows{})
+            entries = append(entries,&SqlSingleQueryResult{})
             fullReturnData.Message = "No database connection"
 
         //attempt query if there is a connection
@@ -393,7 +391,7 @@ func sqlConnect(login, pass, server, name string) Connection {
 }
 
 //wrapper for runQuery() that caches results
-func runCachingQuery(db *sql.DB, query string) (*Qrows,error) {
+func runCachingQuery(db *sql.DB, query string) (*SqlSingleQueryResult, error) {
 
     hasher := sha1.New()
     hasher.Write([]byte(query))
@@ -413,48 +411,56 @@ func runCachingQuery(db *sql.DB, query string) (*Qrows,error) {
 }
 
 
-//return Qrows struct with query results
-func runQuery(db *sql.DB, query string) (*Qrows,error) {
+//return SqlSingleQueryResult struct with query results
+func runQuery(db *sql.DB, query string) (*SqlSingleQueryResult,error) {
     println(query)
 
     //if connected to SQL server
     if (dbCon.Status & CON_CHANGED != 0) {
 
+        var ramUsage uint64 = 0
         rows,err := db.Query(query)
         if err == nil {
             columnNames,_ := rows.Columns()
-            columnValues := make([]interface{}, len(columnNames))
+            columnValues := make([]string, len(columnNames))
             columnPointers := make([]interface{}, len(columnNames))
-            for i := 0; i < len(columnNames); i++ { columnPointers[i] = &columnValues[i] }
-            var entry []interface{}
-            var entries[][]interface{}
+            for i,v := range columnNames {
+                columnPointers[i] = &columnValues[i]
+                ramUsage += stringRam(v)
+            }
+            var entry []string
+            var entries[][]string
             var rownum = 0
             for rows.Next() {
                 rows.Scan(columnPointers...)
-                entry = make([]interface{},len(columnNames))
-                for i := 0; i < len(columnNames); i++ {
+                entry = make([]string,len(columnNames))
+                for i,_ := range columnNames {
                     entry[i] = columnValues[i]
+                    ramUsage += stringRam(entry[i])
                 }
                 entries = append(entries,entry)
                 rownum++
             }
             println("query success")
-            return &Qrows{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries, Query: query}, nil
+            print("ram usage: "); println(ramUsage)
+            ramUsed += ramUsage
+            return &SqlSingleQueryResult{Colnames: columnNames, Numcols: len(columnNames),
+                                         Numrows: rownum, Vals: entries, Query: query, Ram: ramUsage}, nil
         } else {
             println("query failed")
-            return &Qrows{}, err
+            return &SqlSingleQueryResult{}, err
         }
     } else {
         println("query null because db not connected")
-        return &Qrows{}, errors.New("no connection")
+        return &SqlSingleQueryResult{}, errors.New("no connection")
     }
 }
 
 //run multiple queries deliniated by semicolon
-func runQueries(db *sql.DB, query string) ([]*Qrows, error) {
+func runQueries(db *sql.DB, query string) ([]*SqlSingleQueryResult, error) {
     if (strings.HasSuffix(query,";")) { query = query[:len(query)-1] }
     queries := strings.Split(strings.Replace(query,"\\n","",-1),";")
-    var results[]*Qrows
+    var results[]*SqlSingleQueryResult
     for i := range queries {
         result,err := runCachingQuery(db,queries[i])
         results = append(results, result)
@@ -538,4 +544,8 @@ func launch(url string) error {
     }
     args = append(args, url)
     return exec.Command(cmd, args...).Start()
+}
+
+func stringRam(val string) uint64 {
+    return uint64(unsafe.Sizeof(val)) + uint64(len(val))
 }

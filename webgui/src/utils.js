@@ -94,6 +94,10 @@ export function getWhere(queryResults,column,value){
     } else return null;
 }
 
+export function generateKeyDiagram(){
+    console.log("ok");
+}
+
 export const bit = {
     DAT_BLANK      : 0,
     DAT_ERROR      : 1,
