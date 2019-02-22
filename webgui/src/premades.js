@@ -116,7 +116,7 @@ export var medicalTables = [
       "fkeys": [],
     },
 
-    { "name" : "FacilityClaimDetailMoney"
+    { "name" : "FacilityClaimDetailMoney",
       "pkey" : null,
       "fkeys": [],
     },

@@ -251,10 +251,16 @@ class QuerySelect extends React.Component {
                          />
                      </div>);
 
+        var selectors = [];
+
+        if (this.props.s.mode === "SQL")
+            selectors.push(metaDataMenu,customQueryEntry);
+        else
+            selectors.push(<button>awwwww yeeee</button>);
+
         return (
             <div className="querySelect"> 
-            {metaDataMenu} 
-            {customQueryEntry} 
+            {selectors} 
             {this.props.showQuery} 
             </div>
         );
@@ -268,16 +274,23 @@ class TopMenuBar extends React.Component {
             <div className="topBar">
             <LoginForm
                 updateTopMessage = {this.props.updateTopMessage}
+                mode = {this.props.s.mode}
             />
             <Saver
                 savepath = {this.props.s.savepath}
                 changeSavePath = {this.props.changeSavePath}
                 currentQuery = {this.props.s.queryHistory[this.props.s.historyPosition]}
                 submitQuery = {this.props.submitQuery}
+                mode = {this.props.s.mode}
             />
             <Opener
                 submitQuery = {this.props.submitQuery}
                 openpath = {this.props.s.openpath}
+                mode = {this.props.s.mode}
+            />
+            <ModeSelect
+                mode = {this.props.s.mode}
+                changeMode = {this.props.changeMode}
             />
             <div id="topMessage" className="topMessage">{this.props.s.topMessage}</div>
             <History
@@ -305,9 +318,28 @@ class History extends React.Component {
     }
 }
 
+class ModeSelect extends React.Component {
+    toggleForm(){ document.getElementById("modeShow").classList.toggle("show");
+                  document.getElementById("saveShow").classList.remove("show");
+                  document.getElementById("openShow").classList.remove("show");
+                  document.getElementById("LoginShow").classList.remove("show"); }
+    render(){
+        return(
+            <>
+            <button className="topButton dropContent" id="modeButton" onClick={()=>this.toggleForm()}>Mode: SQL</button>
+            <div id="modeShow" className="modeShow dropContent">
+            <button className="modeButton dropContent" onClick={()=>this.props.changeMode("SQL")}>SQL</button>
+            <button className="modeButton dropContent" onClick={()=>this.props.changeMode("CSV")}>CSV</button>
+            </div>
+            </>
+        )
+    }
+}
+
 class Opener extends React.Component {
     toggleForm(){ document.getElementById("openShow").classList.toggle("show");
                   document.getElementById("saveShow").classList.remove("show");
+                  document.getElementById("modeShow").classList.remove("show");
                   document.getElementById("LoginShow").classList.remove("show"); }
     render(){
         return(
@@ -332,6 +364,7 @@ class Opener extends React.Component {
 class Saver extends React.Component {
     toggleForm(){ document.getElementById("saveShow").classList.toggle("show");
                   document.getElementById("openShow").classList.remove("show");
+                  document.getElementById("modeShow").classList.remove("show");
                   document.getElementById("LoginShow").classList.remove("show"); }
     render(){
         return(
@@ -357,11 +390,15 @@ class Saver extends React.Component {
 class LoginForm extends React.Component {
     toggleForm(){ document.getElementById("LoginShow").classList.toggle("show");
                   document.getElementById("openShow").classList.remove("show");
+                  document.getElementById("modeShow").classList.remove("show");
                   document.getElementById("saveShow").classList.remove("show"); }
     render(){
+        var disp = {};
+        if (this.props.mode !== "SQL")
+            disp = {display:"none"};
         return (
             <>
-            <button className="loginButton dropContent topButton" onClick={()=>this.toggleForm()}>
+            <button className="loginButton dropContent topButton" style={disp} onClick={()=>this.toggleForm()}>
             Login
             </button>
             <div id="LoginShow" className="LoginShow  dropContent">
@@ -408,6 +445,7 @@ class Main extends React.Component {
         super(props);
 
         this.state = {
+            mode : "SQL",
             topMessage : "",
             savepath : "",
             openpath : "",
@@ -463,6 +501,9 @@ class Main extends React.Component {
         this.setState({ historyPosition : position });
         this.submitQuery(this.state.queryHistory[position], 0, true);
     }
+    changeMode(mode){ 
+        this.setState({ mode : mode, topMessage : `${mode} mode` }); 
+    }
 
     render(){
         return (
@@ -473,8 +514,10 @@ class Main extends React.Component {
             submitQuery = {(query, fileIO, backtrack, openpath)=>this.submitQuery(query, fileIO, backtrack, openpath)}
             viewHistory = {(position)=>this.viewHistory(position)}
             changeSavePath = {(path)=>this.setState({ savepath : path })}
+            changeMode = {(mode)=>this.changeMode(mode)}
         />
         <QuerySelect
+            s = {this.state}
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
             submitQuery = {(query, fileIO)=>this.submitQuery(query, fileIO)}
             showQuery = {this.state.showQuery}

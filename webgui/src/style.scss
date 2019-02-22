@@ -177,6 +177,19 @@ html {
     min-width: 40em;
 }
 
+//mode select section
+.modeShow {
+    padding: 0.3em;
+    background: $loginbg;
+    top: 2.2em;
+    position: absolute;
+    display: none;
+}
+.modeButton {
+    padding: 1em;
+    margin: 1em;
+}
+
 //history arrows
 .historyArrows {
     right: 0;
