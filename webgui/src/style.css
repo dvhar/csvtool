@@ -108,8 +108,7 @@ html {
   padding: 0.3em;
   background: #fdffe5;
   top: 2.2em;
-  position: absolute;
-  display: none; }
+  position: absolute; }
 
 .LoginShow label {
   width: 9em;
@@ -123,8 +122,7 @@ html {
   padding: 0.3em;
   background: #fdffe5;
   top: 2.2em;
-  position: absolute;
-  display: none; }
+  position: absolute; }
 
 .fileSelectShow label {
   display: inline-block; }
@@ -136,8 +134,7 @@ html {
   padding: 0.3em;
   background: #fdffe5;
   top: 2.2em;
-  position: absolute;
-  display: none; }
+  position: absolute; }
 
 .modeButton {
   padding: 1em;

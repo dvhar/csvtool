@@ -272,25 +272,30 @@ class TopMenuBar extends React.Component {
 
         return (
             <div className="topBar">
-            <LoginForm
+            <TopDropdown
                 updateTopMessage = {this.props.updateTopMessage}
-                mode = {this.props.s.mode}
-            />
-            <Saver
-                savepath = {this.props.s.savepath}
+                changeMode = {this.props.changeMode}
                 changeSavePath = {this.props.changeSavePath}
                 currentQuery = {this.props.s.queryHistory[this.props.s.historyPosition]}
                 submitQuery = {this.props.submitQuery}
                 mode = {this.props.s.mode}
+                section = {this.props.s.topDropdown}
+                openpath = {this.props.s.openpath}
+                savepath = {this.props.s.savepath}
+            />
+            <LoginForm
+                changeTopDrop = {this.props.changeTopDrop}
+                mode = {this.props.s.mode}
+            />
+            <Saver
+                changeTopDrop = {this.props.changeTopDrop}
             />
             <Opener
-                submitQuery = {this.props.submitQuery}
-                openpath = {this.props.s.openpath}
-                mode = {this.props.s.mode}
+                changeTopDrop = {this.props.changeTopDrop}
             />
             <ModeSelect
+                changeTopDrop = {this.props.changeTopDrop}
                 mode = {this.props.s.mode}
-                changeMode = {this.props.changeMode}
             />
             <div id="topMessage" className="topMessage">{this.props.s.topMessage}</div>
             <History
@@ -318,124 +323,138 @@ class History extends React.Component {
     }
 }
 
+class TopDropdown extends React.Component {
+
+    render(){
+        var dropdownContents = {
+            nothing : <></>,
+            modeShow : (
+                <div id="modeShow" className="modeShow dropContent">
+                <button className="modeButton dropContent" onClick={()=>this.props.changeMode("SQL")}>SQL</button>
+                <button className="modeButton dropContent" onClick={()=>this.props.changeMode("CSV")}>CSV</button>
+                </div>
+            ),
+
+            openShow : (
+                <div id="openShow" className="fileSelectShow dropContent">
+                    <label className="dropContent">Open file:</label> 
+                    <input id="openPath" className="dropContent"/>
+                    <button onClick={()=>{
+                        var path = document.getElementById("openPath").value;
+                        this.props.submitQuery("", 2, false, path);
+                    }}>open</button>
+                </div>
+            ),
+
+            saveShow : (
+                <div id="saveShow" className="fileSelectShow dropContent">
+                    <label className="dropContent">Save file:</label> 
+                    <input id="savePath" className="dropContent"/>
+                    <button onClick={()=>{
+                        var path = document.getElementById("savePath").value;
+                        this.props.submitQuery(this.props.currentQuery, 1, false, path);
+                        this.props.changeSavePath(path); //see if this is needed
+                    }}>save</button>
+                </div>
+            ),
+
+            loginShow : (
+                <div id="LoginShow" className="LoginShow  dropContent">
+                    <label className="dropContent">Database url:</label> 
+                    <input className="dropContent" id="dbUrl"/> <br/>
+                    <label className="dropContent">Database name:</label> 
+                    <input className="dropContent" id="dbName"/> <br/>
+                    <label className="dropContent">login name:</label> 
+                    <input className="dropContent" id="dbLogin"/> <br/>
+                    <label className="dropContent">login password:</label> 
+                    <input className="dropContent" id="dbPass" type="password"/> <br/>
+                    <div className="loginButtonDiv dropContent">
+                        <button className="dropContent" onClick={()=>{
+                            var dbUrl = document.getElementById("dbUrl").value;
+                            var dbName = document.getElementById("dbName").value;
+                            var dbLogin = document.getElementById("dbLogin").value;
+                            var dbPass = document.getElementById("dbPass").value;
+                            postRequest({path:"/login/",body:{Login: dbLogin, Pass:dbPass, Database: dbName, Server: dbUrl, Action: "login"}})
+                            .then(dat=>{
+                                switch (dat.Status){
+                                    case 4:  
+                                        this.props.updateTopMessage(dat.Message);
+                                        document.getElementById("LoginShow").classList.remove('show');
+                                        break;
+                                    default: 
+                                        this.props.updateTopMessage(dat.Message);
+                                        document.getElementById("LoginMessage").innerHTML = "Nothing happened. Maybe bad credentials or connection.";
+                                        break;
+                                }
+                            })
+                        }}
+                        >Submit</button><br/>
+                    </div>
+                    <span id="LoginMessage"></span>
+                </div>
+            ),
+        }
+        return dropdownContents[this.props.section];
+    }
+
+    defValue(){ 
+        switch(this.props.section){
+            case "openShow":
+                document.getElementById("openPath").value = this.props.openpath; 
+                break;
+            case "saveShow":
+                document.getElementById("savePath").value = this.props.savepath;
+                break
+            case "loginShow":
+                document.getElementById("dbUrl").value = "";
+                document.getElementById("dbName").value = "";
+            default: break;
+        }
+    }
+    componentDidMount(){ this.defValue(); }
+    componentDidUpdate(){ this.defValue(); }
+}
 class ModeSelect extends React.Component {
-    toggleForm(){ document.getElementById("modeShow").classList.toggle("show");
-                  document.getElementById("saveShow").classList.remove("show");
-                  document.getElementById("openShow").classList.remove("show");
-                  document.getElementById("LoginShow").classList.remove("show"); }
+    toggleForm(){ this.props.changeTopDrop("modeShow");}
     render(){
         return(
-            <>
             <button className="topButton dropContent" id="modeButton" onClick={()=>this.toggleForm()}>Mode: SQL</button>
-            <div id="modeShow" className="modeShow dropContent">
-            <button className="modeButton dropContent" onClick={()=>this.props.changeMode("SQL")}>SQL</button>
-            <button className="modeButton dropContent" onClick={()=>this.props.changeMode("CSV")}>CSV</button>
-            </div>
-            </>
         )
     }
 }
 
 class Opener extends React.Component {
-    toggleForm(){ document.getElementById("openShow").classList.toggle("show");
-                  document.getElementById("saveShow").classList.remove("show");
-                  document.getElementById("modeShow").classList.remove("show");
-                  document.getElementById("LoginShow").classList.remove("show"); }
+    toggleForm(){ this.props.changeTopDrop("openShow");}
     render(){
         return(
-            <>
             <button className="topButton dropContent" id="openButton" onClick={()=>this.toggleForm()}>Open</button>
-            <div id="openShow" className="fileSelectShow dropContent">
-                <label className="dropContent">Open file:</label> 
-                <input id="openPath" className="dropContent"/>
-                <button onClick={()=>{
-                    var path = document.getElementById("openPath").value;
-                    this.props.submitQuery("", 2, false, path);
-                }}>open</button>
-            </div>
-            </>
         )
     }
-    defValue(){ document.getElementById("openPath").value = this.props.openpath; }
-    componentDidMount(){ this.defValue(); }
-    componentDidUpdate(){ this.defValue(); }
+    //defValue(){ document.getElementById("openPath").value = this.props.openpath; }
+    //componentDidMount(){ this.defValue(); }
+    //componentDidUpdate(){ this.defValue(); }
 }
 
 class Saver extends React.Component {
-    toggleForm(){ document.getElementById("saveShow").classList.toggle("show");
-                  document.getElementById("openShow").classList.remove("show");
-                  document.getElementById("modeShow").classList.remove("show");
-                  document.getElementById("LoginShow").classList.remove("show"); }
+    toggleForm(){ this.props.changeTopDrop("saveShow");}
     render(){
-        return(
-            <>
-            <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>
-            <div id="saveShow" className="fileSelectShow dropContent">
-                <label className="dropContent">Save file:</label> 
-                <input id="savePath" className="dropContent"/>
-                <button onClick={()=>{
-                    var path = document.getElementById("savePath").value;
-                    this.props.submitQuery(this.props.currentQuery, 1, false, path);
-                    this.props.changeSavePath(path); //see if this is needed
-                }}>save</button>
-            </div>
-            </>
-        )
+        return( <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>)
     }
-    defValue(){ document.getElementById("savePath").value = this.props.savepath; }
-    componentDidMount(){ this.defValue(); }
-    componentDidUpdate(){ this.defValue(); }
+    //defValue(){ document.getElementById("savePath").value = this.props.savepath; }
+    //componentDidMount(){ this.defValue(); }
+    //componentDidUpdate(){ this.defValue(); }
 }
 
 class LoginForm extends React.Component {
-    toggleForm(){ document.getElementById("LoginShow").classList.toggle("show");
-                  document.getElementById("openShow").classList.remove("show");
-                  document.getElementById("modeShow").classList.remove("show");
-                  document.getElementById("saveShow").classList.remove("show"); }
+    toggleForm(){ this.props.changeTopDrop("loginShow");}
     render(){
         var disp = {};
         if (this.props.mode !== "SQL")
             disp = {display:"none"};
         return (
-            <>
             <button className="loginButton dropContent topButton" style={disp} onClick={()=>this.toggleForm()}>
             Login
             </button>
-            <div id="LoginShow" className="LoginShow  dropContent">
-                <label className="dropContent">Database url:</label> 
-                <input className="dropContent" id="dbUrl"/> <br/>
-                <label className="dropContent">Database name:</label> 
-                <input className="dropContent" id="dbName"/> <br/>
-                <label className="dropContent">login name:</label> 
-                <input className="dropContent" id="dbLogin"/> <br/>
-                <label className="dropContent">login password:</label> 
-                <input className="dropContent" id="dbPass" type="password"/> <br/>
-                <div className="loginButtonDiv dropContent">
-                    <button className="dropContent" onClick={()=>{
-                        var dbUrl = document.getElementById("dbUrl").value;
-                        var dbName = document.getElementById("dbName").value;
-                        var dbLogin = document.getElementById("dbLogin").value;
-                        var dbPass = document.getElementById("dbPass").value;
-                        postRequest({path:"/login/",body:{Login: dbLogin, Pass:dbPass, Database: dbName, Server: dbUrl, Action: "login"}})
-                        .then(dat=>{
-                            var message;
-                            switch (dat.Status){
-                                case 4:  
-                                    this.props.updateTopMessage(dat.Message);
-                                    document.getElementById("LoginShow").classList.remove('show');
-                                    break;
-                                default: 
-                                    this.props.updateTopMessage(dat.Message);
-                                    document.getElementById("LoginMessage").innerHTML = "Nothing happened. Maybe bad credentials or connection.";
-                                    break;
-                            }
-                        })
-                    }}
-                    >Submit</button><br/>
-                </div>
-                <span id="LoginMessage"></span>
-            </div>
-            </>
         )
     }
 }
@@ -447,12 +466,14 @@ class Main extends React.Component {
         this.state = {
             mode : "SQL",
             topMessage : "",
+            topDropdown : "nothing",
             savepath : "",
             openpath : "",
             queryHistory: ['',],
             historyPosition : 0,
             showQuery : <></>,
         }
+        this.topDropReset = this.topDropReset.bind(this);
 
         //get initial login state
         postRequest({path:"/login/",body:{Action: "check"}})
@@ -504,17 +525,25 @@ class Main extends React.Component {
     changeMode(mode){ 
         this.setState({ mode : mode, topMessage : `${mode} mode` }); 
     }
+    topDropReset(e){ 
+        if (!e.target.matches('.dropContent'))
+            this.setState({ topDropdown : "nothing" }); 
+    }
 
     render(){
+    
+        document.addEventListener('click',this.topDropReset);
+
         return (
         <>
         <TopMenuBar
             s = {this.state}
-            updateTopMessage = {(message)=>this.setState({topMessage:message})}
+            updateTopMessage = {(message)=>this.setState({ topMessage : message })}
             submitQuery = {(query, fileIO, backtrack, openpath)=>this.submitQuery(query, fileIO, backtrack, openpath)}
             viewHistory = {(position)=>this.viewHistory(position)}
             changeSavePath = {(path)=>this.setState({ savepath : path })}
             changeMode = {(mode)=>this.changeMode(mode)}
+            changeTopDrop = {(section)=>this.setState({ topDropdown : section })}
         />
         <QuerySelect
             s = {this.state}
@@ -536,19 +565,6 @@ function startRender(){
         document.getElementById('root'));
 }
 
-//dropdown closing
-window.onclick = function(event) {
-  if (!event.target.matches('.dropContent')) {
-    document.getElementById("LoginMessage").innerHTML = ""; 
-    var dropdowns = document.getElementsByClassName("dropContent");
-    for (var i = 0; i < dropdowns.length; i++) {
-      var openDropdown = dropdowns[i];
-      if (openDropdown.classList.contains('show')) {
-        openDropdown.classList.remove('show');
-      }
-    }
-  }
-}
 
 startRender();
 
