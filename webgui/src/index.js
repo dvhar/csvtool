@@ -276,6 +276,7 @@ class TopMenuBar extends React.Component {
                 updateTopMessage = {this.props.updateTopMessage}
                 changeMode = {this.props.changeMode}
                 changeSavePath = {this.props.changeSavePath}
+                changeTopDrop = {this.props.changeTopDrop}
                 currentQuery = {this.props.s.queryHistory[this.props.s.historyPosition]}
                 submitQuery = {this.props.submitQuery}
                 mode = {this.props.s.mode}
@@ -339,7 +340,7 @@ class TopDropdown extends React.Component {
                 <div id="openShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Open file:</label> 
                     <input id="openPath" className="dropContent"/>
-                    <button onClick={()=>{
+                    <button className="dropContent" onClick={()=>{
                         var path = document.getElementById("openPath").value;
                         this.props.submitQuery("", 2, false, path);
                     }}>open</button>
@@ -350,10 +351,10 @@ class TopDropdown extends React.Component {
                 <div id="saveShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Save file:</label> 
                     <input id="savePath" className="dropContent"/>
-                    <button onClick={()=>{
+                    <button className="dropContent" onClick={()=>{
+                        console.log('trying to save');
                         var path = document.getElementById("savePath").value;
                         this.props.submitQuery(this.props.currentQuery, 1, false, path);
-                        this.props.changeSavePath(path); //see if this is needed
                     }}>save</button>
                 </div>
             ),
@@ -430,9 +431,6 @@ class Opener extends React.Component {
             <button className="topButton dropContent" id="openButton" onClick={()=>this.toggleForm()}>Open</button>
         )
     }
-    //defValue(){ document.getElementById("openPath").value = this.props.openpath; }
-    //componentDidMount(){ this.defValue(); }
-    //componentDidUpdate(){ this.defValue(); }
 }
 
 class Saver extends React.Component {
@@ -440,9 +438,6 @@ class Saver extends React.Component {
     render(){
         return( <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>)
     }
-    //defValue(){ document.getElementById("savePath").value = this.props.savepath; }
-    //componentDidMount(){ this.defValue(); }
-    //componentDidUpdate(){ this.defValue(); }
 }
 
 class LoginForm extends React.Component {
