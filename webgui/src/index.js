@@ -253,7 +253,7 @@ class QuerySelect extends React.Component {
 
         var selectors = [];
 
-        if (this.props.s.mode === "SQL")
+        if (this.props.s.mode === "MSSQL")
             selectors.push(metaDataMenu,customQueryEntry);
         else
             selectors.push(<button>awwwww yeeee</button>);
@@ -331,8 +331,8 @@ class TopDropdown extends React.Component {
             nothing : <></>,
             modeShow : (
                 <div id="modeShow" className="modeShow dropContent">
-                <button className="modeButton dropContent" onClick={()=>this.props.changeMode("SQL")}>SQL</button>
-                <button className="modeButton dropContent" onClick={()=>this.props.changeMode("CSV")}>CSV</button>
+                <button className="modeButton " onClick={()=>this.props.changeMode("MSSQL")}>MSSQL</button>
+                <button className="modeButton " onClick={()=>this.props.changeMode("CSV")}>CSV</button>
                 </div>
             ),
 
@@ -340,7 +340,7 @@ class TopDropdown extends React.Component {
                 <div id="openShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Open file:</label> 
                     <input id="openPath" className="dropContent"/>
-                    <button className="dropContent" onClick={()=>{
+                    <button className="" onClick={()=>{
                         var path = document.getElementById("openPath").value;
                         this.props.submitQuery("", 2, false, path);
                     }}>open</button>
@@ -351,7 +351,7 @@ class TopDropdown extends React.Component {
                 <div id="saveShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Save file:</label> 
                     <input id="savePath" className="dropContent"/>
-                    <button className="dropContent" onClick={()=>{
+                    <button className="" onClick={()=>{
                         console.log('trying to save');
                         var path = document.getElementById("savePath").value;
                         this.props.submitQuery(this.props.currentQuery, 1, false, path);
@@ -370,7 +370,7 @@ class TopDropdown extends React.Component {
                     <label className="dropContent">login password:</label> 
                     <input className="dropContent" id="dbPass" type="password"/> <br/>
                     <div className="loginButtonDiv dropContent">
-                        <button className="dropContent" onClick={()=>{
+                        <button className="" onClick={()=>{
                             var dbUrl = document.getElementById("dbUrl").value;
                             var dbName = document.getElementById("dbName").value;
                             var dbLogin = document.getElementById("dbLogin").value;
@@ -419,7 +419,7 @@ class ModeSelect extends React.Component {
     toggleForm(){ this.props.changeTopDrop("modeShow");}
     render(){
         return(
-            <button className="topButton dropContent" id="modeButton" onClick={()=>this.toggleForm()}>Mode: SQL</button>
+            <button className="topButton dropContent" id="modeButton" onClick={()=>this.toggleForm()}>Mode: {this.props.mode}</button>
         )
     }
 }
@@ -444,7 +444,7 @@ class LoginForm extends React.Component {
     toggleForm(){ this.props.changeTopDrop("loginShow");}
     render(){
         var disp = {};
-        if (this.props.mode !== "SQL")
+        if (this.props.mode !== "MSSQL")
             disp = {display:"none"};
         return (
             <button className="loginButton dropContent topButton" style={disp} onClick={()=>this.toggleForm()}>
@@ -459,7 +459,7 @@ class Main extends React.Component {
         super(props);
 
         this.state = {
-            mode : "SQL",
+            mode : "CSV",
             topMessage : "",
             topDropdown : "nothing",
             savepath : "",
@@ -470,12 +470,14 @@ class Main extends React.Component {
         }
         this.topDropReset = this.topDropReset.bind(this);
 
-        //get initial login state
-        postRequest({path:"/login/",body:{Action: "check"}})
-        .then(dat=>{
-            console.log(dat);
-            this.setState({topMessage: dat.Status===bit.CON_CHECKED?  dat.Message : "No connection"})
-        });
+        //get initial login state if sql mode
+        if (this.state.mode === "MSSQL") {
+            postRequest({path:"/login/",body:{Action: "check"}})
+            .then(dat=>{
+                console.log(dat);
+                this.setState({topMessage: dat.Status===bit.CON_CHECKED?  dat.Message : "No connection"})
+            });
+        }
         //get initial file path
         postRequest({path:"/info/",body:{}})
         .then(dat=>{
@@ -518,11 +520,13 @@ class Main extends React.Component {
         this.submitQuery(this.state.queryHistory[position], 0, true);
     }
     changeMode(mode){ 
-        this.setState({ mode : mode, topMessage : `${mode} mode` }); 
+        this.setState({ mode : mode }); 
     }
     topDropReset(e){ 
+        setTimeout(()=>{
         if (!e.target.matches('.dropContent'))
             this.setState({ topDropdown : "nothing" }); 
+        },50);
     }
 
     render(){
