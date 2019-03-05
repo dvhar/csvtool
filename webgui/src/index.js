@@ -232,7 +232,7 @@ class QueryRender extends React.Component {
 
 class QuerySelect extends React.Component {
     render(){
-        var metaDataMenu = ( <div className="queryMenuContainer"> 
+        var sqlServerMetaDataMenu = ( <div className="queryMenuContainer"> 
                          <DropdownQueryMenu
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
@@ -243,7 +243,7 @@ class QuerySelect extends React.Component {
                          />
                      </div>);
 
-        var customQueryEntry = ( <div className="queryMenuContainer"> 
+        var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
                             classes = {["queryMenuDiv","queryMenuButton"]}
@@ -254,7 +254,7 @@ class QuerySelect extends React.Component {
         var selectors = [];
 
         if (this.props.s.mode === "MSSQL")
-            selectors.push(metaDataMenu,customQueryEntry);
+            selectors.push(sqlServerMetaDataMenu, sqlServerCustomQueryEntry);
         else
             selectors.push(<button>awwwww yeeee</button>);
 
@@ -504,20 +504,23 @@ class Main extends React.Component {
                            />) });
         }
     }
-    submitQuery(query, fileIO=0, backtrack=false, openPath=""){
-        postRequest({path:"/query/",body:{Query:query, FileIO:fileIO, FilePath:openPath}}).then(dat=>{
+    submitQuery(query, fileIO=0, backtrack=false, openPath="", mode){
+        if (mode === undefined) { mode = this.state.mode; }
+        var fullQuery = {Query:query, FileIO:fileIO, FilePath:openPath, Mode:mode};
+        postRequest({path:"/query/",body:fullQuery}).then(dat=>{
             //console.log(dat);
             if ((dat.Status & bit.DAT_GOOD) && (!backtrack)){
                 this.setState({ topMessage : dat.Message,
                                 historyPosition : this.state.queryHistory.length,
-                                queryHistory : this.state.queryHistory.concat(dat.OriginalQuery),   });
+                                queryHistory : this.state.queryHistory.concat({query: dat.OriginalQuery, mode: dat.Mode}) });
             }
             this.showLoadedQuery(dat);
         });
     }
     viewHistory(position){
+        var q = this.state.queryHistory[position];
         this.setState({ historyPosition : position });
-        this.submitQuery(this.state.queryHistory[position], 0, true);
+        this.submitQuery(q.query, 0, true, "", q.mode);
     }
     changeMode(mode){ 
         this.setState({ mode : mode }); 

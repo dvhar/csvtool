@@ -55,6 +55,7 @@ type ReturnData struct {
     Status int
     Message string
     OriginalQuery string
+    Mode string
 }
 
 //database connection struct and codes
@@ -156,6 +157,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //struct that matches incoming json requests
         type Qrequest struct {
             Query string
+            Mode string
             FileIO int
             FilePath string
         }
@@ -169,6 +171,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         json.Unmarshal(body,&req)
         fullReturnData.Status = DAT_BLANK
         fullReturnData.OriginalQuery = req.Query
+        fullReturnData.Mode = req.Mode
 
         //handle request to open file
         if req.FileIO == 2 {
