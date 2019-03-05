@@ -490,7 +490,7 @@ class Main extends React.Component {
     showLoadedQuery(results){
         if (results.Status & bit.DAT_ERROR){
             if (results.Message === undefined || results.Message === "")
-                alert("Could not make query. Bad connection?");
+                alert("Could not make query. Bad connection or syntax?");
             else
                 alert(results.Message);
         }
@@ -504,8 +504,7 @@ class Main extends React.Component {
                            />) });
         }
     }
-    submitQuery(query, fileIO=0, backtrack=false, openPath="", mode){
-        if (mode === undefined) { mode = this.state.mode; }
+    submitQuery(query, fileIO=0, backtrack=false, openPath="", mode=this.state.mode){
         var fullQuery = {Query:query, FileIO:fileIO, FilePath:openPath, Mode:mode};
         postRequest({path:"/query/",body:fullQuery}).then(dat=>{
             //console.log(dat);
