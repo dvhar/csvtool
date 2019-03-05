@@ -62,37 +62,6 @@ func main() {
     Printf("Result count: %d\n",resCount)
 }
 
-//sort query results by column name or index
-func sortBy(res *SingleQueryResult, colName interface{}, whichWay int) error {
-    colIndex, ok := colName.(int)
-    var err error
-    if !ok {
-        colIndex, err = getColumnIdx(res.Colnames, colName.(string))
-        if err != nil { return err }
-    }
-    colType := res.Types[colIndex]
-    sort.Slice(res.Vals, func(i, j int) bool {
-        if res.Vals[i][colIndex] == nil && res.Vals[j][colIndex] == nil { return false
-        } else if res.Vals[i][colIndex] == nil { return false
-        } else if res.Vals[j][colIndex] == nil { return true
-        } else {
-            ret := false
-            switch colType {
-                case T_NULL:   fallthrough
-                case T_STRING: ret = res.Vals[i][colIndex].(string) > res.Vals[j][colIndex].(string)
-                case T_INT:    ret = res.Vals[i][colIndex].(int) > res.Vals[j][colIndex].(int)
-                case T_FLOAT:  ret = res.Vals[i][colIndex].(float64) > res.Vals[j][colIndex].(float64)
-                case T_DATE:   ret = res.Vals[i][colIndex].(time.Time).After(res.Vals[j][colIndex].(time.Time))
-            }
-            if whichWay == 1 { return !ret }
-            return ret
-        }
-        return false
-    })
-    return nil
-}
-
-
 func max(a int, b int) int {
     if a>b { return a }
     return b
@@ -608,7 +577,7 @@ func parseTokenTypes(q *QuerySpecs, c *Columns, col int, counter int) error {
     }
     tok = q.Next()
     if tok.Ttype != TOK_END {
-        err = parseTokenTypes(q,c,col,counter+1)
+        err = parseTokenTypes(q, c, col, counter+1)
     }
     return err
 }
@@ -731,6 +700,7 @@ func evalComparison(q *QuerySpecs, entry *[]interface{}) (bool,error) {
     compCol := q.Tok()
     relop := q.Next()
     compVal := q.Next()
+    //if comparing non-null values
     if compVal.Val != nil && (*entry)[compCol.Val.(int)] != nil {
         switch relop.Val.(string) {
             case "<>": fallthrough
@@ -766,6 +736,7 @@ func evalComparison(q *QuerySpecs, entry *[]interface{}) (bool,error) {
                 }
         }
 
+    //if comparing to null
     } else if compVal.Val == nil {
         switch relop.Val.(string) {
             case "<>": fallthrough
@@ -779,7 +750,7 @@ func evalComparison(q *QuerySpecs, entry *[]interface{}) (bool,error) {
     return match, nil
 }
 
-//sort results with order-by clause
+//evaluate order-by clause by calling sortBy functin
 func evalOrderBy(q *QuerySpecs, result *SingleQueryResult) error {
     for  { if q.Peek().Ttype == TOK_ORDER || q.Peek().Ttype == TOK_END { break } else { q.Next() } }
     tok := q.Next()
@@ -791,5 +762,35 @@ func evalOrderBy(q *QuerySpecs, result *SingleQueryResult) error {
         return sortBy(result, tok.Val.(int), whichWay)
     }
     return err
+}
+
+//sort query results by column name or index
+func sortBy(res *SingleQueryResult, colName interface{}, whichWay int) error {
+    colIndex, ok := colName.(int)
+    var err error
+    if !ok {
+        colIndex, err = getColumnIdx(res.Colnames, colName.(string))
+        if err != nil { return err }
+    }
+    colType := res.Types[colIndex]
+    sort.Slice(res.Vals, func(i, j int) bool {
+        if res.Vals[i][colIndex] == nil && res.Vals[j][colIndex] == nil { return false
+        } else if res.Vals[i][colIndex] == nil { return false
+        } else if res.Vals[j][colIndex] == nil { return true
+        } else {
+            ret := false
+            switch colType {
+                case T_NULL:   fallthrough
+                case T_STRING: ret = res.Vals[i][colIndex].(string) > res.Vals[j][colIndex].(string)
+                case T_INT:    ret = res.Vals[i][colIndex].(int) > res.Vals[j][colIndex].(int)
+                case T_FLOAT:  ret = res.Vals[i][colIndex].(float64) > res.Vals[j][colIndex].(float64)
+                case T_DATE:   ret = res.Vals[i][colIndex].(time.Time).After(res.Vals[j][colIndex].(time.Time))
+            }
+            if whichWay == 1 { return !ret }
+            return ret
+        }
+        return false
+    })
+    return nil
 }
 

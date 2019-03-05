@@ -87,6 +87,13 @@ type FilePaths struct {
     OpenPath string
     Status int
 }
+//struct that matches incoming json requests
+type Qrequest struct {
+    Query string
+    Mode string
+    FileIO int
+    FilePath string
+}
 
 //TODO: find out if program will run on multiple databases. Will need cache for each db
 var Qcache map[string]*SingleQueryResult
@@ -152,13 +159,6 @@ func server(serverUrl string, done chan bool) {
 func queryHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
 
-        //struct that matches incoming json requests
-        type Qrequest struct {
-            Query string
-            Mode string
-            FileIO int
-            FilePath string
-        }
         body, _ := ioutil.ReadAll(r.Body)
             println(formatRequest(r))
             println(string(body))
@@ -173,19 +173,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
         //handle request to open file
         if req.FileIO == 2 {
-            FPaths.OpenPath = req.FilePath
-            FPaths.Status |= FP_OCHANGED
-            fileData, err := ioutil.ReadFile(FPaths.OpenPath)
-            if err != nil {
-                fullReturnData.Status |= DAT_ERROR
-                fullReturnData.Message = "Error opening file"
-                println("Error opening file")
-            } else {
-                json.Unmarshal(fileData,&fullReturnData)
-                fullReturnData.Message = "Opened file"
-                println("Opened file")
-            }
-            full_json,_ := json.Marshal(fullReturnData)
+            full_json,_ := openQueryFile(&req, &fullReturnData)
             Fprint(w, string(full_json))
             return
         }
@@ -214,41 +202,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
         //save queries to json file
         if req.FileIO == 1 {
-            println("saving query...")
-            savePath := req.FilePath
-            pathStat, err := os.Stat(savePath)
-
-            //if given a real path
-            if err == nil {
-                if pathStat.Mode().IsDir() {
-                    savePath = savePath + "sqlSaved.json"
-                } //else given a real file
-            } else {
-                _, err := os.Stat(filepath.Dir(savePath))
-                //if base path doesn't exist
-                if err != nil {
-                    fullReturnData.Status |= DAT_BADPATH
-                    fullReturnData.Message = "Invalid path: " + savePath
-                    println("invalid path")
-                } //else given new file
-            }
-
-            //save file
-            if fullReturnData.Status & DAT_BADPATH == 0 {
-                file, err := os.OpenFile(savePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
-                FPaths.SavePath = savePath
-                if err == nil {
-                    file.WriteString(string(full_json))
-                    file.Close()
-                    FPaths.Status = FP_SCHANGED
-                    fullReturnData.Message = "Saved to "+savePath
-                    println("Saved to "+savePath)
-                } else {
-                    fullReturnData.Status = (DAT_BADPATH | DAT_IOERR)
-                    fullReturnData.Message = "File IO error"
-                    println("File IO error")
-                }
-            }
+            saveQueryFile(&req, &fullReturnData, full_json)
         }
 
         //update json with save message
@@ -464,6 +418,64 @@ func runQueries(db *sql.DB, query string) ([]*SingleQueryResult, error) {
         }
     }
     return results, nil
+}
+
+func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json []byte) error {
+    println("saving query...")
+    savePath := req.FilePath
+    pathStat, err := os.Stat(savePath)
+
+    //if given a real path
+    if err == nil {
+        if pathStat.Mode().IsDir() {
+            savePath = savePath + "sqlSaved.json"
+        } //else given a real file
+    } else {
+        _, err := os.Stat(filepath.Dir(savePath))
+        //if base path doesn't exist
+        if err != nil {
+            fullReturnData.Status |= DAT_BADPATH
+            fullReturnData.Message = "Invalid path: " + savePath
+            println("invalid path")
+        } //else given new file
+    }
+
+    //save file
+    if fullReturnData.Status & DAT_BADPATH == 0 {
+        file, err := os.OpenFile(savePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+        FPaths.SavePath = savePath
+        if err == nil {
+            file.WriteString(string(full_json))
+            file.Close()
+            FPaths.Status = FP_SCHANGED
+            fullReturnData.Message = "Saved to "+savePath
+            println("Saved to "+savePath)
+        } else {
+            fullReturnData.Status = (DAT_BADPATH | DAT_IOERR)
+            fullReturnData.Message = "File IO error"
+            println("File IO error")
+        }
+    }
+    return err
+}
+
+
+//handle file opening
+func openQueryFile(req *Qrequest, fullReturnData *ReturnData) ([]byte, error) {
+    FPaths.OpenPath = req.FilePath
+    FPaths.Status |= FP_OCHANGED
+    fileData, err := ioutil.ReadFile(FPaths.OpenPath)
+    if err != nil {
+        fullReturnData.Status |= DAT_ERROR
+        fullReturnData.Message = "Error opening file"
+        println("Error opening file")
+    } else {
+        json.Unmarshal(fileData,&fullReturnData)
+        fullReturnData.Message = "Opened file"
+        println("Opened file")
+    }
+    full_json, err := json.Marshal(fullReturnData)
+    return full_json, err
 }
 
 //some useful premade queries

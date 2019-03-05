@@ -354,7 +354,7 @@ class TopDropdown extends React.Component {
                     <button className="" onClick={()=>{
                         console.log('trying to save');
                         var path = document.getElementById("savePath").value;
-                        this.props.submitQuery(this.props.currentQuery, 1, false, path);
+                        this.props.submitQuery(this.props.currentQuery.query, 1, false, path);
                     }}>save</button>
                 </div>
             ),
