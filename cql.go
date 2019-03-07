@@ -1,8 +1,8 @@
 package main
 
 import (
-    "encoding/base64"
-    "crypto/sha1"
+    //"encoding/base64"
+    //"crypto/sha1"
   "encoding/csv"
   //"encoding/json"
   . "fmt"
@@ -19,9 +19,10 @@ import (
 
 )
 
+
 var m runtime.MemStats
-var totalMem uint64
 var ColCache map[string]*Columns
+var totalMem uint64
 const (
     T_NULL = 1 << iota
     T_INT = 1 << iota
@@ -31,21 +32,17 @@ const (
     T_UNKNOWN = 1 << iota
 )
 
+/* Using csvQuery function in bigger program. uncomment if using as standalone application
 //main func
 func main() {
     ColCache = make(map[string]*Columns)
     totalMem = memory.TotalMemory()
-    fname := os.Args[1]
+    //fname := os.Args[1]
 
-    //get query string from arg or test default
-    var queryString string
-    if len(os.Args) > 2 {
-        queryString = os.Args[2]
-    } else {
-        queryString =  "select minantipsych where minantipsych != null"
-        //queryString =  "select minantipsych where minantipsych > '2016-10-17 00:00:00 +0000 UTC'"
-        //queryString =  "select top 30 3 4 5 6 7 where 3 <> AH2256988 order by 7 asc"
-    }
+    //get query string from arg
+    var fname string
+    queryString := os.Args[1]
+    if len(os.Args) > 2 { fname = os.Args[2] }
 
     testQuery := QuerySpecs{
         Qstring : queryString,
@@ -61,6 +58,17 @@ func main() {
     }
     Printf("Result count: %d\n",resCount)
 }
+type SingleQueryResult struct {
+    Numrows int
+    Numcols int
+    Types []int
+    Colnames []string
+    Vals [][]interface{}
+    Status int
+    Query string
+}
+*/
+
 
 func max(a int, b int) int {
     if a>b { return a }
@@ -79,21 +87,24 @@ type QuerySpecs struct {
     SelectAll bool
     ColArray []int
     ColSpec *Columns
+    End bool
 }
 //token retrieval methods
 func (q *QuerySpecs) Next() *Token {
     if q.TokIdx < len(q.TokArray)-1 {
         q.TokIdx++
         return &q.TokArray[q.TokIdx]
-    } else { return &Token{TOK_END, nil, T_UNKNOWN} }
+    } else { q.End = true; return &Token{TOK_END, nil, T_UNKNOWN} }
 }
 func (q *QuerySpecs) Back() *Token {
     if q.TokIdx > 0 {
         q.TokIdx--
     }
+    q.End = false
     return &q.TokArray[q.TokIdx]
 }
 func (q *QuerySpecs) Reset() {
+    q.End = false
     q.TokIdx = 0
 }
 func (q QuerySpecs) Peek() *Token {
@@ -102,7 +113,11 @@ func (q QuerySpecs) Peek() *Token {
     } else { return &Token{TOK_END, nil, T_UNKNOWN} }
 }
 func (q QuerySpecs) Tok() *Token {
-    return &q.TokArray[q.TokIdx]
+    if q.End {
+        return &Token{TOK_END, nil, T_UNKNOWN}
+    } else {
+        return &q.TokArray[q.TokIdx]
+    }
 }
 //column metadata
 type Columns struct {
@@ -111,15 +126,6 @@ type Columns struct {
     Types []int
     NewTypes []int
     Width int
-}
-type SingleQueryResult struct {
-    Numrows int
-    Numcols int
-    Types []int
-    Colnames []string
-    Vals [][]interface{}
-    Status int
-    Query string
 }
 
 //get the column count, names, and types of a csv file. arg file pointer or name
@@ -169,9 +175,19 @@ func inferTypes(file interface{}) (*Columns, error) {
 }
 
 func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
-    //open file and check cache for column info
-    fp,_ := os.Open(q.Fname)
+    //tokenize input query
+    err := tokenizeQspec(&q)
+    if err != nil { Println(err); return &SingleQueryResult{}, err }
+    println("tokenized ok")
+
+    //open file
+    Println("token array: ",q.TokArray)
+    parseFromToken(&q)
+    fp,err := os.Open(q.Fname)
+    if err != nil { Println(err); return &SingleQueryResult{}, err }
     defer fp.Close()
+
+    /*//column info cache
     hasher := sha1.New()
     hasher.Write([]byte(q.Fname))
     sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
@@ -184,17 +200,23 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         fp.Seek(0,0)
         ColCache[sha] = ColSpec
     }
+    */
+
+    //infer column types
+    ColSpec, err := inferTypes(fp)
+    if err != nil { return &SingleQueryResult{}, err }
+    fp.Seek(0,0)
     q.ColSpec = ColSpec
-    //tokenize query and type the value tokens
-    err := tokenizeQspec(&q)
-    if err != nil { Println(err); return &SingleQueryResult{}, err }
-    println("tokenized ok")
+
+    //do some pre-query parsing
     err = parseTokenTypes(&q, ColSpec, 0,1)
     if err != nil { Println(err); return &SingleQueryResult{}, err }
     println("typed the tokens")
     q.Reset()
     Println(q)
+
     //prepare input and output
+    totalMem = memory.TotalMemory()
     cread := csv.NewReader(fp)
     result := SingleQueryResult{
         Colnames : ColSpec.Names,
@@ -252,9 +274,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         result.Colnames = ColSpec.NewNames
         result.Types = ColSpec.NewTypes
     }
-    println("now trying sort")
     evalOrderBy(&q, &result)
-    println("sorted")
     return &result, nil
 }
 
@@ -301,6 +321,7 @@ const (
     TOK_TOP = iota
     TOK_ORDER = iota
     TOK_ORDHOW = iota
+    TOK_FROM = iota
     TOK_END = iota
 )
 type Token struct {
@@ -384,6 +405,7 @@ func tokenizeQspec(q *QuerySpecs) error {
         if v[0] == '(' { state = 4 }
         if v[0] == ')' { state = 5 }
         if i == 0 && s.ToLower(v) == "select" { selectPart = true; state = 6 }
+        if (selectPart || i ==0 ) && s.ToLower(v) == "from" { selectPart = false; state = 10 }
         if (selectPart || i ==0 ) && s.ToLower(v) == "where" { selectPart = false; state = 6 }
         if selectPart && v == "*" { state = 7 }
         if v == "order" && i<len(words)-2 && words[i+1] == "by" { state = 8 }
@@ -523,10 +545,30 @@ func tokenizeQspec(q *QuerySpecs) error {
                 TokArray = append(TokArray, tempTok)
                 state = 0
                 i++
+
+            //from token
+            case 10:
+                TokArray = append(TokArray, Token{TOK_FROM, words[i+1], T_STRING})
+                selectPart = false
+                state = 6
+                i += 2
         }
     }
     q.TokArray = TokArray
     return nil
+}
+
+func parseFromToken(q *QuerySpecs) error {
+    tok := q.Tok()
+    if tok.Ttype == TOK_END {
+        if q.Fname == "" { q.Reset(); return errors.New("No file to query")
+        } else { q.Reset(); return nil }
+    } else if tok.Ttype == TOK_FROM {
+        q.Fname = tok.Val.(string)
+        println("found from val: "+q.Fname)
+        q.Reset();
+        return nil
+    } else { q.Next(); return parseFromToken(q) }
 }
 
 //give val tokens their correct Dtype and change col name tokens to col index
@@ -640,6 +682,7 @@ func evalSelectCol(q *QuerySpecs, result *SingleQueryResult, row *[]interface{},
 
 //evaluate to true if there is no where clause, else call evalMultiComparison
 func evalWhere(q *QuerySpecs, entry *[]interface{}) (bool, error) {
+    if q.Tok().Ttype == TOK_FROM { q.Next() }
     if q.Tok().Ttype == TOK_SELECT && q.TokWhere == 0 {
         return true, nil
     }

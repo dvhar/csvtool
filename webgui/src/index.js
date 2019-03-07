@@ -9,9 +9,12 @@ import * as serviceWorker from './serviceWorker';
 //var squel = require("squel");
 
 function DropdownQueryTextbox(props){
+    //var inbox = [];
+    //if (props.s.mode === "CSV") inbox.push( <input className="queryFileBox" placeholder="full path of csv file you would like to query" type="text"/> );
+
     return(
-        <div className={`dropmenu ${props.classes[0]}`}>
-            <div className={`dropButton ${props.classes[1]}`}>
+        <div className="dropmenu queryMenuDiv">
+            <div className="dropButton queryMenuButton">
                 {props.title}
             </div>
             <div className="dropmenu-content">
@@ -24,13 +27,13 @@ function DropdownQueryTextbox(props){
             }}>Submit Query</button>
             </div>
         </div>
-    )
+    );
 }
 
 function DropdownQueryMenu(props){
     return(
-        <div className={`dropmenu ${props.classes[0]}`}>
-            <div className={`dropButton ${props.classes[1]}`}>
+        <div className="dropmenu queryMenuDiv">
+            <div className="dropButton queryMenuButton">
                 {props.title}
             </div>
             <div className="dropmenu-content">
@@ -51,20 +54,6 @@ function DropdownQueryMenu(props){
     )
 }
 
-function DropdownGenericMenu(props){
-    return(
-        <div className={`dropmenu ${props.classes[0]}`}>
-            <div className={`dropButton ${props.classes[1]}`}>
-                {props.title}
-            </div>
-            <div className="dropmenu-content">
-            <select size={String(props.size)} className="dropSelect">
-                {props.contents}
-            </select>
-            </div>
-        </div>
-    )
-}
 
 //drop down list for what columns to hide
 class TableSelectColumns extends React.Component {
@@ -82,14 +71,34 @@ class TableSelectColumns extends React.Component {
             </option>
         )
     }
+
+    SelectColumnDropdown(title, size, contents){
+        return(
+            <div className="dropmenu tableModDiv">
+                <div className="dropButton tableModButton">
+                    {title}
+                </div>
+                <div className="dropmenu-content absolute-pos tableModDrop">
+                <select size={String(size)} className="dropSelect">
+                    {contents}
+                </select>
+                </div>
+            </div>
+        )
+    }
+
     render(){
         return (
-            <DropdownGenericMenu
-                title = {this.props.title}
-                size = {Math.min(20,this.props.table.Colnames.length)}
-                contents = {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
-                classes = {["tableModDiv","tableModButton"]}
-            />
+            <div className="dropmenu tableModDiv">
+                <div className="dropButton tableModButton">
+                    {this.props.title}
+                </div>
+                <div className="dropmenu-content absolute-pos tableModDrop">
+                <select size={String(Math.min(20,this.props.table.Colnames.length))} className="dropSelect">
+                    {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
+                </select>
+                </div>
+            </div>
         )
     }
 }
@@ -132,9 +141,10 @@ class TableSelectRows extends React.Component {
                 </select>
         ];
         if (this.state.secondDrop)
+            console.log("second drop items: ", this.state.secondDropItems);
             dropdowns.push(
                 <select className="dropSelect" size={Math.min(20,this.state.secondDropItems.length+1)}>
-                    {["*"].concat(this.state.secondDropItems).map((name,i)=>this.dropItem(name,i,'second'))}
+                    {["*"].concat(this.state.secondDropItems.sort()).map((name,i)=>this.dropItem(name,i,'second'))}
                 </select>
             );
         return (
@@ -142,7 +152,7 @@ class TableSelectRows extends React.Component {
                 <div className="dropButton tableModButton">
                 {this.props.title}
                 </div>
-                <div className="dropmenu-content">
+                <div className="dropmenu-content absolute-pos tableModDrop">
                 {dropdowns}
                 </div>
             </div>
@@ -239,15 +249,22 @@ class QuerySelect extends React.Component {
                             //make this run multi-select queries
                             contents = {premades.metaDataQueries}
                             submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
-                            classes = {["queryMenuDiv","queryMenuButton"]}
                          />
                      </div>);
 
         var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
-                            classes = {["queryMenuDiv","queryMenuButton"]}
                             submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
+                            s = {this.props.s}
+                         />
+                     </div>);
+
+        var csvCustomQueryEntry = ( <div className="queryMenuContainer"> 
+                         <DropdownQueryTextbox
+                            title = {<h2>Enter CSV Query{"\u25bc"}</h2>}
+                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
+                            s = {this.props.s}
                          />
                      </div>);
 
@@ -256,7 +273,7 @@ class QuerySelect extends React.Component {
         if (this.props.s.mode === "MSSQL")
             selectors.push(sqlServerMetaDataMenu, sqlServerCustomQueryEntry);
         else
-            selectors.push(<button>awwwww yeeee</button>);
+            selectors.push(csvCustomQueryEntry);
 
         return (
             <div className="querySelect"> 

@@ -85,6 +85,7 @@ const (
 type FilePaths struct {
     SavePath string
     OpenPath string
+    CsvPath string
     Status int
 }
 //struct that matches incoming json requests
@@ -93,6 +94,7 @@ type Qrequest struct {
     Mode string
     FileIO int
     FilePath string
+    CsvFile string
 }
 
 //TODO: find out if program will run on multiple databases. Will need cache for each db
@@ -187,7 +189,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //attempt query if there is a connection
         } else {
             println("requesting query")
-            entries,err = runQueries(dbCon.Db, req.Query)
+            entries,err = runQueries(dbCon.Db, &req)
             if err != nil {
                 fullReturnData.Status |= DAT_ERROR
                 fullReturnData.Message = "Error querying database"
@@ -345,8 +347,8 @@ func sqlConnect(login, pass, server, name string) Connection {
     return ret
 }
 
-//wrapper for runQuery() that caches results
-func runCachingQuery(db *sql.DB, query string) (*SingleQueryResult, error) {
+//wrapper for runSqlServerQuery() that caches results
+func runCachingQuery(db *sql.DB, query string, mode string) (*SingleQueryResult, error) {
 
     hasher := sha1.New()
     hasher.Write([]byte(query))
@@ -356,18 +358,42 @@ func runCachingQuery(db *sql.DB, query string) (*SingleQueryResult, error) {
         println("returning cached result " + sha)
         return cachedResult, nil
     } else {
-        println("attempting new query for " + sha)
-        result, err := runQuery(db, query)
-        if err == nil {
-            Qcache[sha] = result
+        switch mode {
+            case "CSV":
+                println("attempting new csv query for " + sha)
+                result, err := runCsvQuery(query)
+                if err == nil {
+                    Qcache[sha] = result
+                }
+                return result, err
+            case "MSSQL": fallthrough
+            default:
+                println("attempting new server query for " + sha)
+                result, err := runSqlServerQuery(db, query)
+                if err == nil {
+                    Qcache[sha] = result
+                }
+                return result, err
         }
-        return result, err
+        println("invalid query request object")
+        return nil, errors.New("invalid query request object")
     }
 }
 
+//wrapper for csvQuery
+func runCsvQuery(query string) (*SingleQueryResult,error) {
+    qSpec := QuerySpecs{
+        Qstring : query,
+        Fname : "/home/dave/Documents/work/data/bigdata/2018facilityclaims.csv" }
+    println("attempting csv query from gui program")
+    res, err := csvQuery(qSpec)
+    Println(err)
+    //Println(res)
+    return res, err
+}
 
 //return SingleQueryResult struct with query results
-func runQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
+func runSqlServerQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
     println(query)
 
     //if connected to SQL server
@@ -405,13 +431,14 @@ func runQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
     }
 }
 
-//run multiple queries deliniated by semicolon
-func runQueries(db *sql.DB, query string) ([]*SingleQueryResult, error) {
+//run Qrequest with multiple queries deliniated by semicolon
+func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
+    query := req.Query
     if (strings.HasSuffix(query,";")) { query = query[:len(query)-1] }
     queries := strings.Split(strings.Replace(query,"\\n","",-1),";")
     var results[]*SingleQueryResult
     for i := range queries {
-        result,err := runCachingQuery(db,queries[i])
+        result,err := runCachingQuery(db, queries[i], req.Mode)
         results = append(results, result)
         if err != nil {
             return results, err

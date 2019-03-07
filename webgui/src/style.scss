@@ -36,11 +36,13 @@ html {
 }
 
 //dropdown menu
+.absolute-pos {
+    position: absolute;
+}
 .dropmenu-content{
     display: none;
-    position: absolute;
     padding: 1em;
-    background: $dropdownbg;
+    //background: $dropdownbg;
     div {
         padding: .2em .5em;
         background-color: $button1;
@@ -66,10 +68,18 @@ html {
 .dropButton {
     display: block;
     text-align: center;
+    width: 15em;
+    margin: auto;
+}
+.queryFileBox {
+    display: inherit;
+    width: 99%;
+    margin-bottom: 0.3em;
 }
 .queryMenuDiv{
     padding: .2em .2em;
-    @include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
+    //@include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
+    @include sgradient($ttop,$ttp,$bbt,$bbot);
 }
 .queryMenuButton{
     padding: .2em .5em;
@@ -79,6 +89,9 @@ html {
 .tableModDiv {
     background-color: $button1;
     padding: .2em .2em;
+    @include sgradient($ttop,$ttp,$bbt,$bbot);
+}
+.tableModDrop {
     @include sgradient($ttop,$ttp,$bbt,$bbot);
 }
 .tableModButton {
