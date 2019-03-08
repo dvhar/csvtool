@@ -15,7 +15,7 @@ import (
   d "github.com/araddon/dateparse"
   "github.com/pbnjay/memory"
   . "strconv"
-  //r "regexp"
+  "regexp"
 
 )
 
@@ -393,7 +393,8 @@ func tokenizeQspec(q *QuerySpecs) error {
         "or" : true,
     }
     //var needParen int
-    words := s.Fields(q.Qstring)
+    comma := regexp.MustCompile(`,`)
+    words := s.Fields( string(comma.ReplaceAll( []byte(q.Qstring), []byte(" ") )) )
     if len(words) < 2 { return errors.New("invalid query") }
 
     for i:= 0; i<len(words); {
