@@ -170,6 +170,7 @@ func inferTypes(file interface{}) (*Columns, error) {
             }
         }
     }
+    fp.Seek(0,0)
     println("got column data types")
     return &cols, nil
 }
@@ -203,13 +204,11 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     */
 
     //infer column types
-    ColSpec, err := inferTypes(fp)
+    q.ColSpec, err = inferTypes(fp)
     if err != nil { return &SingleQueryResult{}, err }
-    fp.Seek(0,0)
-    q.ColSpec = ColSpec
 
     //do some pre-query parsing
-    err = parseTokenTypes(&q, ColSpec, 0,1)
+    err = parseTokenTypes(&q, 0,1)
     if err != nil { Println(err); return &SingleQueryResult{}, err }
     println("typed the tokens")
     q.Reset()
@@ -219,9 +218,9 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     totalMem = memory.TotalMemory()
     cread := csv.NewReader(fp)
     result := SingleQueryResult{
-        Colnames : ColSpec.Names,
-        Numcols: ColSpec.Width,
-        Types: ColSpec.Types,
+        Colnames : q.ColSpec.Names,
+        Numcols: q.ColSpec.Width,
+        Types: q.ColSpec.Types,
     }
     var tempRow []interface{}
     var row []interface{}
@@ -236,13 +235,13 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         line, err := cread.Read()
         if err != nil {break}
         result.Numrows++
-        row = make([]interface{}, ColSpec.Width)
+        row = make([]interface{}, q.ColSpec.Width)
         //read each cell from line
         for i,cell := range line {
             cell = s.TrimSpace(cell)
             if cell == "NULL" || cell == "null" || cell == "" { row[i] = nil
             } else {
-                switch ColSpec.Types[i] {
+                switch q.ColSpec.Types[i] {
                     case T_INT:    row[i],_ = Atoi(cell)
                     case T_FLOAT:  row[i],_ = ParseFloat(cell,64)
                     case T_DATE:   row[i],_ = d.ParseAny(cell)
@@ -271,8 +270,8 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     }
     //update result column names if only querying a subset of them
     if !q.SelectAll {
-        result.Colnames = ColSpec.NewNames
-        result.Types = ColSpec.NewTypes
+        result.Colnames = q.ColSpec.NewNames
+        result.Types = q.ColSpec.NewTypes
     }
     evalOrderBy(&q, &result)
     return &result, nil
@@ -572,7 +571,7 @@ func parseFromToken(q *QuerySpecs) error {
 }
 
 //give val tokens their correct Dtype and change col name tokens to col index
-func parseTokenTypes(q *QuerySpecs, c *Columns, col int, counter int) error {
+func parseTokenTypes(q *QuerySpecs, col int, counter int) error {
     tok := q.Tok()
     var ok bool
     var err error
@@ -585,7 +584,7 @@ func parseTokenTypes(q *QuerySpecs, c *Columns, col int, counter int) error {
         col, ok = tok.Val.(int)
         //change column token value to index of column
         if !ok {
-            col, err = getColumnIdx(c.Names, tok.Val.(string))
+            col, err = getColumnIdx(q.ColSpec.Names, tok.Val.(string))
             if err != nil { return errors.New("parseTokenTypes: column "+tok.Val.(string)+" not found") }
             println("column "+tok.Val.(string)+" is number "+Itoa(col))
         } else {
@@ -593,11 +592,11 @@ func parseTokenTypes(q *QuerySpecs, c *Columns, col int, counter int) error {
         }
         tok.Val = col
         //add select column to list, update result column names and types
-        if col >= c.Width { return errors.New("column index too big:"+Itoa(col)+" > "+Itoa(c.Width)) }
+        if col >= q.ColSpec.Width { return errors.New("column index too big:"+Itoa(col)+" > "+Itoa(q.ColSpec.Width)) }
         if tok.Ttype == TOK_SCOL && col >= 0 {
             q.ColArray = append(q.ColArray, col)
-            c.NewNames = append(c.NewNames, c.Names[col])
-            c.NewTypes = append(c.NewTypes, c.Types[col])
+            q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[col])
+            q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[col])
         }
     }
 
@@ -606,7 +605,7 @@ func parseTokenTypes(q *QuerySpecs, c *Columns, col int, counter int) error {
 
     //give val token the type of its column, or null if it is null
     if tok.Ttype == TOK_VAL {
-        tok.Dtype = c.Types[col]
+        tok.Dtype = q.ColSpec.Types[col]
         if s.ToLower(tok.Val.(string)) == "null" { tok.Dtype = T_NULL }
         switch tok.Dtype {
             case T_INT:    tok.Val,err = Atoi(tok.Val.(string))
@@ -619,7 +618,7 @@ func parseTokenTypes(q *QuerySpecs, c *Columns, col int, counter int) error {
     }
     tok = q.Next()
     if tok.Ttype != TOK_END {
-        err = parseTokenTypes(q, c, col, counter+1)
+        err = parseTokenTypes(q, col, counter+1)
     }
     return err
 }
