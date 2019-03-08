@@ -7,6 +7,7 @@ $bbot: #7db9e8;
 $top-top: #FFD700;
 $top-bot: #FFFF70;
 $button1: #EEEEEE;
+$cell: #FAFAFA;
 
 $ojgradient1: #feccb1;
 $ojgradient2: #f17432;
@@ -107,10 +108,10 @@ html {
 //table display
 .tableCell {
     text-align: center;
-    //padding: .2em .5em;
-    background-color: $button1;
-    border-radius: 4px;
-    min-width: 5em;
+    white-space:nowrap;
+    background-color: $cell;
+    //border-radius: 4px;
+    min-width: 4em;
 }
 .tableRow {
     padding: 1em;
@@ -188,8 +189,12 @@ html {
 .fileSelectShow label {
     display: inline-block;
 }
-.fileSelectShow input {
+.fileSelectShow input[type="text"] {
     min-width: 40em;
+    margin: 0.5em 0em 0.5em 0.5em;
+}
+.saveRadio {
+    margin: 0.6em;
 }
 
 //mode select section

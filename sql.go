@@ -81,6 +81,10 @@ const (
     FP_OERROR = 1 << iota
     FP_OCHANGED = 1 << iota
     FP_CWD = 0
+    F_CSV = 1 << iota
+    F_JSON = 1 << iota
+    F_OPEN = 1 << iota
+    F_SAVE = 1 << iota
 )
 type FilePaths struct {
     SavePath string
@@ -117,6 +121,7 @@ func main() {
     } else {
         FPaths.Status = FP_OERROR | FP_SERROR
     }
+    Printf("CJOS: %d %d %d %d\n", F_CSV, F_JSON, F_OPEN, F_SAVE)
 
 
 
@@ -174,7 +179,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         fullReturnData.Mode = req.Mode
 
         //handle request to open file
-        if req.FileIO == 2 {
+        if (req.FileIO & F_OPEN) != 0 {
             full_json,_ := openQueryFile(&req, &fullReturnData)
             Fprint(w, string(full_json))
             return
@@ -203,7 +208,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         full_json,_ := json.Marshal(fullReturnData)
 
         //save queries to json file
-        if req.FileIO == 1 {
+        if (req.FileIO & F_SAVE) != 0 {
             saveQueryFile(&req, &fullReturnData, full_json)
         }
 

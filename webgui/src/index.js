@@ -254,7 +254,7 @@ class QuerySelect extends React.Component {
 
         var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
-                            title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
+                            title = {<h2>Enter SQL Query{"\u25bc"}</h2>}
                             submit = {(query)=>this.props.submitQuery(query)}
                             s = {this.props.s}
                          />
@@ -356,24 +356,28 @@ class TopDropdown extends React.Component {
             openShow : (
                 <div id="openShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Open file:</label> 
-                    <input id="openPath" className="dropContent"/>
+                    <input id="openPath" className="pathInput" type="text" className="dropContent"/>
                     <button className="" onClick={()=>{
                         var path = document.getElementById("openPath").value;
-                        this.props.submitQuery({fileIO : 2, filePath : path});
+                        this.props.submitQuery({fileIO : bit.F_OPEN, filePath : path});
                     }}>open</button>
                 </div>
             ),
 
+            //FileIO datapoint: CJOS: 32 64 128 256
             saveShow : (
                 <div id="saveShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Save file:</label> 
-                    <input id="savePath" className="dropContent"/>
+                    <input id="savePath" className="pathInput" type="text" className="dropContent"/>
                     <button className="" onClick={()=>{
-                        console.log('trying to save');
+                        var jradio = document.getElementById("jradio").checked;
                         var path = document.getElementById("savePath").value;
-                        //this.props.submitQuery(this.props.currentQuery.query, 1, false, path);
-                        this.props.submitQuery({query : this.props.currentQuery.query, fileIO : 1, filePath : path});
-                    }}>save</button>
+                        var filetype = jradio? bit.F_JSON : bit.F_CSV;
+                        console.log('trying to save '+filetype);
+                        this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|filetype, filePath : path});
+                    }}>save</button><br/>
+                    <input className="dropContent saveRadio" name="ftype" type="radio" id="cradio" value="CSV"/>CSV - Save queries on page to their own csv file. A number will be added to file name if more than 1.<br/>
+                    <input className="dropContent saveRadio" name="ftype" type="radio" id="jradio" value="JSON"/>JSON - Save queries on page to single json file.<br/>
                 </div>
             ),
 

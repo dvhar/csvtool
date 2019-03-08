@@ -71,9 +71,9 @@ html {
 
 .tableCell {
   text-align: center;
-  background-color: #EEEEEE;
-  border-radius: 4px;
-  min-width: 5em; }
+  white-space: nowrap;
+  background-color: #FAFAFA;
+  min-width: 4em; }
 
 .tableRow {
   padding: 1em; }
@@ -141,8 +141,12 @@ html {
 .fileSelectShow label {
   display: inline-block; }
 
-.fileSelectShow input {
-  min-width: 40em; }
+.fileSelectShow input[type="text"] {
+  min-width: 40em;
+  margin: 0.5em 0em 0.5em 0.5em; }
+
+.saveRadio {
+  margin: 0.6em; }
 
 .modeShow {
   padding: 0.3em;

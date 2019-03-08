@@ -116,4 +116,9 @@ export const bit = {
     FP_SCHANGED     : 1 << 2,
     FP_OERROR       : 1 << 3,
     FP_OCHANGED     : 1 << 4,
+
+    F_CSV           : 1 << 5,
+    F_JSON          : 1 << 6,
+    F_OPEN          : 1 << 7,
+    F_SAVE          : 1 << 8,
 }
