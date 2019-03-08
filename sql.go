@@ -5,6 +5,7 @@ import (
     //"github.com/Jeffail/gabs"
     "encoding/base64"
     "encoding/json"
+    "encoding/csv"
     "path/filepath"
     "database/sql"
     "crypto/sha1"
@@ -207,9 +208,9 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         fullReturnData.Entries = entries
         full_json,_ := json.Marshal(fullReturnData)
 
-        //save queries to json file
+        //save queries to file
         if (req.FileIO & F_SAVE) != 0 {
-            saveQueryFile(&req, &fullReturnData, full_json)
+            saveQueryFile(&req, &fullReturnData, &full_json)
         }
 
         //update json with save message
@@ -452,7 +453,7 @@ func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
     return results, nil
 }
 
-func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json []byte) error {
+func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte) error {
     println("saving query...")
     savePath := req.FilePath
     pathStat, err := os.Stat(savePath)
@@ -475,10 +476,15 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json []byte) 
     //save file
     if fullReturnData.Status & DAT_BADPATH == 0 {
         file, err := os.OpenFile(savePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+        defer file.Close()
         FPaths.SavePath = savePath
         if err == nil {
-            file.WriteString(string(full_json))
-            file.Close()
+            //actually save the file
+            if (req.FileIO & F_CSV) != 0 {
+                saveCsv(file, fullReturnData)
+            } else {
+                file.WriteString(string(*full_json))
+            }
             FPaths.Status = FP_SCHANGED
             fullReturnData.Message = "Saved to "+savePath
             println("Saved to "+savePath)
@@ -491,6 +497,16 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json []byte) 
     return err
 }
 
+func saveCsv(file *os.File, fullReturnData *ReturnData) error {
+    writer := csv.NewWriter(file)
+    defer writer.Flush()
+    err := writer.Write(fullReturnData.Entries[0].Colnames)
+    for _, value := range fullReturnData.Entries[0].Vals {
+        st := strings.Fields(strings.Trim(Sprint(value), "[]"))
+        err = writer.Write(st)
+    }
+    return err
+}
 
 //handle file opening
 func openQueryFile(req *Qrequest, fullReturnData *ReturnData) ([]byte, error) {
