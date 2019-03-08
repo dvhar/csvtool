@@ -23,7 +23,7 @@ function DropdownQueryTextbox(props){
             <br/>
             <button onClick={()=>{
                 var query = document.getElementById("textBoxId").value;
-                props.submit(query);
+                props.submit({query : query});
             }}>Submit Query</button>
             </div>
         </div>
@@ -46,7 +46,7 @@ function DropdownQueryMenu(props){
                     for (var i in selected)
                         if (i == Number(i))
                             queries += premades.metaDataQueries[selected[i].getAttribute("data-idx")].query;
-                    props.submit(queries);
+                    props.submit({query : queries});
                 }}
             >Submit</button>
             </div>
@@ -248,14 +248,14 @@ class QuerySelect extends React.Component {
                             size = {premades.metaDataQueries.length}
                             //make this run multi-select queries
                             contents = {premades.metaDataQueries}
-                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
+                            submit = {(query)=>this.props.submitQuery(query)}
                          />
                      </div>);
 
         var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
                             title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
-                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
+                            submit = {(query)=>this.props.submitQuery(query)}
                             s = {this.props.s}
                          />
                      </div>);
@@ -263,7 +263,7 @@ class QuerySelect extends React.Component {
         var csvCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
                             title = {<h2>Enter CSV Query{"\u25bc"}</h2>}
-                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
+                            submit = {(query)=>this.props.submitQuery(query)}
                             s = {this.props.s}
                          />
                      </div>);
@@ -359,7 +359,7 @@ class TopDropdown extends React.Component {
                     <input id="openPath" className="dropContent"/>
                     <button className="" onClick={()=>{
                         var path = document.getElementById("openPath").value;
-                        this.props.submitQuery("", 2, false, path);
+                        this.props.submitQuery({fileIO : 2, filePath : path});
                     }}>open</button>
                 </div>
             ),
@@ -371,7 +371,8 @@ class TopDropdown extends React.Component {
                     <button className="" onClick={()=>{
                         console.log('trying to save');
                         var path = document.getElementById("savePath").value;
-                        this.props.submitQuery(this.props.currentQuery.query, 1, false, path);
+                        //this.props.submitQuery(this.props.currentQuery.query, 1, false, path);
+                        this.props.submitQuery({query : this.props.currentQuery.query, fileIO : 1, filePath : path});
                     }}>save</button>
                 </div>
             ),
@@ -521,22 +522,31 @@ class Main extends React.Component {
                            />) });
         }
     }
-    submitQuery(query, fileIO=0, backtrack=false, openPath="", mode=this.state.mode){
-        var fullQuery = {Query:query, FileIO:fileIO, FilePath:openPath, Mode:mode};
+
+    submitQuery(querySpecs){
+        console.log("queryspecs:",querySpecs);
+        var fullQuery = {
+            Query: querySpecs.query || "", 
+            FileIO: querySpecs.fileIO || 0, 
+            FilePath: querySpecs.filePath || "", 
+            Mode: querySpecs.mode || this.state.mode
+            };
         postRequest({path:"/query/",body:fullQuery}).then(dat=>{
             //console.log(dat);
-            if ((dat.Status & bit.DAT_GOOD) && (!backtrack)){
+            if ((dat.Status & bit.DAT_GOOD) && (!querySpecs.backtrack)){
                 this.setState({ topMessage : dat.Message,
                                 historyPosition : this.state.queryHistory.length,
-                                queryHistory : this.state.queryHistory.concat({query: dat.OriginalQuery, mode: dat.Mode}) });
+                                queryHistory : this.state.queryHistory.concat({query : dat.OriginalQuery, mode: dat.Mode}) });
             }
             this.showLoadedQuery(dat);
         });
     }
+
     viewHistory(position){
         var q = this.state.queryHistory[position];
         this.setState({ historyPosition : position });
-        this.submitQuery(q.query, 0, true, "", q.mode);
+        //this.submitQuery(q.query, 0, true, "", q.mode);
+        this.submitQuery({ query : q.query, backtrack : true, mode: q.mode});
     }
     changeMode(mode){ 
         this.setState({ mode : mode }); 
@@ -557,7 +567,7 @@ class Main extends React.Component {
         <TopMenuBar
             s = {this.state}
             updateTopMessage = {(message)=>this.setState({ topMessage : message })}
-            submitQuery = {(query, fileIO, backtrack, openpath)=>this.submitQuery(query, fileIO, backtrack, openpath)}
+            submitQuery = {(query)=>this.submitQuery(query)}
             viewHistory = {(position)=>this.viewHistory(position)}
             changeSavePath = {(path)=>this.setState({ savepath : path })}
             changeMode = {(mode)=>this.changeMode(mode)}
@@ -566,7 +576,7 @@ class Main extends React.Component {
         <QuerySelect
             s = {this.state}
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
-            submitQuery = {(query, fileIO)=>this.submitQuery(query, fileIO)}
+            submitQuery = {(query)=>this.submitQuery(query)}
             showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
         />
