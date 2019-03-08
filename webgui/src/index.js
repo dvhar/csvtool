@@ -18,7 +18,7 @@ function DropdownQueryTextbox(props){
                 {props.title}
             </div>
             <div className="dropmenu-content">
-            <textarea rows="10" cols="70" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
+            <textarea rows="10" className="queryTextEntry" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
             </textarea>
             <br/>
             <button onClick={()=>{

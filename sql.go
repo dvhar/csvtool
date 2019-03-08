@@ -21,7 +21,7 @@ import (
 )
 
 //command line flags
-var dbNoCon = flag.Bool("no", false, "Don't connect to database")
+var dbNoCon = flag.Bool("no", true, "Don't connect to database")
 var localPort = flag.String("port", "8060", "Change localhost port")
 var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
 var dbserver = flag.String("s", os.Getenv("MSSQL_CLI_SERVER"), "Database URL")
@@ -181,12 +181,12 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         }
 
         //return null query if no connection
-        if dbCon.Err != nil {
+        if req.Mode == "MSSQL" && dbCon.Err != nil {
             println("no database connection")
             entries = append(entries,&SingleQueryResult{})
             fullReturnData.Message = "No database connection"
 
-        //attempt query if there is a connection
+        //attempt query
         } else {
             println("requesting query")
             entries,err = runQueries(dbCon.Db, &req)

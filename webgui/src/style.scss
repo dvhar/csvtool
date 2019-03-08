@@ -76,16 +76,20 @@ html {
     width: 99%;
     margin-bottom: 0.3em;
 }
-.queryMenuDiv{
+.queryMenuDiv {
     padding: .2em .2em;
     //@include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
     @include sgradient($ttop,$ttp,$bbt,$bbot);
 }
-.queryMenuButton{
+.queryMenuButton {
     padding: .2em .5em;
     background-color: $button1;
     border-radius: 4px;
 }
+.queryTextEntry {
+    width: calc(95vw);
+}
+
 .tableModDiv {
     background-color: $button1;
     padding: .2em .2em;

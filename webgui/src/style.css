@@ -51,6 +51,9 @@ html {
   background-color: #EEEEEE;
   border-radius: 4px; }
 
+.queryTextEntry {
+  width: calc(95vw); }
+
 .tableModDiv {
   background-color: #EEEEEE;
   padding: .2em .2em;
