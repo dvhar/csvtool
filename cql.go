@@ -360,7 +360,7 @@ func tokenMaybeQuoted(word string, token *interface{}, awaitQuote*byte, state in
 }
 
 //state machine takes QuerySpecs struct with query string and fills out the token array.
-//bites off a word at a time rather than each character to speed development. May want to refactor to go char by char.
+//written quickly with no prior knowledge of how to write a language. Should be refactored with state table.
 func tokenizeQspec(q *QuerySpecs) error {
 
     state := 0
@@ -394,7 +394,7 @@ func tokenizeQspec(q *QuerySpecs) error {
     }
     //var needParen int
     comma := regexp.MustCompile(`,`)
-    words := s.Fields( string(comma.ReplaceAll( []byte(q.Qstring), []byte(" ") )) )
+    words := s.Fields( comma.ReplaceAllString(q.Qstring, " "))
     if len(words) < 2 { return errors.New("invalid query") }
 
     for i:= 0; i<len(words); {

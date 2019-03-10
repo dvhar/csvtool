@@ -6,4 +6,4 @@ export PATH=$PATH:$GOPATH/bin
 next steps:
     more query language features
     more powerful gui
-
+    ask if vals starting with 0 like 000232342 need to keep leading zero

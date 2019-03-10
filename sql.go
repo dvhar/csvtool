@@ -16,6 +16,7 @@ import (
     "strings"
     "errors"
     . "fmt"
+    "time"
     "flag"
     "os/exec"
     "os"
@@ -498,12 +499,25 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
 }
 
 func saveCsv(file *os.File, fullReturnData *ReturnData) error {
+    //set up csv writer and write heading
     writer := csv.NewWriter(file)
     defer writer.Flush()
     err := writer.Write(fullReturnData.Entries[0].Colnames)
+    //prepare array for each row
+    var output []string
+    output = make([]string, fullReturnData.Entries[0].Numcols)
     for _, value := range fullReturnData.Entries[0].Vals {
-        st := strings.Fields(strings.Trim(Sprint(value), "[]"))
-        err = writer.Write(st)
+        for i,entry := range value {
+            if entry == nil { output[i] = ""
+            } else {
+                switch entry.(type) {
+                    //case time.Time: output[i] = entry.(time.Time).Format(time.RFC3339)
+                    case time.Time: output[i] = entry.(time.Time).Format("2006-01-02 15:04:05")
+                    default: output[i] = Sprint(entry)
+                }
+            }
+        }
+        err = writer.Write(output)
     }
     return err
 }
