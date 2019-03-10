@@ -223,10 +223,17 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 //limit the amount of rows returned to the browser because browsers are slow
 func rowLimit(fullReturnData *ReturnData) {
     for i, query := range fullReturnData.Entries {
-        if query.Numrows > 9 {
-            fullReturnData.Entries[i].Vals = query.Vals[:9]
-            fullReturnData.Entries[i].Numrows =  9
-            //Printf("types: LE: %T  OE: %T", limitedVals, query.Vals)
+        if query.Numrows > 1000 {
+            limited := SingleQueryResult{
+                Numrows : 1000,
+                Numcols : query.Numcols,
+                Types : query.Types,
+                Colnames : query.Colnames,
+                Vals : query.Vals[:1000],
+                Status : query.Status,
+                Query : query.Query,
+            }
+            fullReturnData.Entries[i] = &limited
         }
     }
 }
