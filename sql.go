@@ -145,7 +145,6 @@ func main() {
         dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
         defer dbCon.Db.Close()
     }
-
     <-done
 
 }
@@ -215,8 +214,20 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         }
 
         //update json with save message
+        rowLimit(&fullReturnData)
         full_json,_ = json.Marshal(fullReturnData)
         Fprint(w, string(full_json))
+    }
+}
+
+//limit the amount of rows returned to the browser because browsers are slow
+func rowLimit(fullReturnData *ReturnData) {
+    for i, query := range fullReturnData.Entries {
+        if query.Numrows > 9 {
+            fullReturnData.Entries[i].Vals = query.Vals[:9]
+            fullReturnData.Entries[i].Numrows =  9
+            //Printf("types: LE: %T  OE: %T", limitedVals, query.Vals)
+        }
     }
 }
 
@@ -395,7 +406,6 @@ func runCsvQuery(query string) (*SingleQueryResult,error) {
     println("attempting csv query from gui program")
     res, err := csvQuery(qSpec)
     Println(err)
-    //Println(res)
     return res, err
 }
 
@@ -454,6 +464,7 @@ func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
     return results, nil
 }
 
+//general save function
 func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte) error {
     println("saving query...")
     savePath := req.FilePath
@@ -498,6 +509,7 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
     return err
 }
 
+//save query to csv
 func saveCsv(file *os.File, fullReturnData *ReturnData) error {
     //set up csv writer and write heading
     writer := csv.NewWriter(file)
@@ -508,6 +520,7 @@ func saveCsv(file *os.File, fullReturnData *ReturnData) error {
     output = make([]string, fullReturnData.Entries[0].Numcols)
     for _, value := range fullReturnData.Entries[0].Vals {
         for i,entry := range value {
+            //make sure each entry is formatted well according to its type
             if entry == nil { output[i] = ""
             } else {
                 switch entry.(type) {
@@ -538,43 +551,6 @@ func openQueryFile(req *Qrequest, fullReturnData *ReturnData) ([]byte, error) {
     }
     full_json, err := json.Marshal(fullReturnData)
     return full_json, err
-}
-
-//some useful premade queries
-func premade(request string ) (string) {
-    switch request {
-        case "columns_total":
-            return "SELECT * FROM information_schema.Columns;"
-
-        case "columns_abridged":
-            return `SELECT table_name, column_name, ordinal_position, data_type, is_nullable
-                    FROM information_schema.columns;`
-
-        case "columns_withkey":
-            return `SELECT c.table_name, c.column_name, c.DATA_TYPE, c.IS_NULLABLE, 
-                        k.constraint_type, k.constraint_name
-                    FROM information_schema.columns as c 
-                    left join
-                    (
-                        select col.column_name, tab.table_name, tab.constraint_type, tab.constraint_name
-                        FROM   information_schema.constraint_column_usage as col
-                        join information_schema.table_constraints as tab
-                        on col.constraint_name = tab.constraint_name
-                        where tab.table_name = col.table_name
-                    )
-                    as k
-                    on c.column_name = k.column_name
-                    and c.table_name = k.table_name;`
-
-        case "primaries":
-            return `SELECT col.column_name, tab.table_name, tab.constraint_type, col.constraint_name
-                    FROM   information_schema.constraint_column_usage as col
-                    JOIN information_schema.table_constraints as tab
-                    ON col.constraint_name = tab.constraint_name
-                    WHERE tab.table_name = col.table_name;`
-        default:
-            return  ""
-    }
 }
 
 //show request from browser
