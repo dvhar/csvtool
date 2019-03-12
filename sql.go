@@ -98,6 +98,7 @@ type FilePaths struct {
 type Qrequest struct {
     Query string
     Mode string
+    Cache bool
     FileIO int
     FilePath string
     CsvFile string
@@ -123,9 +124,6 @@ func main() {
     } else {
         FPaths.Status = FP_OERROR | FP_SERROR
     }
-    Printf("CJOS: %d %d %d %d\n", F_CSV, F_JSON, F_OPEN, F_SAVE)
-
-
 
     //set up server url and start server in goroutine
     println("Starting server")
@@ -133,8 +131,8 @@ func main() {
     port := ":" + *localPort
     if *danger { host = "" }
     serverUrl := host + port
-    done := make(chan bool)
-    go server(serverUrl,done)
+    //done := make(chan bool)
+    //go server(serverUrl,done)
 
     //launch web browser for gui
     launch("http://localhost"+port);
@@ -145,12 +143,14 @@ func main() {
         dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
         defer dbCon.Db.Close()
     }
-    <-done
+    server(serverUrl)
+    //<-done
 
 }
 
 //webserver
-func server(serverUrl string, done chan bool) {
+//func server(serverUrl string, done chan bool) {
+func server(serverUrl string) {
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query", queryHandler())
     http.HandleFunc("/query/", queryHandler())
@@ -158,9 +158,8 @@ func server(serverUrl string, done chan bool) {
     http.HandleFunc("/login/", loginHandler())
     http.HandleFunc("/info", infoHandler())
     http.HandleFunc("/info/", infoHandler())
-
     http.ListenAndServe(serverUrl, nil)
-    done <- true
+    //done <- true
 }
 
 //returns handler function for query requests from the webgui
@@ -217,6 +216,10 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         rowLimit(&fullReturnData)
         full_json,_ = json.Marshal(fullReturnData)
         Fprint(w, string(full_json))
+        full_json = []byte("")
+        fullReturnData = ReturnData{}
+        println("running garbage collector")
+        runtime.GC()
     }
 }
 
@@ -224,16 +227,9 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 func rowLimit(fullReturnData *ReturnData) {
     for i, query := range fullReturnData.Entries {
         if query.Numrows > 1000 {
-            limited := SingleQueryResult{
-                Numrows : 1000,
-                Numcols : query.Numcols,
-                Types : query.Types,
-                Colnames : query.Colnames,
-                Vals : query.Vals[:1000],
-                Status : query.Status,
-                Query : query.Query,
-            }
-            fullReturnData.Entries[i] = &limited
+            fullReturnData.Entries[i].Vals = query.Vals[:1000]
+            fullReturnData.Entries[i].Numrows = 1000
+            runtime.GC()
         }
     }
 }
@@ -373,7 +369,7 @@ func sqlConnect(login, pass, server, name string) Connection {
 }
 
 //wrapper for runSqlServerQuery() that caches results
-func runCachingQuery(db *sql.DB, query string, mode string) (*SingleQueryResult, error) {
+func runCachingQuery(db *sql.DB, query string, mode string, cacheOn bool) (*SingleQueryResult, error) {
 
     hasher := sha1.New()
     hasher.Write([]byte(query))
@@ -387,7 +383,8 @@ func runCachingQuery(db *sql.DB, query string, mode string) (*SingleQueryResult,
             case "CSV":
                 println("attempting new csv query for " + sha)
                 result, err := runCsvQuery(query)
-                if err == nil {
+                if err == nil && cacheOn {
+                    println("caching result")
                     Qcache[sha] = result
                 }
                 return result, err
@@ -395,7 +392,8 @@ func runCachingQuery(db *sql.DB, query string, mode string) (*SingleQueryResult,
             default:
                 println("attempting new server query for " + sha)
                 result, err := runSqlServerQuery(db, query)
-                if err == nil {
+                if err == nil && cacheOn {
+                    println("caching result")
                     Qcache[sha] = result
                 }
                 return result, err
@@ -462,7 +460,7 @@ func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
     queries := strings.Split(strings.Replace(query,"\\n","",-1),";")
     var results[]*SingleQueryResult
     for i := range queries {
-        result,err := runCachingQuery(db, queries[i], req.Mode)
+        result,err := runCachingQuery(db, queries[i], req.Mode, req.Cache)
         results = append(results, result)
         if err != nil {
             return results, err

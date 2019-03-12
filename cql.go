@@ -126,6 +126,7 @@ type Columns struct {
     Types []int
     NewTypes []int
     Width int
+    NewWidth int
 }
 
 //get the column count, names, and types of a csv file. arg file pointer or name
@@ -272,6 +273,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     if !q.SelectAll {
         result.Colnames = q.ColSpec.NewNames
         result.Types = q.ColSpec.NewTypes
+        result.Numcols = q.ColSpec.NewWidth
     }
     evalOrderBy(&q, &result)
     return &result, nil
@@ -675,6 +677,7 @@ func evalSelectCol(q *QuerySpecs, result *SingleQueryResult, row *[]interface{},
         (*selected)[count] = (*row)[tok.Val.(int)]
         if count == q.SelectColNum - 1 {
             result.Vals = append(result.Vals, *selected)
+            q.ColSpec.NewWidth = count+1
         }
     }
     return evalSelectCol(q, result, row, selected, count+1)
