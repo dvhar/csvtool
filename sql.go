@@ -57,6 +57,7 @@ type ReturnData struct {
     Message string
     OriginalQuery string
     Mode string
+    Clipped bool
 }
 
 //database connection struct and codes
@@ -214,6 +215,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
         //update json with save message
         rowLimit(&fullReturnData)
+        if fullReturnData.Clipped { fullReturnData.Message += ". Showing only top 1000" }
         full_json,_ = json.Marshal(fullReturnData)
         Fprint(w, string(full_json))
         full_json = []byte("")
@@ -229,6 +231,7 @@ func rowLimit(fullReturnData *ReturnData) {
         if query.Numrows > 1000 {
             fullReturnData.Entries[i].Vals = query.Vals[:1000]
             fullReturnData.Entries[i].Numrows = 1000
+            fullReturnData.Clipped = true
             runtime.GC()
         }
     }
@@ -410,13 +413,13 @@ func runCsvQuery(query string) (*SingleQueryResult,error) {
         Fname : "/home/dave/Documents/work/data/bigdata/2018facilityclaims.csv" }
     println("attempting csv query from gui program")
     res, err := csvQuery(qSpec)
-    Println(err)
+    res.Query = query;
+    Println("csv query error: ",err)
     return res, err
 }
 
 //return SingleQueryResult struct with query results
 func runSqlServerQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
-    println(query)
 
     //if connected to SQL server
     if (dbCon.Status & CON_CHANGED != 0) {

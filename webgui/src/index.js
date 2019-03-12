@@ -354,7 +354,7 @@ class TopDropdown extends React.Component {
 
             openShow : (
                 <div id="openShow" className="fileSelectShow dropContent">
-                    <label className="dropContent">Open file:</label> 
+                    <p className="dropContent">This is for opening JSON files saved by this program. If you want to open a CSV, run a query on it.</p> 
                     <input id="openPath" className="pathInput" type="text" className="dropContent"/>
                     <button className="" onClick={()=>{
                         var path = document.getElementById("openPath").value;
@@ -363,7 +363,7 @@ class TopDropdown extends React.Component {
                 </div>
             ),
 
-            //FileIO datapoint: CJOS: 32 64 128 256
+            //FileIO bits: CJOS: 32 64 128 256
             saveShow : (
                 <div id="saveShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Save file:</label> 
@@ -372,7 +372,6 @@ class TopDropdown extends React.Component {
                         var jradio = document.getElementById("jradio").checked;
                         var path = document.getElementById("savePath").value;
                         this.props.changeSavePath(path);
-                        console.log("savepath saved: ",this.props.savepath);
                         var filetype = jradio? bit.F_JSON : bit.F_CSV;
                         this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|filetype, filePath : path});
                     }}>save</button><br/>
@@ -427,7 +426,6 @@ class TopDropdown extends React.Component {
                 break;
             case "saveShow":
                 document.getElementById("savePath").value = this.props.savepath;
-                console.log("savepath retreived: ",this.props.savepath);
                 break
             case "loginShow":
                 document.getElementById("dbUrl").value = "";
@@ -516,6 +514,7 @@ class Main extends React.Component {
                 alert(results.Message);
         }
         else if (results.Status & bit.DAT_GOOD){
+            console.log(results);
             this.setState({
                 showQuery : results.Entries.map(
                     tab => <QueryRender 
