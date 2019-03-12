@@ -141,7 +141,6 @@ class TableSelectRows extends React.Component {
                 </select>
         ];
         if (this.state.secondDrop)
-            console.log("second drop items: ", this.state.secondDropItems);
             dropdowns.push(
                 <select className="dropSelect" size={Math.min(20,this.state.secondDropItems.length+1)}>
                     {["*"].concat(this.state.secondDropItems.sort()).map((name,i)=>this.dropItem(name,i,'second'))}
@@ -372,8 +371,9 @@ class TopDropdown extends React.Component {
                     <button className="" onClick={()=>{
                         var jradio = document.getElementById("jradio").checked;
                         var path = document.getElementById("savePath").value;
+                        this.props.changeSavePath(path);
+                        console.log("savepath saved: ",this.props.savepath);
                         var filetype = jradio? bit.F_JSON : bit.F_CSV;
-                        console.log('trying to save '+filetype);
                         this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|filetype, filePath : path});
                     }}>save</button><br/>
                     <input className="dropContent saveRadio" name="ftype" type="radio" id="cradio" value="CSV"/>CSV - Save queries on page to their own csv file. A number will be added to file name if more than 1.<br/>
@@ -427,6 +427,7 @@ class TopDropdown extends React.Component {
                 break;
             case "saveShow":
                 document.getElementById("savePath").value = this.props.savepath;
+                console.log("savepath retreived: ",this.props.savepath);
                 break
             case "loginShow":
                 document.getElementById("dbUrl").value = "";
@@ -496,14 +497,12 @@ class Main extends React.Component {
         if (this.state.mode === "MSSQL") {
             postRequest({path:"/login/",body:{Action: "check"}})
             .then(dat=>{
-                console.log(dat);
                 this.setState({topMessage: dat.Status===bit.CON_CHECKED?  dat.Message : "No connection"})
             });
         }
         //get initial file path
         postRequest({path:"/info/",body:{}})
         .then(dat=>{
-            console.log(dat); 
             this.setState({ savepath : dat.Status & bit.FP_SERROR===1 ? "" : dat.SavePath,
                             openpath : dat.Status & bit.FP_OERROR===1 ? "" : dat.OpenPath });
         });
@@ -528,7 +527,6 @@ class Main extends React.Component {
     }
 
     submitQuery(querySpecs){
-        console.log("queryspecs:",querySpecs);
         var fullQuery = {
             Query: querySpecs.query || "", 
             FileIO: querySpecs.fileIO || 0, 
@@ -536,7 +534,6 @@ class Main extends React.Component {
             Mode: querySpecs.mode || this.state.mode
             };
         postRequest({path:"/query/",body:fullQuery}).then(dat=>{
-            //console.log(dat);
             if ((dat.Status & bit.DAT_GOOD) && (!querySpecs.backtrack)){
                 this.setState({ topMessage : dat.Message,
                                 historyPosition : this.state.queryHistory.length,

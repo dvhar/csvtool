@@ -119,7 +119,7 @@ func main() {
     cwd, err := os.Getwd()
     if err == nil {
         FPaths.OpenPath = cwd + "/"
-        FPaths.SavePath  = cwd + "/sqlSaved.json"
+        FPaths.SavePath  = cwd + "/"
         FPaths.Status = 0
     } else {
         FPaths.Status = FP_OERROR | FP_SERROR
@@ -478,7 +478,8 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
     //if given a real path
     if err == nil {
         if pathStat.Mode().IsDir() {
-            savePath = savePath + "sqlSaved.json"
+            fullReturnData.Message = "Must specify a file name to save"
+            return errors.New("Must specify a file name to save")
         } //else given a real file
     } else {
         _, err := os.Stat(filepath.Dir(savePath))
@@ -492,10 +493,10 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
 
     //save file
     if fullReturnData.Status & DAT_BADPATH == 0 {
-        file, err := os.OpenFile(savePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
+        file, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0660)
         defer file.Close()
-        FPaths.SavePath = savePath
         if err == nil {
+            FPaths.SavePath = savePath
             //actually save the file
             if (req.FileIO & F_CSV) != 0 {
                 saveCsv(file, fullReturnData)
