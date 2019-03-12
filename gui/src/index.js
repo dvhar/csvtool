@@ -5,37 +5,32 @@ import './style.css';
 import {postRequest,getUnique,getWhere,sortQuery,bit} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
-import Websocket from 'react-websocket';
-
 
 //var squel = require("squel");
 
 function DropdownQueryTextbox(props){
-    //var inbox = [];
-    //if (props.s.mode === "CSV") inbox.push( <input className="queryFileBox" placeholder="full path of csv file you would like to query" type="text"/> );
-
     return(
-        <div className="dropmenu queryMenuDiv">
-            <div className="dropButton queryMenuButton">
+        <div className={`dropmenu ${props.classes[0]}`}>
+            <div className={`dropButton ${props.classes[1]}`}>
                 {props.title}
             </div>
             <div className="dropmenu-content">
-            <textarea rows="10" className="queryTextEntry" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
+            <textarea rows="10" cols="70" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
             </textarea>
             <br/>
             <button onClick={()=>{
                 var query = document.getElementById("textBoxId").value;
-                props.submit({query : query});
+                props.submit(query);
             }}>Submit Query</button>
             </div>
         </div>
-    );
+    )
 }
 
 function DropdownQueryMenu(props){
     return(
-        <div className="dropmenu queryMenuDiv">
-            <div className="dropButton queryMenuButton">
+        <div className={`dropmenu ${props.classes[0]}`}>
+            <div className={`dropButton ${props.classes[1]}`}>
                 {props.title}
             </div>
             <div className="dropmenu-content">
@@ -48,7 +43,7 @@ function DropdownQueryMenu(props){
                     for (var i in selected)
                         if (i == Number(i))
                             queries += premades.metaDataQueries[selected[i].getAttribute("data-idx")].query;
-                    props.submit({query : queries});
+                    props.submit(queries);
                 }}
             >Submit</button>
             </div>
@@ -56,6 +51,20 @@ function DropdownQueryMenu(props){
     )
 }
 
+function DropdownGenericMenu(props){
+    return(
+        <div className={`dropmenu ${props.classes[0]}`}>
+            <div className={`dropButton ${props.classes[1]}`}>
+                {props.title}
+            </div>
+            <div className="dropmenu-content">
+            <select size={String(props.size)} className="dropSelect">
+                {props.contents}
+            </select>
+            </div>
+        </div>
+    )
+}
 
 //drop down list for what columns to hide
 class TableSelectColumns extends React.Component {
@@ -73,34 +82,14 @@ class TableSelectColumns extends React.Component {
             </option>
         )
     }
-
-    SelectColumnDropdown(title, size, contents){
-        return(
-            <div className="dropmenu tableModDiv">
-                <div className="dropButton tableModButton">
-                    {title}
-                </div>
-                <div className="dropmenu-content absolute-pos tableModDrop">
-                <select size={String(size)} className="dropSelect">
-                    {contents}
-                </select>
-                </div>
-            </div>
-        )
-    }
-
     render(){
         return (
-            <div className="dropmenu tableModDiv">
-                <div className="dropButton tableModButton">
-                    {this.props.title}
-                </div>
-                <div className="dropmenu-content absolute-pos tableModDrop">
-                <select size={String(Math.min(20,this.props.table.Colnames.length))} className="dropSelect">
-                    {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
-                </select>
-                </div>
-            </div>
+            <DropdownGenericMenu
+                title = {this.props.title}
+                size = {Math.min(20,this.props.table.Colnames.length)}
+                contents = {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
+                classes = {["tableModDiv","tableModButton"]}
+            />
         )
     }
 }
@@ -145,7 +134,7 @@ class TableSelectRows extends React.Component {
         if (this.state.secondDrop)
             dropdowns.push(
                 <select className="dropSelect" size={Math.min(20,this.state.secondDropItems.length+1)}>
-                    {["*"].concat(this.state.secondDropItems.sort()).map((name,i)=>this.dropItem(name,i,'second'))}
+                    {["*"].concat(this.state.secondDropItems).map((name,i)=>this.dropItem(name,i,'second'))}
                 </select>
             );
         return (
@@ -153,7 +142,7 @@ class TableSelectRows extends React.Component {
                 <div className="dropButton tableModButton">
                 {this.props.title}
                 </div>
-                <div className="dropmenu-content absolute-pos tableModDrop">
+                <div className="dropmenu-content">
                 {dropdowns}
                 </div>
             </div>
@@ -243,38 +232,31 @@ class QueryRender extends React.Component {
 
 class QuerySelect extends React.Component {
     render(){
-        var sqlServerMetaDataMenu = ( <div className="queryMenuContainer"> 
+        var metaDataMenu = ( <div className="queryMenuContainer"> 
                          <DropdownQueryMenu
                             title = {<h2>View database schema query{"\u25bc"}</h2>}
                             size = {premades.metaDataQueries.length}
                             //make this run multi-select queries
                             contents = {premades.metaDataQueries}
-                            submit = {(query)=>this.props.submitQuery(query)}
+                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
+                            classes = {["queryMenuDiv","queryMenuButton"]}
                          />
                      </div>);
 
-        var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
+        var customQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
-                            title = {<h2>Enter SQL Query{"\u25bc"}</h2>}
-                            submit = {(query)=>this.props.submitQuery(query)}
-                            s = {this.props.s}
-                         />
-                     </div>);
-
-        var csvCustomQueryEntry = ( <div className="queryMenuContainer"> 
-                         <DropdownQueryTextbox
-                            title = {<h2>Enter CSV Query{"\u25bc"}</h2>}
-                            submit = {(query)=>this.props.submitQuery(query)}
-                            s = {this.props.s}
+                            title = {<h2>Enter Custom SQL Query{"\u25bc"}</h2>}
+                            classes = {["queryMenuDiv","queryMenuButton"]}
+                            submit = {(query, fileIO)=>this.props.submitQuery(query, fileIO)}
                          />
                      </div>);
 
         var selectors = [];
 
-        if (this.props.s.mode === "MSSQL")
-            selectors.push(sqlServerMetaDataMenu, sqlServerCustomQueryEntry);
+        if (this.props.s.mode === "SQL")
+            selectors.push(metaDataMenu,customQueryEntry);
         else
-            selectors.push(csvCustomQueryEntry);
+            selectors.push(<button>awwwww yeeee</button>);
 
         return (
             <div className="querySelect"> 
@@ -349,36 +331,31 @@ class TopDropdown extends React.Component {
             nothing : <></>,
             modeShow : (
                 <div id="modeShow" className="modeShow dropContent">
-                <button className="modeButton " onClick={()=>this.props.changeMode("MSSQL")}>MSSQL</button>
-                <button className="modeButton " onClick={()=>this.props.changeMode("CSV")}>CSV</button>
+                <button className="modeButton dropContent" onClick={()=>this.props.changeMode("SQL")}>SQL</button>
+                <button className="modeButton dropContent" onClick={()=>this.props.changeMode("CSV")}>CSV</button>
                 </div>
             ),
 
             openShow : (
                 <div id="openShow" className="fileSelectShow dropContent">
-                    <p className="dropContent">This is for opening JSON files saved by this program. If you want to open a CSV, run a query on it.</p> 
-                    <input id="openPath" className="pathInput" type="text" className="dropContent"/>
-                    <button className="" onClick={()=>{
+                    <label className="dropContent">Open file:</label> 
+                    <input id="openPath" className="dropContent"/>
+                    <button className="dropContent" onClick={()=>{
                         var path = document.getElementById("openPath").value;
-                        this.props.submitQuery({fileIO : bit.F_OPEN, filePath : path});
+                        this.props.submitQuery("", 2, false, path);
                     }}>open</button>
                 </div>
             ),
 
-            //FileIO bits: CJOS: 32 64 128 256
             saveShow : (
                 <div id="saveShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Save file:</label> 
-                    <input id="savePath" className="pathInput" type="text" className="dropContent"/>
-                    <button className="" onClick={()=>{
-                        var jradio = document.getElementById("jradio").checked;
+                    <input id="savePath" className="dropContent"/>
+                    <button className="dropContent" onClick={()=>{
+                        console.log('trying to save');
                         var path = document.getElementById("savePath").value;
-                        this.props.changeSavePath(path);
-                        var filetype = jradio? bit.F_JSON : bit.F_CSV;
-                        this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|filetype, filePath : path});
-                    }}>save</button><br/>
-                    <input className="dropContent saveRadio" name="ftype" type="radio" id="cradio" value="CSV"/>CSV - Save queries on page to their own csv file. A number will be added to file name if more than 1.<br/>
-                    <input className="dropContent saveRadio" name="ftype" type="radio" id="jradio" value="JSON"/>JSON - Save queries on page to single json file.<br/>
+                        this.props.submitQuery(this.props.currentQuery, 1, false, path);
+                    }}>save</button>
                 </div>
             ),
 
@@ -393,7 +370,7 @@ class TopDropdown extends React.Component {
                     <label className="dropContent">login password:</label> 
                     <input className="dropContent" id="dbPass" type="password"/> <br/>
                     <div className="loginButtonDiv dropContent">
-                        <button className="" onClick={()=>{
+                        <button className="dropContent" onClick={()=>{
                             var dbUrl = document.getElementById("dbUrl").value;
                             var dbName = document.getElementById("dbName").value;
                             var dbLogin = document.getElementById("dbLogin").value;
@@ -442,7 +419,7 @@ class ModeSelect extends React.Component {
     toggleForm(){ this.props.changeTopDrop("modeShow");}
     render(){
         return(
-            <button className="topButton dropContent" id="modeButton" onClick={()=>this.toggleForm()}>Mode: {this.props.mode}</button>
+            <button className="topButton dropContent" id="modeButton" onClick={()=>this.toggleForm()}>Mode: SQL</button>
         )
     }
 }
@@ -467,7 +444,7 @@ class LoginForm extends React.Component {
     toggleForm(){ this.props.changeTopDrop("loginShow");}
     render(){
         var disp = {};
-        if (this.props.mode !== "MSSQL")
+        if (this.props.mode !== "SQL")
             disp = {display:"none"};
         return (
             <button className="loginButton dropContent topButton" style={disp} onClick={()=>this.toggleForm()}>
@@ -482,7 +459,7 @@ class Main extends React.Component {
         super(props);
 
         this.state = {
-            mode : "CSV",
+            mode : "SQL",
             topMessage : "",
             topDropdown : "nothing",
             savepath : "",
@@ -493,16 +470,16 @@ class Main extends React.Component {
         }
         this.topDropReset = this.topDropReset.bind(this);
 
-        //get initial login state if sql mode
-        if (this.state.mode === "MSSQL") {
-            postRequest({path:"/login/",body:{Action: "check"}})
-            .then(dat=>{
-                this.setState({topMessage: dat.Status===bit.CON_CHECKED?  dat.Message : "No connection"})
-            });
-        }
+        //get initial login state
+        postRequest({path:"/login/",body:{Action: "check"}})
+        .then(dat=>{
+            console.log(dat);
+            this.setState({topMessage: dat.Status===bit.CON_CHECKED?  dat.Message : "No connection"})
+        });
         //get initial file path
         postRequest({path:"/info/",body:{}})
         .then(dat=>{
+            console.log(dat); 
             this.setState({ savepath : dat.Status & bit.FP_SERROR===1 ? "" : dat.SavePath,
                             openpath : dat.Status & bit.FP_OERROR===1 ? "" : dat.OpenPath });
         });
@@ -511,12 +488,11 @@ class Main extends React.Component {
     showLoadedQuery(results){
         if (results.Status & bit.DAT_ERROR){
             if (results.Message === undefined || results.Message === "")
-                alert("Could not make query. Bad connection or syntax?");
+                alert("Could not make query. Bad connection?");
             else
                 alert(results.Message);
         }
         else if (results.Status & bit.DAT_GOOD){
-            console.log(results);
             this.setState({
                 showQuery : results.Entries.map(
                     tab => <QueryRender 
@@ -526,42 +502,27 @@ class Main extends React.Component {
                            />) });
         }
     }
-
-    submitQuery(querySpecs){
-        var fullQuery = {
-            Query: querySpecs.query || "", 
-            FileIO: querySpecs.fileIO || 0, 
-            FilePath: querySpecs.filePath || "", 
-            Mode: querySpecs.mode || this.state.mode
-            };
-        postRequest({path:"/query/",body:fullQuery}).then(dat=>{
-            if ((dat.Status & bit.DAT_GOOD) && (!querySpecs.backtrack)){
+    submitQuery(query, fileIO=0, backtrack=false, openPath=""){
+        postRequest({path:"/query/",body:{Query:query, FileIO:fileIO, FilePath:openPath}}).then(dat=>{
+            //console.log(dat);
+            if ((dat.Status & bit.DAT_GOOD) && (!backtrack)){
                 this.setState({ topMessage : dat.Message,
                                 historyPosition : this.state.queryHistory.length,
-                                queryHistory : this.state.queryHistory.concat({query : dat.OriginalQuery, mode: dat.Mode}) });
+                                queryHistory : this.state.queryHistory.concat(dat.OriginalQuery),   });
             }
             this.showLoadedQuery(dat);
         });
     }
-
     viewHistory(position){
-        var q = this.state.queryHistory[position];
         this.setState({ historyPosition : position });
-        //this.submitQuery(q.query, 0, true, "", q.mode);
-        this.submitQuery({ query : q.query, backtrack : true, mode: q.mode});
+        this.submitQuery(this.state.queryHistory[position], 0, true);
     }
     changeMode(mode){ 
-        this.setState({ mode : mode }); 
+        this.setState({ mode : mode, topMessage : `${mode} mode` }); 
     }
     topDropReset(e){ 
-        setTimeout(()=>{
         if (!e.target.matches('.dropContent'))
             this.setState({ topDropdown : "nothing" }); 
-        },50);
-    }
-    handleData(data) {
-      let result = JSON.parse(data);
-      console.log("socket data: ", data);
     }
 
     render(){
@@ -573,7 +534,7 @@ class Main extends React.Component {
         <TopMenuBar
             s = {this.state}
             updateTopMessage = {(message)=>this.setState({ topMessage : message })}
-            submitQuery = {(query)=>this.submitQuery(query)}
+            submitQuery = {(query, fileIO, backtrack, openpath)=>this.submitQuery(query, fileIO, backtrack, openpath)}
             viewHistory = {(position)=>this.viewHistory(position)}
             changeSavePath = {(path)=>this.setState({ savepath : path })}
             changeMode = {(mode)=>this.changeMode(mode)}
@@ -582,12 +543,10 @@ class Main extends React.Component {
         <QuerySelect
             s = {this.state}
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
-            submitQuery = {(query)=>this.submitQuery(query)}
+            submitQuery = {(query, fileIO)=>this.submitQuery(query, fileIO)}
             showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
         />
-        <Websocket url='ws://localhost:8060/socket/'
-          onMessage={this.handleData.bind(this)}/>
         </>
         )
     }

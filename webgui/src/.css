@@ -1,0 +1,152 @@
+html {
+  min-height: 100%;
+  background-color: #DDDDDD;
+  background: linear-gradient(to bottom, #997d60 0%, #dab78c 45%, #c3a996 100%); }
+
+.dropmenu-content {
+  display: none;
+  position: absolute;
+  padding: 1em;
+  background: brown; }
+  .dropmenu-content div {
+    padding: .2em .5em;
+    background-color: #EEEEEE;
+    border-radius: 4px;
+    margin: .2em .2em; }
+
+.dropSelect {
+  top: 0;
+  float: left; }
+
+.dropmenu:hover .dropmenu-content {
+  display: block; }
+
+.hiddenColumn {
+  color: red; }
+
+.dropmenu {
+  z-index: 10;
+  display: inline-block;
+  min-width: 12em; }
+
+.dropButton {
+  display: block;
+  text-align: center; }
+
+.queryMenuDiv {
+  padding: .2em .2em;
+  background: #feccb1;
+  background: linear-gradient(to bottom, #feccb1 1%, #f17432 22%, #ea5507 22%, #fb955e 100%); }
+
+.queryMenuButton {
+  padding: .2em .5em;
+  background-color: #EEEEEE;
+  border-radius: 4px; }
+
+.tableModDiv {
+  background-color: #EEEEEE;
+  padding: .2em .2em;
+  background: #2989d8;
+  background: linear-gradient(to bottom, #2989d8 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
+
+.tableModButton {
+  padding: .2em .5em;
+  background-color: #EEEEEE;
+  border-radius: 4px; }
+
+.tableCell {
+  text-align: center;
+  padding: .2em .5em;
+  background-color: #EEEEEE;
+  border-radius: 4px;
+  min-width: 5em; }
+
+.tableRow {
+  padding: 1em; }
+
+.tableDiv {
+  background: #ccc;
+  position: static;
+  top: 3em;
+  max-height: calc(80vh - 100px);
+  max-width: calc(95%);
+  overflow: auto;
+  margin: auto;
+  border: 2px solid black; }
+
+.querySelect {
+  margin-top: 2.3em; }
+
+.queryMenuContainer {
+  text-align: center;
+  margin-bottom: 1em; }
+
+.tableModifiers {
+  text-align: center; }
+
+.topBar {
+  background: #ffe889;
+  background: linear-gradient(to bottom, #f0b7a1 0%, #8c3310 50%, #752201 51%, #bf6e4e 100%);
+  min-height: 2em;
+  padding: 0.2em;
+  display: flex;
+  justify-content: left;
+  position: fixed;
+  width: 100%;
+  top: 0; }
+
+.topMessage {
+  color: #ffff99; }
+
+.topButton {
+  margin-right: 1em; }
+
+.loginButtonDiv {
+  padding-left: 9em; }
+
+.LoginShow {
+  padding: 0.3em;
+  background: #fdffe5;
+  top: 2.2em;
+  position: absolute; }
+
+.LoginShow label {
+  width: 9em;
+  display: inline-block;
+  text-align: right; }
+
+.LoginShow input {
+  min-width: 20em; }
+
+.fileSelectShow {
+  padding: 0.3em;
+  background: #fdffe5;
+  top: 2.2em;
+  position: absolute; }
+
+.fileSelectShow label {
+  display: inline-block; }
+
+.fileSelectShow input {
+  min-width: 40em; }
+
+.modeShow {
+  padding: 0.3em;
+  background: #fdffe5;
+  top: 2.2em;
+  position: absolute; }
+
+.modeButton {
+  padding: 1em;
+  margin: 1em; }
+
+.historyArrows {
+  right: 0;
+  position: inherit;
+  color: #ffff99; }
+
+.arrow {
+  font-size: x-large; }
+
+.show {
+  display: block; }
