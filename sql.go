@@ -504,15 +504,17 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
             err = saveCsv(fullReturnData)
         } else {
             //write json file
+            extension := regexp.MustCompile(`\.json$`)
+            if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.json` }
             var file *os.File
-            file, err = os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0660)
+            file, err = os.OpenFile(FPaths.SavePath, os.O_CREATE|os.O_WRONLY, 0660)
             file.WriteString(string(*full_json))
             file.Close()
+            if err == nil { fullReturnData.Message = `saved to `+FPaths.SavePath }
         }
         if err == nil {
             //it worked
             FPaths.Status = FP_SCHANGED
-            fullReturnData.Message = "Saved to "+savePath
             println("Saved to "+savePath)
         } else {
             //it didnt work
@@ -527,15 +529,18 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
 //save query to csv
 func saveCsv(fullReturnData *ReturnData) error {
     //set up csv writer and write heading
-    extension := regexp.MustCompile(`\.csv`)
+    extension := regexp.MustCompile(`\.csv$`)
+    if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.csv` }
 
     //loop through queries and save each to its own file
     for ii,qdata := range fullReturnData.Entries {
         var saveFile string
         if len(fullReturnData.Entries) > 1 {
             saveFile = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(ii+1)+`.csv`)
+            fullReturnData.Message = `saved to `+extension.ReplaceAllString(FPaths.SavePath, `-N.csv files.`)
         } else {
             saveFile = FPaths.SavePath
+            fullReturnData.Message = `saved to `+saveFile
         }
         file, err := os.OpenFile(saveFile, os.O_CREATE|os.O_WRONLY, 0660)
         if err != nil { return err }
