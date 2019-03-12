@@ -13,7 +13,9 @@ import (
     "net/http"
     "net/url"
     "runtime"
+    "regexp"
     "strings"
+    . "strconv"
     "errors"
     . "fmt"
     "time"
@@ -494,22 +496,26 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
         } //else given new file
     }
 
-    //save file
     if fullReturnData.Status & DAT_BADPATH == 0 {
-        file, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0660)
-        defer file.Close()
+        FPaths.SavePath = savePath
+        //save the file after checking file path
+        if (req.FileIO & F_CSV) != 0 {
+            //write csv file
+            err = saveCsv(fullReturnData)
+        } else {
+            //write json file
+            var file *os.File
+            file, err = os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0660)
+            file.WriteString(string(*full_json))
+            file.Close()
+        }
         if err == nil {
-            FPaths.SavePath = savePath
-            //actually save the file
-            if (req.FileIO & F_CSV) != 0 {
-                saveCsv(file, fullReturnData)
-            } else {
-                file.WriteString(string(*full_json))
-            }
+            //it worked
             FPaths.Status = FP_SCHANGED
             fullReturnData.Message = "Saved to "+savePath
             println("Saved to "+savePath)
         } else {
+            //it didnt work
             fullReturnData.Status = (DAT_BADPATH | DAT_IOERR)
             fullReturnData.Message = "File IO error"
             println("File IO error")
@@ -519,29 +525,44 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
 }
 
 //save query to csv
-func saveCsv(file *os.File, fullReturnData *ReturnData) error {
+func saveCsv(fullReturnData *ReturnData) error {
     //set up csv writer and write heading
-    writer := csv.NewWriter(file)
-    defer writer.Flush()
-    err := writer.Write(fullReturnData.Entries[0].Colnames)
-    //prepare array for each row
-    var output []string
-    output = make([]string, fullReturnData.Entries[0].Numcols)
-    for _, value := range fullReturnData.Entries[0].Vals {
-        for i,entry := range value {
-            //make sure each entry is formatted well according to its type
-            if entry == nil { output[i] = ""
-            } else {
-                switch entry.(type) {
-                    //case time.Time: output[i] = entry.(time.Time).Format(time.RFC3339)
-                    case time.Time: output[i] = entry.(time.Time).Format("2006-01-02 15:04:05")
-                    default: output[i] = Sprint(entry)
+    extension := regexp.MustCompile(`\.csv`)
+
+    //loop through queries and save each to its own file
+    for ii,qdata := range fullReturnData.Entries {
+        var saveFile string
+        if len(fullReturnData.Entries) > 1 {
+            saveFile = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(ii+1)+`.csv`)
+        } else {
+            saveFile = FPaths.SavePath
+        }
+        file, err := os.OpenFile(saveFile, os.O_CREATE|os.O_WRONLY, 0660)
+        if err != nil { return err }
+        writer := csv.NewWriter(file)
+        defer writer.Flush()
+        err = writer.Write(qdata.Colnames)
+        if err != nil { return err }
+        //prepare array for each row
+        var output []string
+        output = make([]string, qdata.Numcols)
+        for _, value := range qdata.Vals {
+            for i,entry := range value {
+                //make sure each entry is formatted well according to its type
+                if entry == nil { output[i] = ""
+                } else {
+                    switch entry.(type) {
+                        //case time.Time: output[i] = entry.(time.Time).Format(time.RFC3339)
+                        case time.Time: output[i] = entry.(time.Time).Format("2006-01-02 15:04:05")
+                        default: output[i] = Sprint(entry)
+                    }
                 }
             }
+            err = writer.Write(output)
+            if err != nil { return err }
         }
-        err = writer.Write(output)
     }
-    return err
+    return nil
 }
 
 //handle file opening
