@@ -128,9 +128,9 @@ func openQueryFile(req *Qrequest, fullReturnData *ReturnData) ([]byte, error) {
     return full_json, err
 }
 
-//use channels to save files directly from query without holding results in memory
+//use channel to save files directly from query without holding results in memory
 func realtimeCsvSaver() {
-    //NewNames is []string
+
     numTotal := 0
     numRecieved := 0
     extension := regexp.MustCompile(`\.csv$`)
@@ -142,21 +142,26 @@ func realtimeCsvSaver() {
         switch c.Type {
             case CH_SAVPREP:
                 println("saveprep chan recieved")
-                numTotal = c.Number
                 numRecieved = 0
-                FPaths.RtSavePath = c.Message
-                FPaths.SavePath = c.Message
-                if !extension.MatchString(FPaths.RtSavePath) { FPaths.RtSavePath += `.csv` }
-
-            case CH_HEADER: println("header chan")
-                numRecieved++
-                if numTotal > 1 {
-                    FPaths.RtSavePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
+                err = pathChecker(c.Message)
+                if err == nil {
+                    FPaths.RtSavePath = c.Message
+                    numTotal = c.Number
                 }
-                file, err = os.OpenFile(FPaths.RtSavePath, os.O_CREATE|os.O_WRONLY, 0660)
-                writer = csv.NewWriter(file)
-                defer writer.Flush()
-                err = writer.Write(c.Header)
+
+            case CH_HEADER:
+                println("header chan")
+                if numTotal > 0 {
+                    numRecieved++
+                    messager <- "Saving "+Itoa(numRecieved)+" to "+FPaths.RtSavePath
+                    if numTotal > 1 {
+                        FPaths.RtSavePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
+                    }
+                    file, err = os.OpenFile(FPaths.RtSavePath, os.O_CREATE|os.O_WRONLY, 0660)
+                    writer = csv.NewWriter(file)
+                    defer writer.Flush()
+                    err = writer.Write(c.Header)
+                }
 
             case CH_ROW: println("row chan")
             case CH_FILE: println("file chan: "+c.Message)
@@ -167,10 +172,9 @@ func realtimeCsvSaver() {
 
 
 
-func rtSavePrep(req *Qrequest) error {
-    savePath := req.FilePath
-    pathStat, err := os.Stat(savePath)
+func pathChecker(savePath string) error {
 
+    pathStat, err := os.Stat(savePath)
     //if given a real path
     if err == nil {
         if pathStat.Mode().IsDir() {
@@ -189,9 +193,5 @@ func rtSavePrep(req *Qrequest) error {
     FPaths.SavePath = savePath
     extension := regexp.MustCompile(`\.csv$`)
     if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.csv` }
-    if req.Qamount == 1 {
-        FPaths.RtSavePath = FPaths.SavePath
-    } else {
-    }
     return nil
 }

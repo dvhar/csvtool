@@ -21,7 +21,6 @@ import (
 
 
 var m runtime.MemStats
-var ColCache map[string]*Columns
 var totalMem uint64
 const (
     T_NULL = 1 << iota
@@ -35,7 +34,6 @@ const (
 /* Using csvQuery function in bigger program. uncomment if using as standalone application
 //main func
 func main() {
-    ColCache = make(map[string]*Columns)
     totalMem = memory.TotalMemory()
     //fname := os.Args[1]
 
@@ -188,21 +186,6 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     fp,err := os.Open(q.Fname)
     if err != nil { Println(err); return &SingleQueryResult{}, err }
     defer fp.Close()
-
-    /*//column info cache
-    hasher := sha1.New()
-    hasher.Write([]byte(q.Fname))
-    sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-    ColSpec, ok := ColCache[sha]
-    if !ok {
-        println("getting column data types")
-        var err error
-        ColSpec, err = inferTypes(fp)
-        if err != nil { return &SingleQueryResult{}, err }
-        fp.Seek(0,0)
-        ColCache[sha] = ColSpec
-    }
-    */
 
     //infer column types
     q.ColSpec, err = inferTypes(fp)
@@ -630,6 +613,7 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
         //end of token list
         if len(q.ColSpec.NewNames) == 0 {
             q.SelectAll = true
+            saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.Names}
         }
     }
     return err

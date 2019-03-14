@@ -104,14 +104,11 @@ type Qrequest struct {
     Query string
     Qamount int
     Mode string
-    Cache bool
     FileIO int
     FilePath string
     CsvFile string
 }
 
-//TODO: find out if program will run on multiple databases. Will need cache for each db
-var Qcache map[string]*SingleQueryResult
 var dbCon Connection
 var FPaths FilePaths
 var messager chan string
@@ -125,8 +122,7 @@ func main() {
     go realtimeCsvSaver()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
-    //initialize query data cache and file paths
-    Qcache = make(map[string]*SingleQueryResult)
+    //initialize file paths
     cwd, err := os.Getwd()
     if err == nil {
         FPaths.OpenPath = cwd + "/"
@@ -142,8 +138,6 @@ func main() {
     port := ":" + *localPort
     if *danger { host = "" }
     serverUrl := host + port
-    //done := make(chan bool)
-    //go server(serverUrl,done)
 
     //launch web browser for gui
     launch("http://localhost"+port);
@@ -155,7 +149,6 @@ func main() {
         defer dbCon.Db.Close()
     }
     httpserver(serverUrl)
-    //<-done
 
 }
 //initialize database connection
