@@ -40,6 +40,10 @@ type SingleQueryResult struct {
     Status int
     Query string
 }
+type chanData struct {
+    Message string
+    Status int
+}
 
 //query return data struct and codes
 const (
@@ -107,10 +111,12 @@ type Qrequest struct {
 var Qcache map[string]*SingleQueryResult
 var dbCon Connection
 var FPaths FilePaths
+var c chan chanData
 
 func main() {
     //get password and other flags
     flag.Parse()
+    c = make(chan chanData)
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
     //initialize query data cache and file paths
@@ -142,7 +148,7 @@ func main() {
         dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
         defer dbCon.Db.Close()
     }
-    server(serverUrl)
+    httpserver(serverUrl)
     //<-done
 
 }

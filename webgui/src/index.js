@@ -5,8 +5,11 @@ import './style.css';
 import {postRequest,getUnique,getWhere,sortQuery,bit} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
-import Websocket from 'react-websocket';
+//import Websocket from 'react-websocket';
+//<Websocket url='ws://localhost:8060/socket/' onMessage={this.handleData.bind(this)}/>
+import io from 'socket.io-client';
 
+const socket = io('http://localhost');
 
 //var squel = require("squel");
 
@@ -586,8 +589,6 @@ class Main extends React.Component {
             showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
         />
-        <Websocket url='ws://localhost:8060/socket/'
-          onMessage={this.handleData.bind(this)}/>
         </>
         )
     }

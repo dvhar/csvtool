@@ -9,13 +9,36 @@ import (
     "runtime"
     "strings"
     . "fmt"
+    //"time"
     "os/exec"
+    //. "strconv"
+	//socketio "github.com/googollee/go-socket.io"
+    "github.com/gorilla/websocket"
 )
 
+//websockets
+var upgrader = websocket.Upgrader{} // use default options
+func socketHandler() (func(http.ResponseWriter, *http.Request)) {
+    return func(w http.ResponseWriter, r *http.Request) {
+        output, err := upgrader.Upgrade(w, r, nil)
+        if err != nil {
+            Println("upgrade:", err)
+            return
+        }
+        defer output.Close()
+        for i := range c {
+            err = output.WriteMessage(1, []byte(i.Message))
+        }
+    }
+}
 
 //webserver
 //func server(serverUrl string, done chan bool) {
-func server(serverUrl string) {
+func httpserver(serverUrl string) {
+
+    http.HandleFunc("/socket", socketHandler())
+    http.HandleFunc("/socket/", socketHandler())
+
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query", queryHandler())
     http.HandleFunc("/query/", queryHandler())
@@ -80,6 +103,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //update json with save message
         rowLimit(&fullReturnData)
         if fullReturnData.Clipped { fullReturnData.Message += ". Showing only top 1000" }
+        c <- chanData{fullReturnData.Message, fullReturnData.Status}
         full_json,_ = json.Marshal(fullReturnData)
         Fprint(w, string(full_json))
         full_json = []byte("")
@@ -231,3 +255,4 @@ func launch(url string) error {
     args = append(args, url)
     return exec.Command(cmd, args...).Start()
 }
+
