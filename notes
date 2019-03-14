@@ -5,8 +5,10 @@ export PATH=$PATH:$GOPATH/bin
 
 next steps:
     more query language features
-        -aggragates, between, expressions, joins
+        -aggragates, between, expressions
+        -alter csv to hide sensitive data
     more powerful gui
         -show more data
-        -help query building
+        -save without size limits
+        -query building
     ask if vals starting with 0 like 000232342 need to keep leading zero

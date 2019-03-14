@@ -262,12 +262,14 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         runtime.ReadMemStats(&m)
         if m.Alloc > totalMem/3 {
             println("reached soft memory limit")
+            c <- chanData{Message: "Not enough memory for all results"}
             break
         }
 
         //periodic updates
         rowsChecked++
-        if rowsChecked % 100000 == 0 { println("at line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far") }
+        message := "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
+        if rowsChecked % 100000 == 0 { println(message); c <- chanData{Message : message} }
     }
     //update result column names if only querying a subset of them
     if !q.SelectAll {
@@ -276,6 +278,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         result.Numcols = q.ColSpec.NewWidth
     }
     evalOrderBy(&q, &result)
+    c <- chanData{Message: "Returning results..."}
     return &result, nil
 }
 
