@@ -26,8 +26,8 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
             return
         }
         defer output.Close()
-        for i := range c {
-            err = output.WriteMessage(1, []byte(i.Message))
+        for c := range messager {
+            err = output.WriteMessage(1, []byte(c))
         }
     }
 }
@@ -96,14 +96,16 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         full_json,_ := json.Marshal(fullReturnData)
 
         //save queries to file
+        /*
         if (req.FileIO & F_SAVE) != 0 {
             saveQueryFile(&req, &fullReturnData, &full_json)
         }
+        */
 
         //update json with save message
         rowLimit(&fullReturnData)
         if fullReturnData.Clipped { fullReturnData.Message += ". Showing only top 1000" }
-        c <- chanData{fullReturnData.Message, fullReturnData.Status}
+        messager <- fullReturnData.Message
         full_json,_ = json.Marshal(fullReturnData)
         Fprint(w, string(full_json))
         full_json = []byte("")

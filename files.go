@@ -129,6 +129,69 @@ func openQueryFile(req *Qrequest, fullReturnData *ReturnData) ([]byte, error) {
 }
 
 //use channels to save files directly from query without holding results in memory
-func realtimeCsvSaver(fullReturnData *ReturnData) error {
+func realtimeCsvSaver() {
+    //NewNames is []string
+    numTotal := 0
+    numRecieved := 0
+    extension := regexp.MustCompile(`\.csv$`)
+    var file *os.File
+    var err error
+    var writer *csv.Writer
+
+    for c := range saver {
+        switch c.Type {
+            case CH_SAVPREP:
+                println("saveprep chan recieved")
+                numTotal = c.Number
+                numRecieved = 0
+                FPaths.RtSavePath = c.Message
+                FPaths.SavePath = c.Message
+                if !extension.MatchString(FPaths.RtSavePath) { FPaths.RtSavePath += `.csv` }
+
+            case CH_HEADER: println("header chan")
+                numRecieved++
+                if numTotal > 1 {
+                    FPaths.RtSavePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
+                }
+                file, err = os.OpenFile(FPaths.RtSavePath, os.O_CREATE|os.O_WRONLY, 0660)
+                writer = csv.NewWriter(file)
+                defer writer.Flush()
+                err = writer.Write(c.Header)
+
+            case CH_ROW: println("row chan")
+            case CH_FILE: println("file chan: "+c.Message)
+        }
+        if err != nil { messager <- "Failed to write to file" }
+    }
+}
+
+
+
+func rtSavePrep(req *Qrequest) error {
+    savePath := req.FilePath
+    pathStat, err := os.Stat(savePath)
+
+    //if given a real path
+    if err == nil {
+        if pathStat.Mode().IsDir() {
+            messager <- "Must specify a file name to save"
+            return errors.New("Must specify a file name to save")
+        } //else given a real file
+    } else {
+        _, err := os.Stat(filepath.Dir(savePath))
+        //if base path doesn't exist
+        if err != nil {
+            messager <- "Invalid path: " + savePath
+            return errors.New("Invalid path")
+        } //else given new file
+    }
+    //set realtime save paths
+    FPaths.SavePath = savePath
+    extension := regexp.MustCompile(`\.csv$`)
+    if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.csv` }
+    if req.Qamount == 1 {
+        FPaths.RtSavePath = FPaths.SavePath
+    } else {
+    }
     return nil
 }

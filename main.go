@@ -2,9 +2,7 @@ package main
 import (
     _ "github.com/denisenkom/go-mssqldb"
     //"github.com/Jeffail/gabs"
-    "encoding/base64"
     "database/sql"
-    "crypto/sha1"
     "net/url"
     "strings"
     "errors"
@@ -33,9 +31,19 @@ type SingleQueryResult struct {
     Status int
     Query string
 }
+
+//channel data
+const (
+    CH_HEADER = iota
+    CH_ROW = iota
+    CH_FILE = iota
+    CH_SAVPREP = iota
+)
 type chanData struct {
     Message string
-    Status int
+    Number int
+    Type int
+    Header []string
 }
 
 //query return data struct and codes
@@ -86,6 +94,7 @@ const (
 )
 type FilePaths struct {
     SavePath string
+    RtSavePath string
     OpenPath string
     CsvPath string
     Status int
@@ -93,6 +102,7 @@ type FilePaths struct {
 //struct that matches incoming json requests
 type Qrequest struct {
     Query string
+    Qamount int
     Mode string
     Cache bool
     FileIO int
@@ -104,12 +114,15 @@ type Qrequest struct {
 var Qcache map[string]*SingleQueryResult
 var dbCon Connection
 var FPaths FilePaths
-var c chan chanData
+var messager chan string
+var saver chan chanData
 
 func main() {
     //get password and other flags
     flag.Parse()
-    c = make(chan chanData)
+    messager = make(chan string)
+    saver = make(chan chanData)
+    go realtimeCsvSaver()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
     //initialize query data cache and file paths
@@ -187,41 +200,6 @@ func sqlConnect(login, pass, server, name string) Connection {
     return ret
 }
 
-//wrapper for runSqlServerQuery() that caches results
-func runCachingQuery(db *sql.DB, query string, mode string, cacheOn bool) (*SingleQueryResult, error) {
-
-    hasher := sha1.New()
-    hasher.Write([]byte(query))
-    sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-    cachedResult, ok := Qcache[sha]
-    if ok {
-        println("returning cached result " + sha)
-        return cachedResult, nil
-    } else {
-        switch mode {
-            case "CSV":
-                println("attempting new csv query for " + sha)
-                result, err := runCsvQuery(query)
-                if err == nil && cacheOn {
-                    println("caching result")
-                    Qcache[sha] = result
-                }
-                return result, err
-            case "MSSQL": fallthrough
-            default:
-                println("attempting new server query for " + sha)
-                result, err := runSqlServerQuery(db, query)
-                if err == nil && cacheOn {
-                    println("caching result")
-                    Qcache[sha] = result
-                }
-                return result, err
-        }
-        println("invalid query request object")
-        return nil, errors.New("invalid query request object")
-    }
-}
-
 //wrapper for csvQuery
 func runCsvQuery(query string) (*SingleQueryResult,error) {
     qSpec := QuerySpecs{
@@ -277,9 +255,29 @@ func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
     query := req.Query
     if (strings.HasSuffix(query,";")) { query = query[:len(query)-1] }
     queries := strings.Split(strings.Replace(query,"\\n","",-1),";")
+    req.Qamount = len(queries)
+    //send info to realtime saver
+    if (req.FileIO & F_SAVE) != 0 {
+        saver <- chanData{
+            Number : req.Qamount,
+            Type : CH_SAVPREP,
+            Message : req.FilePath,
+        }
+    }
+    //run queries in a loop
     var results[]*SingleQueryResult
+    var result*SingleQueryResult
+    var err error
     for i := range queries {
-        result,err := runCachingQuery(db, queries[i], req.Mode, req.Cache)
+        //run query
+        switch req.Mode {
+            case "MSSQL":
+                result, err = runSqlServerQuery(db, queries[i])
+            case "CSV": fallthrough
+            default:
+                result, err = runCsvQuery(queries[i])
+        }
+
         results = append(results, result)
         if err != nil {
             return results, err

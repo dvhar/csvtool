@@ -209,11 +209,10 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     if err != nil { return &SingleQueryResult{}, err }
 
     //do some pre-query parsing
-    err = parseTokenTypes(&q, 0,1)
+    err = preParsetokens(&q, 0,1)
     if err != nil { Println(err); return &SingleQueryResult{}, err }
     println("typed the tokens")
     q.Reset()
-    Println(q)
 
     //prepare input and output
     totalMem = memory.TotalMemory()
@@ -262,14 +261,14 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         runtime.ReadMemStats(&m)
         if m.Alloc > totalMem/3 {
             println("reached soft memory limit")
-            c <- chanData{Message: "Not enough memory for all results"}
+            messager <- "Not enough memory for all results"
             break
         }
 
         //periodic updates
         rowsChecked++
         message := "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
-        if rowsChecked % 100000 == 0 { println(message); c <- chanData{Message : message} }
+        if rowsChecked % 100000 == 0 { println(message); messager <- message }
     }
     //update result column names if only querying a subset of them
     if !q.SelectAll {
@@ -278,7 +277,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         result.Numcols = q.ColSpec.NewWidth
     }
     evalOrderBy(&q, &result)
-    c <- chanData{Message: "Returning results..."}
+    messager <- "Loading results from 1 query..."
     return &result, nil
 }
 
@@ -570,6 +569,7 @@ func parseFromToken(q *QuerySpecs) error {
         } else { q.Reset(); return nil }
     } else if tok.Ttype == TOK_FROM {
         q.Fname = tok.Val.(string)
+        saver <- chanData{Type : CH_FILE, Message : q.Fname }
         println("found from val: "+q.Fname)
         q.Reset();
         return nil
@@ -577,7 +577,7 @@ func parseFromToken(q *QuerySpecs) error {
 }
 
 //give val tokens their correct Dtype and change col name tokens to col index
-func parseTokenTypes(q *QuerySpecs, col int, counter int) error {
+func preParsetokens(q *QuerySpecs, col int, counter int) error {
     tok := q.Tok()
     var ok bool
     var err error
@@ -591,7 +591,7 @@ func parseTokenTypes(q *QuerySpecs, col int, counter int) error {
         //change column token value to index of column
         if !ok {
             col, err = getColumnIdx(q.ColSpec.Names, tok.Val.(string))
-            if err != nil { return errors.New("parseTokenTypes: column "+tok.Val.(string)+" not found") }
+            if err != nil { return errors.New("preParsetokens: column "+tok.Val.(string)+" not found") }
             println("column "+tok.Val.(string)+" is number "+Itoa(col))
         } else {
             col--
@@ -625,9 +625,12 @@ func parseTokenTypes(q *QuerySpecs, col int, counter int) error {
     }
     tok = q.Next()
     if tok.Ttype != TOK_END {
-        err = parseTokenTypes(q, col, counter+1)
+        err = preParsetokens(q, col, counter+1)
     } else {
-        if len(q.ColSpec.NewNames) == 0 { q.SelectAll = true }
+        //end of token list
+        if len(q.ColSpec.NewNames) == 0 {
+            q.SelectAll = true
+        }
     }
     return err
 }
