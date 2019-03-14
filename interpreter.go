@@ -604,6 +604,7 @@ func parseTokenTypes(q *QuerySpecs, col int, counter int) error {
             q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[col])
             q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[col])
         }
+        if tok.Ttype == TOK_SCOL && col < 0 { q.SelectAll = true }
     }
 
     //set row limit if TOP token found
@@ -625,6 +626,8 @@ func parseTokenTypes(q *QuerySpecs, col int, counter int) error {
     tok = q.Next()
     if tok.Ttype != TOK_END {
         err = parseTokenTypes(q, col, counter+1)
+    } else {
+        if len(q.ColSpec.NewNames) == 0 { q.SelectAll = true }
     }
     return err
 }
@@ -638,29 +641,19 @@ func evalQuery(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}, sel
     if !match { return false, nil }
 
     //copy entire row if there is no select section
-    if q.SelectColNum == 0 {
+    if q.SelectAll {
         result.Vals = append(result.Vals, *row)
-        q.SelectAll = true
         return true, nil
     }
 
-    //see if columns come after select token, copy whole row if none selected
+    //find select colum token, return error if none found
     q.Reset()
-    tok := q.Tok()
-    if tok.Ttype == TOK_SELECT {
-        for ;q.Peek().Ttype != TOK_SCOL || q.Peek().Ttype == TOK_END; q.Next() {}
-        if tok.Ttype == TOK_END {
-            result.Vals = append(result.Vals, *row)
-            q.SelectAll = true
-            return true, nil
-        }
-    }
+    for ;q.Peek().Ttype != TOK_SCOL || q.Peek().Ttype == TOK_END; q.Next() {}
+    if q.Peek().Ttype == TOK_END { return false, errors.New("No select column found") }
 
     //retreive the selected columns
-    if q.Peek().Ttype == TOK_SCOL {
-        countSelected := evalSelectCol(q, result, row, selected, 0)
-        if countSelected != q.SelectColNum { return true, errors.New("returned the wrong number of columns") }
-    }
+    countSelected := evalSelectCol(q, result, row, selected, 0)
+    if countSelected != q.SelectColNum { return true, errors.New("returned the wrong number of columns") }
     return true, nil
 }
 

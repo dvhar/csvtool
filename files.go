@@ -127,3 +127,8 @@ func openQueryFile(req *Qrequest, fullReturnData *ReturnData) ([]byte, error) {
     full_json, err := json.Marshal(fullReturnData)
     return full_json, err
 }
+
+//use channels to save files directly from query without holding results in memory
+func realtimeCsvSaver(fullReturnData *ReturnData) error {
+    return nil
+}
