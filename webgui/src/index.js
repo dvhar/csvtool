@@ -6,10 +6,14 @@ import {postRequest,getUnique,getWhere,sortQuery,bit} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 //import Websocket from 'react-websocket';
-//<Websocket url='ws://localhost:8060/socket/' onMessage={this.handleData.bind(this)}/>
-import io from 'socket.io-client';
-
-const socket = io('http://localhost');
+//
+//import io from 'socket.io-client';
+//const socket = io('/socket/');
+//socket.on('connect', function(){console.log("connected to socket");});
+//socket.on('event', function(data){console.log(data);});
+//socket.on('disconnect', function(){console.log("disconnected from socket");});
+//console.log(socket);
+//
 
 //var squel = require("squel");
 
@@ -591,6 +595,16 @@ class Main extends React.Component {
         />
         </>
         )
+    }
+
+    componentDidMount(){
+        var that = this;
+        this.ws = new WebSocket("ws://" + document.location.host + "/socket/");
+        console.log(this.ws);
+        this.ws.onopen = function(evt) { console.log("OPEN"); }
+        this.ws.onclose = function(evt) { console.log("CLOSE"); this.ws = null; } 
+        this.ws.onmessage = function(evt) { console.log("RESPONSE: " + evt.data); that.setState({ topMessage : evt.data }); }
+        this.ws.onerror = function(evt) { console.log("ERROR: " + evt.data); } 
     }
 }
 
