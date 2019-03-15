@@ -85,6 +85,7 @@ type QuerySpecs struct {
     SelectAll bool
     ColArray []int
     ColSpec *Columns
+    Save bool
     End bool
 }
 //token retrieval methods
@@ -217,7 +218,6 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         //read line from csv file and allocate array for it
         line, err := cread.Read()
         if err != nil {break}
-        result.Numrows++
         row = make([]interface{}, q.ColSpec.Width)
         //read each cell from line
         for i,cell := range line {
@@ -237,7 +237,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         //recursive descent parser finds matches and retrieves results
         match, err := evalQuery(&q, &result, &row, &tempRow)
         if err != nil{ Println("evalQuery error in csvQuery:",err); return &SingleQueryResult{}, err }
-        if match { j++ }
+        if match { j++; result.Numrows++ }
         q.Reset()
 
         //watch out for memory ceiling
@@ -250,8 +250,10 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
 
         //periodic updates
         rowsChecked++
-        message := "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
-        if rowsChecked % 100000 == 0 { println(message); messager <- message }
+        if rowsChecked % 1000 == 0 {
+            message := "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
+            messager <- message
+        }
     }
     //update result column names if only querying a subset of them
     if !q.SelectAll {
@@ -260,7 +262,8 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         result.Numcols = q.ColSpec.NewWidth
     }
     evalOrderBy(&q, &result)
-    messager <- "Loading results from 1 query..."
+    if q.Save { saver <- chanData{Type : CH_DONE} }
+    messager <- "Finishing a query..."
     return &result, nil
 }
 
@@ -552,9 +555,8 @@ func parseFromToken(q *QuerySpecs) error {
         } else { q.Reset(); return nil }
     } else if tok.Ttype == TOK_FROM {
         q.Fname = tok.Val.(string)
-        saver <- chanData{Type : CH_FILE, Message : q.Fname }
-        println("found from val: "+q.Fname)
         q.Reset();
+        println("found from val: "+q.Fname)
         return nil
     } else { q.Next(); return parseFromToken(q) }
 }
@@ -610,10 +612,12 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
     if tok.Ttype != TOK_END {
         err = preParsetokens(q, col, counter+1)
     } else {
-        //end of token list
+        //end of token list - send header to realtime saver
         if len(q.ColSpec.NewNames) == 0 {
             q.SelectAll = true
             saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.Names}
+        } else {
+            saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
         }
     }
     return err
@@ -630,6 +634,7 @@ func evalQuery(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}, sel
     //copy entire row if there is no select section
     if q.SelectAll {
         result.Vals = append(result.Vals, *row)
+        if q.Save { saver <- chanData{Type : CH_ROW, Row : row} }
         return true, nil
     }
 
@@ -648,18 +653,14 @@ func evalQuery(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}, sel
 func evalSelectCol(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}, selected *[]interface{}, count int) int {
     tok := q.Next()
     if tok.Ttype != TOK_SCOL { return count }
-    //append whole row if * found
-    if tok.Val.(int) < 0 {
-        result.Vals = append(result.Vals, *row)
-        q.SelectAll = true
-        return q.SelectColNum
-    }
+
     //add col to selected array if regular column found
     if count < q.SelectColNum {
         if count == 0 { *selected = make([]interface{}, q.SelectColNum) }
         (*selected)[count] = (*row)[tok.Val.(int)]
         if count == q.SelectColNum - 1 {
             result.Vals = append(result.Vals, *selected)
+            if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} }
             q.ColSpec.NewWidth = count+1
         }
     }

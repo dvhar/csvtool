@@ -36,7 +36,7 @@ type SingleQueryResult struct {
 const (
     CH_HEADER = iota
     CH_ROW = iota
-    CH_FILE = iota
+    CH_DONE = iota
     CH_SAVPREP = iota
 )
 type chanData struct {
@@ -44,6 +44,7 @@ type chanData struct {
     Number int
     Type int
     Header []string
+    Row *[]interface{}
 }
 
 //query return data struct and codes
@@ -194,10 +195,11 @@ func sqlConnect(login, pass, server, name string) Connection {
 }
 
 //wrapper for csvQuery
-func runCsvQuery(query string) (*SingleQueryResult,error) {
+func runCsvQuery(query string, req *Qrequest) (*SingleQueryResult,error) {
     qSpec := QuerySpecs{
         Qstring : query,
         Fname : "/home/dave/Documents/work/data/bigdata/2018facilityclaims.csv" }
+    if (req.FileIO & F_SAVE) != 0 { qSpec.Save = true }
     println("attempting csv query from gui program")
     res, err := csvQuery(qSpec)
     res.Query = query;
@@ -268,7 +270,7 @@ func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
                 result, err = runSqlServerQuery(db, queries[i])
             case "CSV": fallthrough
             default:
-                result, err = runCsvQuery(queries[i])
+                result, err = runCsvQuery(queries[i], req)
         }
 
         results = append(results, result)

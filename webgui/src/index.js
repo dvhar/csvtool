@@ -208,7 +208,7 @@ class TableGrid extends React.Component {
         var inner = document.getElementById(this.state.childId);
         var outter = document.getElementById(this.state.parentId);
         var windoww = window.innerWidth;
-        outter.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*0.95)}px`;
+        outter.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
     }
     componentDidUpdate(){ this.resize(); }
     componentDidMount(){ this.resize(); }
@@ -237,6 +237,7 @@ class QueryRender extends React.Component {
                     hideColumns = {this.props.hideColumns}
                     toggleColumn = {(i)=>this.toggleColumn(i)}
                 />    
+                <span>Rows: {this.props.table.Numrows}</span>
             </div>
             <TableGrid
                 table = {getWhere(this.props.table,this.props.rows.col,this.props.rows.val)}

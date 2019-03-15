@@ -1,3 +1,5 @@
+DEPS = files.go  interpreter.go  main.go  server.go
+
 
 all: sql.lnx rice-box.go
 
@@ -6,13 +8,13 @@ cross: sql.lnx sql.exe sql.mac rice-box.go
 rice-box.go:
 	rice embed-go
 
-sql.exe: sql.go cql.go rice-box.go
+sql.exe: $(DEPS) rice-box.go
 	CGO_ENABLED=0 GOOS=windows go build -o sql.exe
 
-sql.mac: sql.go cql.go rice-box.go
+sql.mac: $(DEPS) rice-box.go
 	CGO_ENABLED=0 GOOS=darwin go build -o sql.mac
 
-sql.lnx: sql.go cql.go rice-box.go
+sql.lnx: $(DEPS) rice-box.go
 	CGO_ENABLED=0 GOOS=linux go build -o sql.lnx
 
 clean:

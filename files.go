@@ -106,6 +106,7 @@ func saveCsv(fullReturnData *ReturnData) error {
             err = writer.Write(output)
             if err != nil { return err }
         }
+        file.Close()
     }
     return nil
 }
@@ -131,27 +132,30 @@ func openQueryFile(req *Qrequest, fullReturnData *ReturnData) ([]byte, error) {
 //use channel to save files directly from query without holding results in memory
 func realtimeCsvSaver() {
 
+    state := 0
     numTotal := 0
     numRecieved := 0
     extension := regexp.MustCompile(`\.csv$`)
     var file *os.File
     var err error
     var writer *csv.Writer
+    var output []string
 
     for c := range saver {
         switch c.Type {
             case CH_SAVPREP:
-                println("saveprep chan recieved")
-                numRecieved = 0
+                println("saveprep chan")
                 err = pathChecker(c.Message)
                 if err == nil {
-                    FPaths.RtSavePath = c.Message
+                    FPaths.RtSavePath = FPaths.SavePath
                     numTotal = c.Number
+                    numRecieved = 0
+                    state = 1
                 }
 
             case CH_HEADER:
                 println("header chan")
-                if numTotal > 0 {
+                if state == 1 {
                     numRecieved++
                     messager <- "Saving "+Itoa(numRecieved)+" to "+FPaths.RtSavePath
                     if numTotal > 1 {
@@ -159,12 +163,30 @@ func realtimeCsvSaver() {
                     }
                     file, err = os.OpenFile(FPaths.RtSavePath, os.O_CREATE|os.O_WRONLY, 0660)
                     writer = csv.NewWriter(file)
-                    defer writer.Flush()
                     err = writer.Write(c.Header)
+                    output = make([]string, len(c.Header))
+                    state = 2
                 }
 
-            case CH_ROW: println("row chan")
-            case CH_FILE: println("file chan: "+c.Message)
+            case CH_ROW:
+                if state == 2 {
+                    for i,entry := range *(c.Row) {
+                        //make sure each entry is formatted well according to its type
+                        if entry == nil { output[i] = ""
+                        } else {
+                            switch entry.(type) {
+                                //case time.Time: output[i] = entry.(time.Time).Format(time.RFC3339)
+                                case time.Time: output[i] = entry.(time.Time).Format("2006-01-02 15:04:05")
+                                default: output[i] = Sprint(entry)
+                            }
+                        }
+                    }
+                    err = writer.Write(output)
+                }
+            case CH_DONE:
+                writer.Flush()
+                file.Close()
+                state = 0
         }
         if err != nil { messager <- "Failed to write to file" }
     }

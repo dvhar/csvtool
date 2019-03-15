@@ -120,7 +120,7 @@ func rowLimit(fullReturnData *ReturnData) {
     for i, query := range fullReturnData.Entries {
         if query.Numrows > 1000 {
             fullReturnData.Entries[i].Vals = query.Vals[:1000]
-            fullReturnData.Entries[i].Numrows = 1000
+            //fullReturnData.Entries[i].Numrows = 1000
             fullReturnData.Clipped = true
             runtime.GC()
         }
