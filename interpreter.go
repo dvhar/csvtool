@@ -81,7 +81,7 @@ type QuerySpecs struct {
     TokArray []Token
     TokIdx int
     TokWhere int
-    Distinct int
+    DistinctIdx int
     DistinctBackcheck int
     SelectColNum int
     SelectAll bool
@@ -159,7 +159,7 @@ func inferTypes(file interface{}) (*Columns, error) {
         if err != nil {break}
         for i,cell := range line {
             entry := s.TrimSpace(cell)
-            if entry == "NULL" || entry == "null" || entry == "" {
+            if entry == "NULL" || entry == "null" || entry == "NA" || entry == "" {
               cols.Types[i] = max(T_NULL, cols.Types[i])
             } else if _, err := Atoi(entry); err == nil {
               cols.Types[i] = max(T_INT, cols.Types[i])
@@ -195,7 +195,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     if err != nil { return &SingleQueryResult{}, err }
 
     //do some pre-query parsing
-    q.Distinct = -1
+    q.DistinctIdx = -1
     err = preParsetokens(&q, 0,1)
     if err != nil { Println(err); return &SingleQueryResult{}, err }
     println("typed the tokens")
@@ -573,9 +573,6 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
     //record "where" position
     if tok.Ttype == TOK_WHERE { q.TokWhere = counter; println("found where token at postition "+Itoa(counter)) }
 
-    //set the distinct column value if there is one
-    if tok.Ttype == TOK_DISTINCT && q.Peek().Ttype == TOK_SCOL { q.Distinct = q.Peek().Val.(int)-1; q.DistinctBackcheck = q.Distinct }
-
     //parse column tokens, build column list
     if tok.Ttype == TOK_WCOL || tok.Ttype == TOK_SCOL || tok.Ttype == TOK_ORDER {
         col, ok = tok.Val.(int)
@@ -597,6 +594,17 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
         }
         //selectall is true if * found in column list
         if tok.Ttype == TOK_SCOL && col < 0 { q.SelectAll = true }
+    }
+
+    //set the distinct column value if there is one
+    if tok.Ttype == TOK_DISTINCT && q.Peek().Ttype == TOK_SCOL {
+        dcol, k := q.Peek().Val.(int)
+        if !k {
+            q.DistinctIdx, err = getColumnIdx(q.ColSpec.Names, q.Peek().Val.(string))
+        } else {
+            q.DistinctIdx = dcol-1;
+        }
+        q.DistinctBackcheck = q.DistinctIdx
     }
 
     //set row limit if TOP token found
@@ -626,16 +634,18 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
         } else {
             saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
         }
-        if q.Distinct >= 0 && !q.SelectAll { q.DistinctBackcheck,_ = updateColIdx(q.Distinct, q.ColSpec) }
+        if q.DistinctIdx >= 0 && !q.SelectAll { q.DistinctBackcheck,_ = updateColIdx(q.DistinctIdx, q.ColSpec) }
     }
     return err
 }
 
 //see if this row has a distict column value if required
 func evalDistinct(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}) (bool,error) {
-    if q.Distinct < 0 { return true, nil }
-    colVal := (*row)[q.Distinct]
-    Println("testing row: ", colVal, " with idx ",Itoa(q.Distinct)," and backcheck idx ", Itoa(q.DistinctBackcheck))
+    if q.DistinctIdx < 0 { return true, nil }
+    colVal := (*row)[q.DistinctIdx]
+    colType := result.Types[q.DistinctBackcheck]
+    Println(result.Types)
+    Println("testing row: ", colVal, " with idx ",Itoa(q.DistinctIdx)," and backcheck idx ", Itoa(q.DistinctBackcheck)," type: ",Itoa(colType))
     return true,nil
 }
 
