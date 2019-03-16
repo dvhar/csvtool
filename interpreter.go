@@ -312,6 +312,7 @@ const (
     TOK_ORDHOW = iota
     TOK_FROM = iota
     TOK_END = iota
+    TOK_DISTINCT = iota
 )
 type Token struct {
     Ttype int
@@ -398,6 +399,7 @@ func tokenizeQspec(q *QuerySpecs) error {
         if (selectPart || i ==0 ) && s.ToLower(v) == "from" { selectPart = false; state = 10 }
         if (selectPart || i ==0 ) && s.ToLower(v) == "where" { selectPart = false; state = 6 }
         if selectPart && v == "*" { state = 7 }
+        if selectPart && v == "DISTINCT" && i < len(words)-1 { state = 11 }
         if v == "order" && i<len(words)-2 && words[i+1] == "by" { state = 8 }
 
         switch state {
@@ -542,6 +544,11 @@ func tokenizeQspec(q *QuerySpecs) error {
                 selectPart = false
                 state = 6
                 i += 2
+
+            //disctinct token
+            case 11:
+                TokArray = append(TokArray, Token{TOK_DISTINCT, 0, T_INT})
+                i++
         }
     }
     q.TokArray = TokArray
