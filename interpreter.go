@@ -253,7 +253,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
 
         //periodic updates
         rowsChecked++
-        if rowsChecked % 1000 == 0 {
+        if rowsChecked % 10000 == 0 {
             message := "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
             messager <- message
         }
@@ -642,10 +642,20 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
 //see if this row has a distict column value if required
 func evalDistinct(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}) (bool,error) {
     if q.DistinctIdx < 0 { return true, nil }
-    colVal := (*row)[q.DistinctIdx]
+    var match bool
+    compVal := (*row)[q.DistinctIdx]
     colType := result.Types[q.DistinctBackcheck]
-    Println(result.Types)
-    Println("testing row: ", colVal, " with idx ",Itoa(q.DistinctIdx)," and backcheck idx ", Itoa(q.DistinctBackcheck)," type: ",Itoa(colType))
+    Println("testing row: ", compVal, " with idx ",Itoa(q.DistinctIdx)," and backcheck idx ", Itoa(q.DistinctBackcheck)," type: ",Itoa(colType))
+    for _,entry := range result.Vals {
+        switch colType {
+            case T_NULL:   fallthrough
+            case T_STRING: match = compVal.(string) == entry[q.DistinctBackcheck].(string)
+            case T_INT:    match = compVal.(int) == entry[q.DistinctBackcheck].(int)
+            case T_FLOAT:  match = compVal.(float64) == entry[q.DistinctBackcheck].(float64)
+            case T_DATE:   match = compVal.(time.Time).Equal(entry[q.DistinctBackcheck].(time.Time))
+        }
+        if match { return false, nil }
+    }
     return true,nil
 }
 
