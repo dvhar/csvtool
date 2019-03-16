@@ -144,7 +144,6 @@ func realtimeCsvSaver() {
     for c := range saver {
         switch c.Type {
             case CH_SAVPREP:
-                println("saveprep chan")
                 err = pathChecker(c.Message)
                 if err == nil {
                     FPaths.RtSavePath = FPaths.SavePath
@@ -154,10 +153,8 @@ func realtimeCsvSaver() {
                 }
 
             case CH_HEADER:
-                println("header chan")
                 if state == 1 {
                     numRecieved++
-                    messager <- "Saving "+Itoa(numRecieved)+" to "+FPaths.RtSavePath
                     if numTotal > 1 {
                         FPaths.RtSavePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
                     }
@@ -183,12 +180,16 @@ func realtimeCsvSaver() {
                     }
                     err = writer.Write(output)
                 }
-            case CH_DONE:
+
+            case CH_NEXT:
                 writer.Flush()
                 file.Close()
+                state = 1
+
+            case CH_DONE:
                 state = 0
         }
-        if err != nil { messager <- "Failed to write to file" }
+        if err != nil { messager <- Sprint(err) }
     }
 }
 

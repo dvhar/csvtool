@@ -262,7 +262,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         result.Numcols = q.ColSpec.NewWidth
     }
     evalOrderBy(&q, &result)
-    if q.Save { saver <- chanData{Type : CH_DONE} }
+    if q.Save { saver <- chanData{Type : CH_NEXT} }
     messager <- "Finishing a query..."
     return &result, nil
 }

@@ -37,6 +37,7 @@ const (
     CH_HEADER = iota
     CH_ROW = iota
     CH_DONE = iota
+    CH_NEXT = iota
     CH_SAVPREP = iota
 )
 type chanData struct {
