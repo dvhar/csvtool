@@ -218,7 +218,7 @@ func runSqlServerQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
         rows,err := db.Query(query)
         if err == nil {
             columnNames,_ := rows.Columns()
-            columnValues := make([]string, len(columnNames))
+            columnValues := make([]interface{}, len(columnNames))
             columnPointers := make([]interface{}, len(columnNames))
             for i,_ := range columnNames {
                 columnPointers[i] = &columnValues[i]
