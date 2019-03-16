@@ -13,7 +13,7 @@ import (
 )
 
 //command line flags
-var dbNoCon = flag.Bool("no", true, "Don't connect to database")
+var dbNoCon = flag.Bool("no", false, "Don't connect to database")
 var localPort = flag.String("port", "8060", "Change localhost port")
 var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
 var dbserver = flag.String("s", os.Getenv("MSSQL_CLI_SERVER"), "Database URL")

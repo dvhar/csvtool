@@ -95,8 +95,8 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         fullReturnData.Entries = entries
         full_json,_ := json.Marshal(fullReturnData)
 
-        //save queries to JSON file
-        if (req.FileIO & F_JSON) != 0 {
+        //save queries if not saving from one csv to another
+        if (req.FileIO & F_SAVE)!=0 && ((req.FileIO & F_JSON)!=0 || req.Mode=="MSSQL") {
             saveQueryFile(&req, &fullReturnData, &full_json)
         }
 
