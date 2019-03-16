@@ -86,7 +86,6 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             if (req.FileIO & F_SAVE) != 0 { saver <- chanData{Type : CH_DONE} }
             if err != nil {
                 fullReturnData.Status |= DAT_ERROR
-                fullReturnData.Message = "Error querying database"
             } else {
                 fullReturnData.Status |= DAT_GOOD
                 fullReturnData.Message = "Query successful"

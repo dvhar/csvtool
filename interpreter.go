@@ -254,8 +254,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
         //periodic updates
         rowsChecked++
         if rowsChecked % 10000 == 0 {
-            message := "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
-            messager <- message
+            messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
         }
     }
     //update result column names if only querying a subset of them
@@ -596,7 +595,7 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
         if tok.Ttype == TOK_SCOL && col < 0 { q.SelectAll = true }
     }
 
-    //set the distinct column value if there is one
+    //set the distinct column value
     if tok.Ttype == TOK_DISTINCT && q.Peek().Ttype == TOK_SCOL {
         dcol, k := q.Peek().Val.(int)
         if !k {
@@ -628,13 +627,14 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
         err = preParsetokens(q, col, counter+1)
     } else {
         //end of token list
-        if len(q.ColSpec.NewNames) == 0 {
+        if len(q.ColSpec.NewNames) == 0 || q.SelectAll {
             q.SelectAll = true
+            q.ColSpec.NewTypes = q.ColSpec.Types
             saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.Names}
         } else {
             saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
+            q.DistinctBackcheck = 0
         }
-        if q.DistinctIdx >= 0 && !q.SelectAll { q.DistinctBackcheck,_ = updateColIdx(q.DistinctIdx, q.ColSpec) }
     }
     return err
 }
@@ -643,9 +643,15 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
 func evalDistinct(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}) (bool,error) {
     if q.DistinctIdx < 0 { return true, nil }
     var match bool
+    /*
+    Println("q: ", Itoa(q.DistinctIdx), " qb: ", Itoa(q.DistinctBackcheck))
+    Println("row: ", *row)
+    Println("brows: ", result.Vals)
+    Println("ntypes: ", q.ColSpec.NewTypes)
+    Println("types: ", q.ColSpec.Types)
+    */
     compVal := (*row)[q.DistinctIdx]
-    colType := result.Types[q.DistinctBackcheck]
-    Println("testing row: ", compVal, " with idx ",Itoa(q.DistinctIdx)," and backcheck idx ", Itoa(q.DistinctBackcheck)," type: ",Itoa(colType))
+    colType := q.ColSpec.NewTypes[q.DistinctBackcheck]
     for _,entry := range result.Vals {
         switch colType {
             case T_NULL:   fallthrough
