@@ -81,6 +81,8 @@ type QuerySpecs struct {
     TokArray []Token
     TokIdx int
     TokWhere int
+    Distinct int
+    DistinctBackcheck int
     SelectColNum int
     SelectAll bool
     ColArray []int
@@ -193,6 +195,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     if err != nil { return &SingleQueryResult{}, err }
 
     //do some pre-query parsing
+    q.Distinct = -1
     err = preParsetokens(&q, 0,1)
     if err != nil { Println(err); return &SingleQueryResult{}, err }
     println("typed the tokens")
@@ -280,18 +283,10 @@ func getColumnIdx(colNames []string, column string) (int, error) {
 func updateColIdx(oldIdx int, c *Columns) (int, error) {
     if len(c.NewNames) == 0 { return oldIdx, nil }
     name := c.Names[oldIdx]
-    var found bool
-    var newIdx int
-    var err error
     for i,n := range c.NewNames {
-        if n == name {
-            found = true
-            newIdx = i
-            break
-        }
+        if n == name { return i,nil }
     }
-    if !found { err = errors.New("Could not find index for column") }
-    return newIdx, err
+    return 0, errors.New("Could not find index for column")
 }
 
 
@@ -548,6 +543,7 @@ func tokenizeQspec(q *QuerySpecs) error {
             //disctinct token
             case 11:
                 TokArray = append(TokArray, Token{TOK_DISTINCT, 0, T_INT})
+                state = 0
                 i++
         }
     }
@@ -577,6 +573,9 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
     //record "where" position
     if tok.Ttype == TOK_WHERE { q.TokWhere = counter; println("found where token at postition "+Itoa(counter)) }
 
+    //set the distinct column value if there is one
+    if tok.Ttype == TOK_DISTINCT && q.Peek().Ttype == TOK_SCOL { q.Distinct = q.Peek().Val.(int)-1; q.DistinctBackcheck = q.Distinct }
+
     //parse column tokens, build column list
     if tok.Ttype == TOK_WCOL || tok.Ttype == TOK_SCOL || tok.Ttype == TOK_ORDER {
         col, ok = tok.Val.(int)
@@ -596,6 +595,7 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
             q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[col])
             q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[col])
         }
+        //selectall is true if * found in column list
         if tok.Ttype == TOK_SCOL && col < 0 { q.SelectAll = true }
     }
 
@@ -619,15 +619,24 @@ func preParsetokens(q *QuerySpecs, col int, counter int) error {
     if tok.Ttype != TOK_END {
         err = preParsetokens(q, col, counter+1)
     } else {
-        //end of token list - send header to realtime saver
+        //end of token list
         if len(q.ColSpec.NewNames) == 0 {
             q.SelectAll = true
             saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.Names}
         } else {
             saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
         }
+        if q.Distinct >= 0 && !q.SelectAll { q.DistinctBackcheck,_ = updateColIdx(q.Distinct, q.ColSpec) }
     }
     return err
+}
+
+//see if this row has a distict column value if required
+func evalDistinct(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}) (bool,error) {
+    if q.Distinct < 0 { return true, nil }
+    colVal := (*row)[q.Distinct]
+    Println("testing row: ", colVal, " with idx ",Itoa(q.Distinct)," and backcheck idx ", Itoa(q.DistinctBackcheck))
+    return true,nil
 }
 
 //top level recursive descent parser for select statement
@@ -636,6 +645,10 @@ func evalQuery(q *QuerySpecs, result *SingleQueryResult, row *[]interface{}, sel
     //see if row matches expression
     match, err := evalWhere(q, row)
     if err != nil{ Println("evalMultiComparison error in evalQuery:",err); return false, err }
+    if !match { return false, nil }
+
+    //see if row is distict if required
+    match, err = evalDistinct(q, result, row)
     if !match { return false, nil }
 
     //copy entire row if there is no select section
@@ -830,4 +843,3 @@ func sortBy(res *SingleQueryResult, colName interface{}, whichWay int) error {
     })
     return nil
 }
-
