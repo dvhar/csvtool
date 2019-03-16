@@ -135,7 +135,7 @@ func main() {
         FPaths.Status = FP_OERROR | FP_SERROR
     }
 
-    //set up server url and start server in goroutine
+    //set up server url
     println("Starting server")
     host := "localhost"
     port := ":" + *localPort
@@ -151,6 +151,8 @@ func main() {
         dbCon = sqlConnect(*dblogin, *dbpass, *dbserver, *dbname)
         defer dbCon.Db.Close()
     }
+
+    //start server
     httpserver(serverUrl)
 
 }

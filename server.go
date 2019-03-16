@@ -25,9 +25,19 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
             Println("upgrade:", err)
             return
         }
+        //browser close notifier not working yet
+        cn, ok := w.(http.CloseNotifier)
+        if !ok {
+            println("closenotifier not working")
+        }
         defer output.Close()
-        for c := range messager {
-            err = output.WriteMessage(1, []byte(c))
+        for {
+            select {
+                case <-cn.CloseNotify():
+                    println("browser quit")
+                case msg := <-messager:
+                     err = output.WriteMessage(1, []byte(msg))
+            }
         }
     }
 }
@@ -36,9 +46,6 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
 //func server(serverUrl string, done chan bool) {
 func httpserver(serverUrl string) {
 
-    http.HandleFunc("/socket", socketHandler())
-    http.HandleFunc("/socket/", socketHandler())
-
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query", queryHandler())
     http.HandleFunc("/query/", queryHandler())
@@ -46,6 +53,8 @@ func httpserver(serverUrl string) {
     http.HandleFunc("/login/", loginHandler())
     http.HandleFunc("/info", infoHandler())
     http.HandleFunc("/info/", infoHandler())
+    http.HandleFunc("/socket", socketHandler())
+    http.HandleFunc("/socket/", socketHandler())
     http.ListenAndServe(serverUrl, nil)
     //done <- true
 }

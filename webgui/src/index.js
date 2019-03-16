@@ -501,13 +501,6 @@ class Main extends React.Component {
         }
         this.topDropReset = this.topDropReset.bind(this);
 
-        //get initial login state if sql mode
-        if (this.state.mode === "MSSQL") {
-            postRequest({path:"/login/",body:{Action: "check"}})
-            .then(dat=>{
-                this.setState({topMessage: dat.Status===bit.CON_CHECKED?  dat.Message : "No connection"})
-            });
-        }
         //get initial file path
         postRequest({path:"/info/",body:{}})
         .then(dat=>{
@@ -567,10 +560,6 @@ class Main extends React.Component {
             this.setState({ topDropdown : "nothing" }); 
         },50);
     }
-    handleData(data) {
-      let result = JSON.parse(data);
-      console.log("socket data: ", data);
-    }
 
     render(){
     
@@ -604,7 +593,7 @@ class Main extends React.Component {
         console.log(this.ws);
         this.ws.onopen = function(evt) { console.log("OPEN"); }
         this.ws.onclose = function(evt) { console.log("CLOSE"); this.ws = null; } 
-        this.ws.onmessage = function(evt) { console.log("RESPONSE: " + evt.data); that.setState({ topMessage : evt.data }); }
+        this.ws.onmessage = function(evt) { that.setState({ topMessage : evt.data }); }
         this.ws.onerror = function(evt) { console.log("ERROR: " + evt.data); } 
     }
 }
