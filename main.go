@@ -3,6 +3,7 @@ import (
     _ "github.com/denisenkom/go-mssqldb"
     //"github.com/Jeffail/gabs"
     "database/sql"
+    "regexp"
     "net/url"
     "strings"
     "errors"
@@ -249,7 +250,9 @@ func runSqlServerQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
 //run Qrequest with multiple queries deliniated by semicolon
 func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
     query := req.Query
-    if (strings.HasSuffix(query,";")) { query = query[:len(query)-1] }
+    //remove uneeded characters from end of string
+    ending := regexp.MustCompile(`;\s*$`)
+    query = ending.ReplaceAllString(query, ``)
     queries := strings.Split(strings.Replace(query,"\\n","",-1),";")
     req.Qamount = len(queries)
     //send info to realtime saver
