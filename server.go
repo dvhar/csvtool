@@ -83,7 +83,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         } else {
             println("requesting query")
             entries,err = runQueries(dbCon.Db, &req)
-            if (req.FileIO & F_SAVE) != 0 { saver <- chanData{Type : CH_DONE} }
+            if (req.FileIO & F_CSV) != 0 { saver <- chanData{Type : CH_DONE} }
             if err != nil {
                 fullReturnData.Status |= DAT_ERROR
             } else {
@@ -95,12 +95,10 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         fullReturnData.Entries = entries
         full_json,_ := json.Marshal(fullReturnData)
 
-        //save queries to file
-        /*
-        if (req.FileIO & F_SAVE) != 0 {
+        //save queries to JSON file
+        if (req.FileIO & F_JSON) != 0 {
             saveQueryFile(&req, &fullReturnData, &full_json)
         }
-        */
 
         //update json with save message
         rowLimit(&fullReturnData)

@@ -121,4 +121,5 @@ export const bit = {
     F_JSON          : 1 << 6,
     F_OPEN          : 1 << 7,
     F_SAVE          : 1 << 8,
+    F_GCSV          : 1 << 9,
 }

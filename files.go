@@ -41,9 +41,11 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
         //save the file after checking file path
         if (req.FileIO & F_CSV) != 0 {
             //write csv file
+            println("saving postquery csv")
             err = saveCsv(fullReturnData)
         } else {
             //write json file
+            println("saving postquery json")
             extension := regexp.MustCompile(`\.json$`)
             if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.json` }
             var file *os.File
@@ -55,7 +57,7 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
         if err == nil {
             //it worked
             FPaths.Status = FP_SCHANGED
-            println("Saved to "+savePath)
+            println("Saved to "+FPaths.SavePath)
         } else {
             //it didnt work
             fullReturnData.Status = (DAT_BADPATH | DAT_IOERR)
@@ -144,6 +146,7 @@ func realtimeCsvSaver() {
     for c := range saver {
         switch c.Type {
             case CH_SAVPREP:
+                println("got saver prep")
                 err = pathChecker(c.Message)
                 if err == nil {
                     FPaths.RtSavePath = FPaths.SavePath
@@ -153,7 +156,9 @@ func realtimeCsvSaver() {
                 }
 
             case CH_HEADER:
+                println("got saver header")
                 if state == 1 {
+                    println("processed saver header")
                     numRecieved++
                     if numTotal > 1 {
                         FPaths.RtSavePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
