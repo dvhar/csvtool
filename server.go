@@ -9,7 +9,7 @@ import (
     "runtime"
     "strings"
     . "fmt"
-    //"time"
+    "time"
     "os/exec"
     //. "strconv"
 	//socketio "github.com/googollee/go-socket.io"
@@ -32,20 +32,20 @@ type SockMessage struct {
     Text string
 }
 func (s* Socks) writer(){
-    cn, ok := s.w.(http.CloseNotifier)
-    if !ok {
-        println("closenotifier not working")
-    }
+    ticker := time.NewTicker(time.Second)
     defer s.conn.Close()
+    var sendSock SockMessage
+    var sendBytes []byte
     for {
         select {
-            case <-cn.CloseNotify():
-                println("browser quit")
             case msg := <-messager:
-                 sent,_ := json.Marshal(SockMessage{ Type: SK_MSG, Text:msg })
-                 err := s.conn.WriteMessage(1, sent)
-                 if err != nil { println("socket writer failed") }
+                sendSock = SockMessage{ Type: SK_MSG, Text:msg }
+            case <-ticker.C:
+                sendSock = SockMessage{ Type: SK_PING }
         }
+        sendBytes,_ = json.Marshal(sendSock)
+        err := s.conn.WriteMessage(1, sendBytes)
+        if err != nil { println("socket writer failed") }
     }
 }
 func (s* Socks) reader(){
@@ -57,9 +57,7 @@ func (s* Socks) reader(){
             }
             break
         }
-        Printf("\n-----socket:---\n")
         Println(string(message))
-        Printf("-----\n")
     }
 }
 

@@ -125,4 +125,5 @@ export const bit = {
 
     SK_MSG          : 0,
     SK_PING         : 1,
+    SK_PONG         : 2,
 }

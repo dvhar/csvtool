@@ -529,7 +529,6 @@ class Main extends React.Component {
     }
 
     submitQuery(querySpecs){
-        this.ws.send("sending to socket from js");
         var fullQuery = {
             Query: querySpecs.query || "", 
             FileIO: querySpecs.fileIO || 0, 
@@ -589,11 +588,12 @@ class Main extends React.Component {
     }
 
     componentDidMount(){
+        //websocket
         var that = this;
         this.ws = new WebSocket("ws://" + document.location.host + "/socket/");
         console.log(this.ws);
         this.ws.onopen = function(e) { console.log("OPEN"); }
-        this.ws.onclose = function(e) { console.log("CLOSE"); this.ws = null; } 
+        this.ws.onclose = function(e) { console.log("CLOSE"); that.ws = null; } 
         this.ws.onmessage = function(e) { 
             var dat = JSON.parse(e.data);
             console.log(dat);
@@ -601,6 +601,8 @@ class Main extends React.Component {
                 case bit.SK_MSG:
                     that.setState({ topMessage : dat.Text }); 
                     break;
+                case bit.SK_PING:
+                    that.ws.send('{Type:2}');
                 default:
                     break;
             }
