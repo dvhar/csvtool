@@ -7,6 +7,7 @@ import (
     "net/url"
     "strings"
     "errors"
+    "time"
     . "fmt"
     "flag"
     "os"
@@ -116,6 +117,7 @@ var dbCon Connection
 var FPaths FilePaths
 var messager chan string
 var saver chan chanData
+var browsersOpen = 0
 
 func main() {
     //get password and other flags
@@ -153,6 +155,22 @@ func main() {
     //start server
     done := make(chan bool)
     go httpserver(serverUrl, done)
+
+    //check to see fo browser is open. If none opened for 5 seconds, exit
+    go func(){
+        ticker := time.NewTicker(time.Second)
+        counter := 0
+        for {
+            <-ticker.C
+            if browsersOpen < 1 {
+                counter++
+            } else {
+                counter = 0
+            }
+            if counter > 5 { os.Exit(2) }
+        }
+    }()
+
     //launch web browser for gui
     launch("http://localhost"+port);
     <-done

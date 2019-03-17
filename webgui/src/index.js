@@ -602,7 +602,7 @@ class Main extends React.Component {
                     that.setState({ topMessage : dat.Text }); 
                     break;
                 case bit.SK_PING:
-                    that.ws.send('{Type:2}');
+                    that.ws.send(JSON.stringify({Type:2, Text:"pong"}));
                 default:
                     break;
             }

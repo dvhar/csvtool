@@ -17,67 +17,75 @@ import (
 )
 
 //websockets
-var upgrader = websocket.Upgrader{} // use default options
 const (
     SK_MSG = iota
     SK_PING = iota
+    SK_PONG = iota
 )
-type Socks struct {
+type Client struct {
     conn *websocket.Conn
     w http.ResponseWriter
     r *http.Request
 }
-type SockMessage struct {
+type sockMessage struct {
     Type int
     Text string
 }
-func (s* Socks) writer(){
+//write loop for each websocket client
+func (c* Client) writer(){
     ticker := time.NewTicker(time.Second)
-    defer s.conn.Close()
-    var sendSock SockMessage
+    browsersOpen++
+    defer func(){
+        browsersOpen--
+        c.conn.Close()
+        ticker.Stop()
+    }()
+    var sendSock sockMessage
     var sendBytes []byte
     for {
         select {
             case msg := <-messager:
-                sendSock = SockMessage{ Type: SK_MSG, Text:msg }
+                sendSock = sockMessage{ Type: SK_MSG, Text:msg }
             case <-ticker.C:
-                sendSock = SockMessage{ Type: SK_PING }
+                sendSock = sockMessage{ Type: SK_PING }
         }
         sendBytes,_ = json.Marshal(sendSock)
-        err := s.conn.WriteMessage(1, sendBytes)
-        if err != nil { println("socket writer failed") }
+        err := c.conn.WriteMessage(1, sendBytes)
+        if err != nil { println("socket writer failed"); return }
     }
 }
-func (s* Socks) reader(){
+//read loop for each websocket client
+func (c* Client) reader(){
+    var message sockMessage
     for {
-        _, message, err := s.conn.ReadMessage()
+        _, messageBytes, err := c.conn.ReadMessage()
         if err != nil {
             if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
                 Printf("error: %v", err)
             }
-            break
+            return
         }
-        Println(string(message))
+        json.Unmarshal(messageBytes, &message)
     }
 }
 
-
+//each new client gets a websocket
 func socketHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
+        upgrader := websocket.Upgrader{} // use default options
         sconn, err := upgrader.Upgrade(w, r, nil)
         if err != nil {
             Println("upgrade:", err)
             return
         }
-        sock := &Socks{ w : w, r : r, conn: sconn }
-        go sock.writer()
-        go sock.reader()
+        client := &Client{ w : w, r : r, conn: sconn }
+        go client.writer()
+        go client.reader()
     }
 }
 
 //webserver
 func httpserver(serverUrl string, done chan bool) {
-//func httpserver(serverUrl string) {
 
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query", queryHandler())
