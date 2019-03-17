@@ -142,8 +142,6 @@ func main() {
     if *danger { host = "" }
     serverUrl := host + port
 
-    //launch web browser for gui
-    launch("http://localhost"+port);
 
     //if connecting to database
     if (! *dbNoCon) {
@@ -153,7 +151,11 @@ func main() {
     }
 
     //start server
-    httpserver(serverUrl)
+    done := make(chan bool)
+    go httpserver(serverUrl, done)
+    //launch web browser for gui
+    launch("http://localhost"+port);
+    <-done
 
 }
 //initialize database connection

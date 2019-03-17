@@ -18,33 +18,68 @@ import (
 
 //websockets
 var upgrader = websocket.Upgrader{} // use default options
+const (
+    SK_MSG = iota
+    SK_PING = iota
+)
+type Socks struct {
+    conn *websocket.Conn
+    w http.ResponseWriter
+    r *http.Request
+}
+type SockMessage struct {
+    Type int
+    Text string
+}
+func (s* Socks) writer(){
+    cn, ok := s.w.(http.CloseNotifier)
+    if !ok {
+        println("closenotifier not working")
+    }
+    defer s.conn.Close()
+    for {
+        select {
+            case <-cn.CloseNotify():
+                println("browser quit")
+            case msg := <-messager:
+                 sent,_ := json.Marshal(SockMessage{ Type: SK_MSG, Text:msg })
+                 err := s.conn.WriteMessage(1, sent)
+                 if err != nil { println("socket writer failed") }
+        }
+    }
+}
+func (s* Socks) reader(){
+    for {
+        _, message, err := s.conn.ReadMessage()
+        if err != nil {
+            if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+                Printf("error: %v", err)
+            }
+            break
+        }
+        Printf("\n-----socket:---\n")
+        Println(string(message))
+        Printf("-----\n")
+    }
+}
+
+
 func socketHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
-        output, err := upgrader.Upgrade(w, r, nil)
+        sconn, err := upgrader.Upgrade(w, r, nil)
         if err != nil {
             Println("upgrade:", err)
             return
         }
-        //browser close notifier not working yet
-        cn, ok := w.(http.CloseNotifier)
-        if !ok {
-            println("closenotifier not working")
-        }
-        defer output.Close()
-        for {
-            select {
-                case <-cn.CloseNotify():
-                    println("browser quit")
-                case msg := <-messager:
-                     err = output.WriteMessage(1, []byte(msg))
-            }
-        }
+        sock := &Socks{ w : w, r : r, conn: sconn }
+        go sock.writer()
+        go sock.reader()
     }
 }
 
 //webserver
-//func server(serverUrl string, done chan bool) {
-func httpserver(serverUrl string) {
+func httpserver(serverUrl string, done chan bool) {
+//func httpserver(serverUrl string) {
 
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
     http.HandleFunc("/query", queryHandler())
@@ -56,7 +91,7 @@ func httpserver(serverUrl string) {
     http.HandleFunc("/socket", socketHandler())
     http.HandleFunc("/socket/", socketHandler())
     http.ListenAndServe(serverUrl, nil)
-    //done <- true
+    done <- true
 }
 
 //returns handler function for query requests from the webgui
