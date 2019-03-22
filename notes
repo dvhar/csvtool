@@ -9,6 +9,7 @@ next steps:
         -alter csv to hide sensitive data
     more powerful gui
         -show more data
-        -save without size limits
+        -eliminate size limits
         -query building
+        -show column idx, type
     ask if vals starting with 0 like 000232342 need to keep leading zero

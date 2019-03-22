@@ -100,6 +100,8 @@ func httpserver(serverUrl string, done chan bool) {
     done <- true
 }
 
+//want only one set of results in memory at once, so global var
+var entries []SingleQueryResult
 //returns handler function for query requests from the webgui
 func queryHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +110,6 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             println(formatRequest(r))
             println(string(body))
         var req Qrequest
-        var entries []*SingleQueryResult
         var fullReturnData ReturnData
         var err error
         json.Unmarshal(body,&req)
@@ -126,7 +127,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //return null query if no connection
         if req.Mode == "MSSQL" && dbCon.Err != nil {
             println("no database connection")
-            entries = append(entries,&SingleQueryResult{})
+            entries = append(entries,SingleQueryResult{})
             fullReturnData.Message = "No database connection"
 
         //attempt query

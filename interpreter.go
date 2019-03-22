@@ -177,27 +177,27 @@ func inferTypes(file interface{}) (*Columns, error) {
     return &cols, nil
 }
 
-func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
+func csvQuery(q QuerySpecs) (SingleQueryResult, error) {
     //tokenize input query
     err := tokenizeQspec(&q)
-    if err != nil { Println(err); return &SingleQueryResult{}, err }
+    if err != nil { Println(err); return SingleQueryResult{}, err }
     println("tokenized ok")
 
     //open file
     Println("token array: ",q.TokArray)
     parseFromToken(&q)
     fp,err := os.Open(q.Fname)
-    if err != nil { Println(err); return &SingleQueryResult{}, err }
+    if err != nil { Println(err); return SingleQueryResult{}, err }
     defer fp.Close()
 
     //infer column types
     q.ColSpec, err = inferTypes(fp)
-    if err != nil { return &SingleQueryResult{}, err }
+    if err != nil { return SingleQueryResult{}, err }
 
     //do some pre-query parsing
     q.DistinctIdx = -1
     err = preParsetokens(&q, 0,1)
-    if err != nil { Println(err); return &SingleQueryResult{}, err }
+    if err != nil { Println(err); return SingleQueryResult{}, err }
     println("typed the tokens")
     q.Reset()
 
@@ -239,7 +239,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
 
         //recursive descent parser finds matches and retrieves results
         match, err := evalQuery(&q, &result, &row, &tempRow)
-        if err != nil{ Println("evalQuery error in csvQuery:",err); return &SingleQueryResult{}, err }
+        if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
         if match { j++; result.Numrows++ }
         q.Reset()
 
@@ -266,7 +266,7 @@ func csvQuery(q QuerySpecs) (*SingleQueryResult, error) {
     evalOrderBy(&q, &result)
     if q.Save { saver <- chanData{Type : CH_NEXT} }
     messager <- "Finishing a query..."
-    return &result, nil
+    return result, nil
 }
 
 func getColumnIdx(colNames []string, column string) (int, error) {
@@ -393,7 +393,7 @@ func tokenizeQspec(q *QuerySpecs) error {
         if (selectPart || i ==0 ) && s.ToLower(v) == "from" { selectPart = false; state = 10 }
         if (selectPart || i ==0 ) && s.ToLower(v) == "where" { selectPart = false; state = 6 }
         if selectPart && v == "*" { state = 7 }
-        if selectPart && v == "DISTINCT" && i < len(words)-1 { state = 11 }
+        if selectPart && s.ToLower(v) == "distinct" && i < len(words)-1 { state = 11 }
         if v == "order" && i<len(words)-2 && words[i+1] == "by" { state = 8 }
 
         switch state {

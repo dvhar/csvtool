@@ -14,7 +14,7 @@ import (
 )
 
 //command line flags
-var dbNoCon = flag.Bool("no", false, "Don't connect to database")
+var dbNoCon = flag.Bool("con", true, "Don't connect to database")
 var localPort = flag.String("port", "8060", "Change localhost port")
 var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
 var dbserver = flag.String("s", os.Getenv("MSSQL_CLI_SERVER"), "Database URL")
@@ -59,7 +59,7 @@ const (
     DAT_BLANK = 0
 )
 type ReturnData struct {
-    Entries []*SingleQueryResult
+    Entries []SingleQueryResult
     Status int
     Message string
     OriginalQuery string
@@ -156,7 +156,7 @@ func main() {
     done := make(chan bool)
     go httpserver(serverUrl, done)
 
-    //check to see fo browser is open. If none opened for 5 seconds, exit
+    //exit program if it goes 5 seconds without being viewed in a browser
     go func(){
         ticker := time.NewTicker(time.Second)
         counter := 0
@@ -219,7 +219,7 @@ func sqlConnect(login, pass, server, name string) Connection {
 }
 
 //wrapper for csvQuery
-func runCsvQuery(query string, req *Qrequest) (*SingleQueryResult,error) {
+func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
     qSpec := QuerySpecs{
         Qstring : query,
         Fname : "/home/dave/Documents/work/data/bigdata/2018facilityclaims.csv" }
@@ -232,7 +232,7 @@ func runCsvQuery(query string, req *Qrequest) (*SingleQueryResult,error) {
 }
 
 //return SingleQueryResult struct with query results
-func runSqlServerQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
+func runSqlServerQuery(db *sql.DB, query string) (SingleQueryResult,error) {
 
     //if connected to SQL server
     if (dbCon.Status & CON_CHANGED != 0) {
@@ -258,19 +258,19 @@ func runSqlServerQuery(db *sql.DB, query string) (*SingleQueryResult,error) {
                 rownum++
             }
             println("query success")
-            return &SingleQueryResult{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries, Query: query}, nil
+            return SingleQueryResult{Colnames: columnNames, Numcols: len(columnNames), Numrows: rownum, Vals: entries, Query: query}, nil
         } else {
             println("query failed")
-            return &SingleQueryResult{}, err
+            return SingleQueryResult{}, err
         }
     } else {
         println("query null because db not connected")
-        return &SingleQueryResult{}, errors.New("no connection")
+        return SingleQueryResult{}, errors.New("no connection")
     }
 }
 
 //run Qrequest with multiple queries deliniated by semicolon
-func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
+func runQueries(db *sql.DB, req *Qrequest) ([]SingleQueryResult, error) {
     query := req.Query
     //remove uneeded characters from end of string
     ending := regexp.MustCompile(`;\s*$`)
@@ -286,8 +286,8 @@ func runQueries(db *sql.DB, req *Qrequest) ([]*SingleQueryResult, error) {
         }
     }
     //run queries in a loop
-    var results[]*SingleQueryResult
-    var result*SingleQueryResult
+    var results[]SingleQueryResult
+    var result SingleQueryResult
     var err error
     for i := range queries {
         //run query
