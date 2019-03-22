@@ -101,7 +101,7 @@ func httpserver(serverUrl string, done chan bool) {
 }
 
 //want only one set of results in memory at once, so global var
-var entries []SingleQueryResult
+var retData ReturnData
 //returns handler function for query requests from the webgui
 func queryHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -110,16 +110,16 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
             println(formatRequest(r))
             println(string(body))
         var req Qrequest
-        var fullReturnData ReturnData
         var err error
+        retData = ReturnData{}
         json.Unmarshal(body,&req)
-        fullReturnData.Status = DAT_BLANK
-        fullReturnData.OriginalQuery = req.Query
-        fullReturnData.Mode = req.Mode
+        retData.Status = DAT_BLANK
+        retData.OriginalQuery = req.Query
+        retData.Mode = req.Mode
 
         //handle request to open file
         if (req.FileIO & F_OPEN) != 0 {
-            full_json,_ := openQueryFile(&req, &fullReturnData)
+            full_json,_ := openQueryFile(&req, &retData)
             Fprint(w, string(full_json))
             return
         }
@@ -127,50 +127,49 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //return null query if no connection
         if req.Mode == "MSSQL" && dbCon.Err != nil {
             println("no database connection")
-            entries = append(entries,SingleQueryResult{})
-            fullReturnData.Message = "No database connection"
+            retData.Entries = append(retData.Entries,SingleQueryResult{})
+            retData.Message = "No database connection"
 
         //attempt query
         } else {
             println("requesting query")
-            entries,err = runQueries(dbCon.Db, &req)
+            retData.Entries,err = runQueries(dbCon.Db, &req)
             if (req.FileIO & F_CSV) != 0 { saver <- chanData{Type : CH_DONE} }
             if err != nil {
-                fullReturnData.Status |= DAT_ERROR
+                retData.Status |= DAT_ERROR
             } else {
-                fullReturnData.Status |= DAT_GOOD
-                fullReturnData.Message = "Query successful"
+                retData.Status |= DAT_GOOD
+                retData.Message = "Query successful"
             }
         }
 
-        fullReturnData.Entries = entries
-        full_json,_ := json.Marshal(fullReturnData)
+        full_json,_ := json.Marshal(retData)
 
         //save queries if not saving from one csv to another
         if (req.FileIO & F_SAVE)!=0 && ((req.FileIO & F_JSON)!=0 || req.Mode=="MSSQL") {
-            saveQueryFile(&req, &fullReturnData, &full_json)
+            saveQueryFile(&req, &retData, &full_json)
         }
 
         //update json with save message
-        rowLimit(&fullReturnData)
-        if fullReturnData.Clipped { fullReturnData.Message += ". Showing only top 1000" }
-        messager <- fullReturnData.Message
-        full_json,_ = json.Marshal(fullReturnData)
+        rowLimit(&retData)
+        if retData.Clipped { retData.Message += ". Showing only top 1000" }
+        messager <- retData.Message
+        full_json,_ = json.Marshal(retData)
         Fprint(w, string(full_json))
         full_json = []byte("")
-        fullReturnData = ReturnData{}
+        retData = ReturnData{}
         println("running garbage collector")
         runtime.GC()
     }
 }
 
 //limit the amount of rows returned to the browser because browsers are slow
-func rowLimit(fullReturnData *ReturnData) {
-    for i, query := range fullReturnData.Entries {
+func rowLimit(retData *ReturnData) {
+    for i, query := range retData.Entries {
         if query.Numrows > 1000 {
-            fullReturnData.Entries[i].Vals = query.Vals[:1000]
-            //fullReturnData.Entries[i].Numrows = 1000
-            fullReturnData.Clipped = true
+            retData.Entries[i].Vals = query.Vals[:1000]
+            //retData.Entries[i].Numrows = 1000
+            retData.Clipped = true
             runtime.GC()
         }
     }
