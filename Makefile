@@ -1,4 +1,4 @@
-DEPS = files.go  interpreter.go  main.go  server.go
+DEPS = files.go  scanner.go parser.go preparser.go  main.go  server.go
 
 
 all: sql.lnx rice-box.go

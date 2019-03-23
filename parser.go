@@ -188,7 +188,6 @@ func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
     return match, nil
 }
 //run each individual comparison
-//fix this part
 func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     match := false
     negate := 0
@@ -268,15 +267,8 @@ func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{})
     if q.DistinctIdx < 0 { return true, nil }
     var match bool
     compVal := (*fromRow)[q.DistinctIdx]
-    colType := q.ColSpec.NewTypes[q.DistinctBackcheck]
     for _,entry := range res.Vals {
-        switch colType {
-            case T_NULL:   fallthrough
-            case T_STRING: match = compVal.(string) == entry[q.DistinctBackcheck].(string)
-            case T_INT:    match = compVal.(int) == entry[q.DistinctBackcheck].(int)
-            case T_FLOAT:  match = compVal.(float64) == entry[q.DistinctBackcheck].(float64)
-            case T_DATE:   match = compVal.(time.Time).Equal(entry[q.DistinctBackcheck].(time.Time))
-        }
+        match = compVal == entry[q.DistinctBackcheck]
         if match { return false, nil }
     }
     return true,nil
