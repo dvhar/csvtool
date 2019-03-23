@@ -3,6 +3,7 @@ import (
 . "fmt"
   "errors"
 . "strconv"
+"strings"
 )
 
 const (
@@ -246,7 +247,7 @@ func scanner(s* StringLookahead) AToken {
         if (nextState & FINAL) != 0 {
             //see if keyword or regular word
             if nextState == WORD {
-                if kw,ok := keywordMap[S];ok {
+                if kw,ok := keywordMap[strings.ToLower(S)];ok {
                     //return keyword token
                     return AToken { Id: kw, Val: S, Line: lineNo }
                 } else {

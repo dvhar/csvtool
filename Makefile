@@ -19,3 +19,6 @@ sql.lnx: $(DEPS) rice-box.go
 
 clean:
 	rm sql.mac sql.exe sql.lnx rice-box.go
+
+test:
+	go run files.go main.go server.go parser.go preparser.go scanner.go

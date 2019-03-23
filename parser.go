@@ -13,17 +13,6 @@ import (
   "sort"
 )
 
-//borrowed from old version
-type SingleQueryResult struct {
-    Numrows int
-    Numcols int
-    Types []int
-    Colnames []string
-    Vals [][]interface{}
-    Status int
-    Query string
-}
-//end borrow
 
 func (q *QuerySpecs) BNext() BToken {
     if q.BIdx < len(q.BTokArray)-1 {
@@ -40,23 +29,13 @@ func (q QuerySpecs) BPeek() BToken {
     }
 }
 func (q QuerySpecs) BTok() BToken {
-    if q.End { return BToken{EOS, 0, 0} }
+    if q.End || len(q.BTokArray)<1 { return BToken{EOS, 0, 0} }
     return q.BTokArray[q.BIdx]
 }
 func (q *QuerySpecs) BReset() { q.BIdx = 0; q.End = false }
 
 var m runtime.MemStats
 var totalMem uint64
-var res SingleQueryResult
-
-func main(){
-    testQuery := QuerySpecs{
-        //Qstring : `select top 10 1 2 3 PatientDOB Quantity Days SourceFile TotalPaid from /home/dave/Documents/work/data/bigdata/2018pharmacyclaims.csv where 1 = 4618115046784 or (PatientGender = F and PatientDOB < 'may 18 1930') order by 3 asc`,
-        DistinctIdx : -1,
-        Qstring : `select from /home/dave/sync/classes/artificiali/h/project/weven.csv`,
-    }
-    csvQuery(&testQuery)
-}
 
 //run csv query
 func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
@@ -66,6 +45,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //do stuff that only needs to be done once and create B tokens for faster parsing
     err = preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
+	saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
 
     //prepare input and output
     totalMem = memory.TotalMemory()
@@ -114,16 +94,21 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         runtime.ReadMemStats(&m)
         if m.Alloc > totalMem/3 {
             println("reached soft memory limit")
+            messager <- "Not enough memory for all results"
             break
         }
 
         //periodic updates
         rowsChecked++
+        if rowsChecked % 10000 == 0 {
+            messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
+        }
     }
     err = evalOrderBy(q, &res)
     if err != nil { Println(err); return SingleQueryResult{}, err }
-    for _,x := range res.Vals { Println(x) }
-    return SingleQueryResult{}, nil
+    messager <- "Finishing a query..."
+    if q.Save { saver <- chanData{Type : CH_NEXT} }
+    return res, nil
 }
 
 //recursive descent parser for evaluating each row
@@ -141,6 +126,7 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     //copy entire row if selecting all
     if q.SelectAll {
         res.Vals = append(res.Vals, *fromRow)
+        if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} }
         return true, nil
     }
 
@@ -272,6 +258,7 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
         if count == q.ColSpec.NewWidth - 1 {
             //all columns selected
             res.Vals = append(res.Vals, *selected)
+            if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} }
         }
     }
     q.BNext()
