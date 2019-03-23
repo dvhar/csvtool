@@ -6,37 +6,37 @@ import {postRequest,getUnique,getWhere,sortQuery,bit} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 //import Websocket from 'react-websocket';
-//
 //import io from 'socket.io-client';
 //const socket = io('/socket/');
 //socket.on('connect', function(){console.log("connected to socket");});
 //socket.on('event', function(data){console.log(data);});
 //socket.on('disconnect', function(){console.log("disconnected from socket");});
-//console.log(socket);
-//
 
-//var squel = require("squel");
-
-function DropdownQueryTextbox(props){
-    //var inbox = [];
-    //if (props.s.mode === "CSV") inbox.push( <input className="queryFileBox" placeholder="full path of csv file you would like to query" type="text"/> );
-
-    return(
-        <div className="dropmenu queryMenuDiv">
-            <div className="dropButton queryMenuButton">
-                {props.title}
+class DropdownQueryTextbox extends React.Component {
+    constructor(props){
+        super(props);
+        this.state = {clicked:0}
+    }
+    render(){
+        var arrow = <span className={this.state.clicked==1?"dim":""}>{"\u25bc"}</span>
+        return(
+            <div className="dropmenu queryMenuDiv">
+                <div className="dropButton queryMenuButton" onClick={()=>{this.setState({clicked:this.state.clicked^1})}}>
+                    <h2>{this.props.title}{arrow}</h2>
+                </div>
+                <div className={`dropmenu-content ${this.state.clicked==1?"show":""}`}>
+                <textarea rows="10" className="queryTextEntry" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
+                </textarea>
+                <br/>
+                <button onClick={()=>{
+                    var query = document.getElementById("textBoxId").value;
+                    this.props.submit({query : query});
+                }}>Submit Query</button>
+                </div>
             </div>
-            <div className="dropmenu-content">
-            <textarea rows="10" className="queryTextEntry" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
-            </textarea>
-            <br/>
-            <button onClick={()=>{
-                var query = document.getElementById("textBoxId").value;
-                props.submit({query : query});
-            }}>Submit Query</button>
-            </div>
-        </div>
-    );
+        );
+    }
+    componentDidMount(){ console.log("mounted dq box"); }
 }
 
 function DropdownQueryMenu(props){
@@ -271,7 +271,7 @@ class QuerySelect extends React.Component {
 
         var csvCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
-                            title = {<h2>Enter CSV Query{"\u25bc"}</h2>}
+                            title = {<>Enter CSV Query</>}
                             submit = {(query)=>this.props.submitQuery(query)}
                             s = {this.props.s}
                          />
@@ -517,7 +517,6 @@ class Main extends React.Component {
                 alert(results.Message);
         }
         else if (results.Status & bit.DAT_GOOD){
-            console.log(results);
             this.setState({
                 showQuery : results.Entries.map(
                     tab => <QueryRender 
@@ -537,8 +536,7 @@ class Main extends React.Component {
             };
         postRequest({path:"/query/",body:fullQuery}).then(dat=>{
             if ((dat.Status & bit.DAT_GOOD) && (!querySpecs.backtrack)){
-                this.setState({ topMessage : dat.Message,
-                                historyPosition : this.state.queryHistory.length,
+                this.setState({ historyPosition : this.state.queryHistory.length,
                                 queryHistory : this.state.queryHistory.concat({query : dat.OriginalQuery, mode: dat.Mode}) });
             }
             this.showLoadedQuery(dat);
@@ -596,7 +594,6 @@ class Main extends React.Component {
         this.ws.onclose = function(e) { console.log("CLOSE"); that.ws = null; } 
         this.ws.onmessage = function(e) { 
             var dat = JSON.parse(e.data);
-            console.log(dat);
             switch (dat.Type) {
                 case bit.SK_MSG:
                     that.setState({ topMessage : dat.Text }); 

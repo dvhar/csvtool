@@ -168,3 +168,6 @@ html {
 
 .show {
   display: block; }
+
+.dim {
+  color: grey; }

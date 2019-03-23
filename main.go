@@ -31,6 +31,7 @@ type SingleQueryResult struct {
     Colnames []string
     Vals [][]interface{}
     Status int
+    Message string
     Query string
 }
 
@@ -228,7 +229,6 @@ func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
     println("attempting csv query from gui program")
     res, err := csvQuery(&qSpec)
     res.Query = query;
-    Println("csv query error: ",err)
     return res, err
 }
 
@@ -302,6 +302,7 @@ func runQueries(db *sql.DB, req *Qrequest) ([]SingleQueryResult, error) {
 
         results = append(results, result)
         if err != nil {
+            messager <-  Sprint(err)
             return results, err
         }
     }

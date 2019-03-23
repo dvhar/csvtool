@@ -139,7 +139,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
                 retData.Status |= DAT_ERROR
             } else {
                 retData.Status |= DAT_GOOD
-                retData.Message = "Query successful"
+                messager <- "Query successful. Returning data"
             }
         }
 
@@ -152,13 +152,11 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
         //update json with save message
         rowLimit(&retData)
-        if retData.Clipped { retData.Message += ". Showing only top 1000" }
-        messager <- retData.Message
+        if retData.Clipped { messager <- "Showing only top 1000" }
         full_json,_ = json.Marshal(retData)
         Fprint(w, string(full_json))
         full_json = []byte("")
         retData = ReturnData{}
-        println("running garbage collector")
         runtime.GC()
     }
 }
