@@ -248,7 +248,7 @@ func scanner(s* StringLookahead) AToken {
         if (nextState & FINAL) != 0 {
             //see if keyword or regular word
             if nextState == WORD {
-                if kw,ok := keywordMap[strings.ToLower(S)];ok {
+                if kw,ok := keywordMap[strings.ToLower(S)];ok && waitForQuote == 0 {
                     //return keyword token
                     return AToken { Id: kw, Val: S, Line: lineNo }
                 } else {
@@ -312,7 +312,7 @@ func (s* StringLookahead) getc() int {
     return int(s.Str[s.idx-1])
 }
 func (s* StringLookahead) peek() int {
-    if s.end { return EOS }
+    if s.end || s.idx >= len(s.Str) { return EOS }
     return int(s.Str[s.idx])
 }
 

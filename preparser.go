@@ -157,9 +157,29 @@ func selectAll(q* QuerySpecs) {
     q.ColSpec.NewTypes = q.ColSpec.Types
     q.ColSpec.NewWidth = q.ColSpec.Width
 }
+func newCol(q* QuerySpecs,ii int) {
+    if !q.SelectAll {
+        q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[ii])
+        q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[ii])
+        q.ColSpec.NewWidth++
+    }
+}
 func preSelectCols(q* QuerySpecs) error {
     //eat commas
     for ;q.ATok().Id == SP_COMMA; { q.ANext() }
+    //construct string from values between quotes
+    if q.ATok().Id == SP_SQUOTE || q.ATok().Id == SP_DQUOTE {
+        quote := q.ATok().Id
+        var S string
+        for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
+        if q.ATok().Id == EOS { return errors.New("Quote was not terminated") }
+        q.ANext()
+        ii, err := getColumnIdx(q.ColSpec.Names, S)
+        if err != nil { return errors.New("Column name not found: "+S) }
+        q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, ii, q.ColSpec.Types[ii]})
+        newCol(q, ii)
+        return preSelectCols(q)
+    }
     //go to from zone
     if q.ATok().Id == KW_FROM || q.ATok().Id == KW_WHERE {
         if q.ColSpec.NewWidth == 0 { selectAll(q) }
@@ -194,11 +214,7 @@ func preSelectCols(q* QuerySpecs) error {
     ii, err := parseColumnIndex(q)
     if err == nil {
         q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, ii, q.ColSpec.Types[ii]})
-        if !q.SelectAll {
-            q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[ii])
-            q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[ii])
-            q.ColSpec.NewWidth++
-        }
+        newCol(q, ii)
         q.ANext()
         return preSelectCols(q)
     } else { return err }
