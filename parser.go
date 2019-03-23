@@ -45,7 +45,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //do stuff that only needs to be done once and create B tokens for faster parsing
     err = preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
-	saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
+    saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
 
     //prepare input and output
     totalMem = memory.TotalMemory()
@@ -154,21 +154,22 @@ func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
     //if found a negater
     if tok.Id == SP_NEGATE {
         negate = true
-        q.BNext()
+        tok = q.BNext()
     }
 
     //if found a column
     if tok.Id == BT_WCOL {
         match, err = evalComparison(q, fromRow)
+        if negate { match = !match }
         if err != nil { return false, err }
     //if ( found instead of column
     } else if tok.Id == SP_LPAREN {
         q.BNext()
         match, err = evalMultiComparison(q, fromRow)
+        if negate { match = !match }
         //eat closing paren, return if this expression is done
         q.BNext()
         if q.BPeek().Id == EOS || q.BPeek().Id == SP_RPAREN || (q.BPeek().Id & BT_AFTWR)!=0 {
-            if negate { match = !match }
             return match, err
         }
     }
@@ -184,10 +185,10 @@ func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
             case KW_OR:  match = match || nextExpr
         }
     }
-    if negate { match = !match }
     return match, nil
 }
 //run each individual comparison
+//fix this part
 func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     match := false
     negate := 0
@@ -205,11 +206,8 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
                        fallthrough
             case "=" :
                 switch compVal.Dtype {
-                    case T_NULL:   fallthrough
-                    case T_STRING: match = compVal.Val.(string) == (*fromRow)[compCol.Val.(int)].(string)
-                    case T_INT:    match = compVal.Val.(int) == (*fromRow)[compCol.Val.(int)].(int)
-                    case T_FLOAT:  match = compVal.Val.(float64) == (*fromRow)[compCol.Val.(int)].(float64)
                     case T_DATE:   match = compVal.Val.(time.Time).Equal((*fromRow)[compCol.Val.(int)].(time.Time))
+                    default:       match = compVal.Val == (*fromRow)[compCol.Val.(int)]
                 }
             case "<=": negate ^= 1
                        fallthrough
@@ -235,6 +233,7 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
 
     //if comparing to null
     } else if compVal.Val == nil {
+        println("comparing to null")
         switch relop.Val.(string) {
             case "<>": negate ^= 1
                        fallthrough
@@ -242,6 +241,7 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
             default  : return false, errors.New("Invalid operation with null: "+relop.Val.(string)+". Valid operators: = != <>")
         }
     }
+    //Println(relop,negate,match,compVal,(*fromRow)[compCol.Val.(int)])
     if negate==1 { match = !match }
     return match, nil
 

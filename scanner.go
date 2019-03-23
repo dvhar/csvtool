@@ -129,6 +129,7 @@ var keywordMap = map[string]int {
     "distinct" :  KW_DISTINCT,
     "top" :       KW_TOP,
     "asc" :       KW_ORDHOW,
+    "not" :       SP_NEGATE,
 }
 var specialMap = map[string]int {
     "=" :  SP_EQ,
