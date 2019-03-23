@@ -30,6 +30,7 @@ type SingleQueryResult struct {
     Numcols int
     Types []int
     Colnames []string
+    Pos []int
     Vals [][]interface{}
     Status int
     Message string

@@ -55,6 +55,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         Colnames : q.ColSpec.NewNames,
         Numcols: q.ColSpec.NewWidth,
         Types: q.ColSpec.NewTypes,
+        Pos: q.ColSpec.NewPos,
     }
     var toRow []interface{}
     var fromRow []interface{}

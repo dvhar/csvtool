@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {postRequest,getUnique,getWhere,sortQuery,bit} from './utils.js';
+import {postRequest,getUnique,getWhere,sortQuery,bit,t} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 //import Websocket from 'react-websocket';
@@ -178,15 +178,26 @@ class TableGrid extends React.Component {
             parentId : Math.random()
         }
     }
-    row(row,type,idx){
+    header(table){
+        var names = []
+        var info = []
+        for (var i=0; i<table.Numcols;i++){
+            names.push(
+                <th key={i} className="tableCell" onClick={()=>{sortQuery(this.props.table,i);this.forceUpdate();}}> 
+                    {table.Colnames[i]}
+                </th>)
+            info.push(
+                <th key={i} className="tableCell" onClick={()=>{sortQuery(this.props.table,i);this.forceUpdate();}}> 
+                    {`${table.Pos[i]}/${t[table.Types[i]]}`}
+                </th>)
+        }
+        return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
+    }
+    row(row,idx){
         return( 
             <tr key={idx} className="tableRow"> 
                 {row.map((name,idx)=>{ 
-                    if (this.props.hideColumns[idx]===0)
-                        if (type === 'head')
-                            return( <th key={idx} className="tableCell" onClick={()=>{sortQuery(this.props.table,idx);this.forceUpdate();}}> {name} </th>)
-                        else
-                            return( <td key={idx} className="tableCell"> {name} </td>) })}
+                    if (this.props.hideColumns[idx]===0) return( <td key={idx} className="tableCell"> {name} </td>) })}
             </tr>
         )
     }
@@ -197,8 +208,8 @@ class TableGrid extends React.Component {
             <div className="tableDiv" id={this.state.parentId}> 
             <table className="table" id={this.state.childId}>
                 <tbody>
-                {this.row(this.props.table.Colnames,'head')}
-                {this.props.table.Vals.map((row,i)=>{return this.row(row,'entry',i)})}
+                {this.header(this.props.table)}
+                {this.props.table.Vals.map((row,i)=>{return this.row(row,i)})}
                 </tbody>
             </table>
             </div>
@@ -547,12 +558,9 @@ class Main extends React.Component {
     viewHistory(position){
         var q = this.state.queryHistory[position];
         this.setState({ historyPosition : position });
-        //this.submitQuery(q.query, 0, true, "", q.mode);
         this.submitQuery({ query : q.query, backtrack : true, mode: q.mode});
     }
-    changeMode(mode){ 
-        this.setState({ mode : mode }); 
-    }
+    changeMode(mode){ this.setState({ mode : mode }); }
     topDropReset(e){ 
         setTimeout(()=>{
         if (!e.target.matches('.dropContent'))

@@ -46,14 +46,15 @@ type Columns struct {
     NewTypes []int
     Width int
     NewWidth int
+    NewPos []int
 }
 const (
-    T_NULL = 1 << iota
-    T_INT = 1 << iota
-    T_FLOAT = 1 << iota
-    T_DATE = 1 << iota
-    T_STRING = 1 << iota
-    T_UNKNOWN = 1 << iota
+    T_NULL = iota
+    T_INT = iota
+    T_FLOAT = iota
+    T_DATE = iota
+    T_STRING = iota
+    T_UNKNOWN = iota
 )
 type BToken struct {
     Id int
@@ -156,11 +157,14 @@ func selectAll(q* QuerySpecs) {
     q.ColSpec.NewNames = q.ColSpec.Names
     q.ColSpec.NewTypes = q.ColSpec.Types
     q.ColSpec.NewWidth = q.ColSpec.Width
+    q.ColSpec.NewPos = make([]int,q.ColSpec.Width)
+    for i,_ := range q.ColSpec.NewNames { q.ColSpec.NewPos[i] = i+1 }
 }
 func newCol(q* QuerySpecs,ii int) {
     if !q.SelectAll {
         q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[ii])
         q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[ii])
+        q.ColSpec.NewPos = append(q.ColSpec.NewPos, ii+1)
         q.ColSpec.NewWidth++
     }
 }
