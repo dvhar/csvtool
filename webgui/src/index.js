@@ -511,9 +511,10 @@ class Main extends React.Component {
     }
     showLoadedQuery(results){
         if (results.Status & bit.DAT_ERROR){
-            if (results.Message === undefined || results.Message === "")
+            if (results.Message === undefined || results.Message === ""){
                 alert("Could not make query. Bad connection or syntax?");
-            else
+                console.log(results);
+            }else
                 alert(results.Message);
         }
         else if (results.Status & bit.DAT_GOOD){

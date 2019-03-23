@@ -9,6 +9,7 @@ import (
     "errors"
     "time"
     . "fmt"
+    . "strconv"
     "flag"
     "os"
 )
@@ -303,7 +304,7 @@ func runQueries(db *sql.DB, req *Qrequest) ([]SingleQueryResult, error) {
         results = append(results, result)
         if err != nil {
             messager <-  Sprint(err)
-            return results, err
+            return results, errors.New("Query "+Itoa(i+1)+" Error: "+Sprint(err))
         }
     }
     return results, nil
