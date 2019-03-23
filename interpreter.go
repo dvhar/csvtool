@@ -177,15 +177,15 @@ func inferTypes(file interface{}) (*Columns, error) {
     return &cols, nil
 }
 
-func csvQuery(q QuerySpecs) (SingleQueryResult, error) {
+func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //tokenize input query
-    err := tokenizeQspec(&q)
+    err := tokenizeQspec(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     println("tokenized ok")
 
     //open file
     Println("token array: ",q.TokArray)
-    parseFromToken(&q)
+    parseFromToken(q)
     fp,err := os.Open(q.Fname)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     defer fp.Close()
@@ -196,7 +196,7 @@ func csvQuery(q QuerySpecs) (SingleQueryResult, error) {
 
     //do some pre-query parsing
     q.DistinctIdx = -1
-    err = preParsetokens(&q, 0,1)
+    err = preParsetokens(q, 0,1)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     println("typed the tokens")
     q.Reset()
@@ -238,7 +238,7 @@ func csvQuery(q QuerySpecs) (SingleQueryResult, error) {
         }
 
         //recursive descent parser finds matches and retrieves results
-        match, err := evalQuery(&q, &result, &row, &tempRow)
+        match, err := evalQuery(q, &result, &row, &tempRow)
         if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
         if match { j++; result.Numrows++ }
         q.Reset()
@@ -263,7 +263,7 @@ func csvQuery(q QuerySpecs) (SingleQueryResult, error) {
         result.Types = q.ColSpec.NewTypes
         result.Numcols = q.ColSpec.NewWidth
     }
-    evalOrderBy(&q, &result)
+    evalOrderBy(q, &result)
     if q.Save { saver <- chanData{Type : CH_NEXT} }
     messager <- "Finishing a query..."
     return result, nil

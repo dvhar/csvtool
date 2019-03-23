@@ -222,10 +222,11 @@ func sqlConnect(login, pass, server, name string) Connection {
 func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
     qSpec := QuerySpecs{
         Qstring : query,
-        Fname : "/home/dave/Documents/work/data/bigdata/2018facilityclaims.csv" }
+        DistinctIdx : -1,
+    }
     if (req.FileIO & F_CSV) != 0 { qSpec.Save = true }
     println("attempting csv query from gui program")
-    res, err := csvQuery(qSpec)
+    res, err := csvQuery(&qSpec)
     res.Query = query;
     Println("csv query error: ",err)
     return res, err
