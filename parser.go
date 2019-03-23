@@ -132,8 +132,8 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
 
     //select columns if doing that
     q.BReset()
-    for ;q.BPeek().Id != BT_SCOL || q.BPeek().Id == EOS; { q.BNext() }
-    if q.BPeek().Id == EOS { return false, errors.New("No columns selected") }
+    for ;q.BTok().Id != BT_SCOL || q.BTok().Id == EOS; { q.BNext() }
+    if q.BTok().Id == EOS { return false, errors.New("No columns selected") }
     countSelected := evalSelectCol(q, res, fromRow, selected, 0)
     if countSelected != q.ColSpec.NewWidth { return true, errors.New("returned "+Itoa(countSelected)+" columns. should be "+Itoa(q.ColSpec.NewWidth)) }
     return true, nil
@@ -233,7 +233,6 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
 
     //if comparing to null
     } else if compVal.Val == nil {
-        println("comparing to null")
         switch relop.Val.(string) {
             case "<>": negate ^= 1
                        fallthrough
