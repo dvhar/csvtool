@@ -133,14 +133,22 @@ func evalFrom(q *QuerySpecs) error {
     return errors.New("Unknown problem parsing 'from' file")
 }
 
-//recursive descent pre-parser builds QuerySpecs and BTokArray
+//top-level recursive descent pre-parser builds Token arrays and QuerySpecs
 //saves main parser some time during query. currently only called once.
 func preParseTokens(q* QuerySpecs) error {
-    //have to open file and get column info first
-    err := evalFrom(q)
+    //first turn query string into A tokens
+    err := tokenizeQspec(q)
     if err != nil { return err }
+
+    //open file and get column info
+    err = evalFrom(q)
+    if err != nil { return err }
+
     //must start with select token. maybe add 'update' later
-    if q.ATok().Id == KW_SELECT { q.ANext(); return preTop(q) }
+    if q.ATok().Id == KW_SELECT {
+        q.ANext()
+        return preTop(q)
+    }
     return errors.New("query must start with select. found "+q.ATok().Val)
 }
 func preTop(q* QuerySpecs) error {
@@ -150,7 +158,9 @@ func preTop(q* QuerySpecs) error {
         if err != nil { return errors.New("Expected number after 'top'. found "+q.APeek().Val) }
         q.ANext(); q.ANext()
     }
-    return preSelectCols(q)
+    err = preSelectCols(q)
+    finishAggregates(q)
+    return err
 }
 func selectAll(q* QuerySpecs) {
     q.SelectAll = true
@@ -187,13 +197,11 @@ func preSelectCols(q* QuerySpecs) error {
     //go to from zone
     if q.ATok().Id == KW_FROM || q.ATok().Id == KW_WHERE {
         if q.ColSpec.NewWidth == 0 { selectAll(q) }
-        finishAggregates(q)
         return preFrom(q)
     }
     //go past where zone
     if (q.ATok().Id & BT_AFTWR) != 0 {
         if q.ColSpec.NewWidth == 0 { selectAll(q) }
-        finishAggregates(q)
         return preAfterWhere(q)
     }
     //check for premature ending

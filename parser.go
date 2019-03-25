@@ -39,11 +39,9 @@ var totalMem uint64
 
 //run csv query
 func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
-    //turn string into A tokens
-    err := tokenizeQspec(q)
-    if err != nil { Println(err); return SingleQueryResult{}, err }
-    //do stuff that only needs to be done once and create B tokens for faster parsing
-    err = preParseTokens(q)
+
+    //parse tokens and do stuff that only needs to be done once
+    err := preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
 

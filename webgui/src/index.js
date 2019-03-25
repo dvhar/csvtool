@@ -178,19 +178,19 @@ class TableGrid extends React.Component {
             parentId : Math.random()
         }
     }
-    header(table){
-        var names = []
-        var info = []
-        for (var i=0; i<table.Numcols;i++){
-            names.push(
-                <th key={i} className="tableCell" onClick={()=>{sortQuery(this.props.table,i);this.forceUpdate();}}> 
-                    {table.Colnames[i]}
-                </th>)
-            info.push(
-                <th key={i} className="tableCell" onClick={()=>{sortQuery(this.props.table,i);this.forceUpdate();}}> 
-                    {`${table.Pos[i]}/${t[table.Types[i]]}`}
-                </th>)
-        }
+    header(){
+        var names = this.props.table.Colnames.map((name,ii)=>{
+            if (this.props.hideColumns[ii]===0) return (
+            <th key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}> 
+                {this.props.table.Colnames[ii]}
+            </th>
+        )});
+        var info = this.props.table.Types.map((name,ii)=>{
+            if (this.props.hideColumns[ii]===0) return (
+            <th key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}> 
+                {`${this.props.table.Pos[ii]}/${t[this.props.table.Types[ii]]}`}
+            </th>
+        )});
         return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
     }
     row(row,idx){
@@ -208,7 +208,7 @@ class TableGrid extends React.Component {
             <div className="tableDiv" id={this.state.parentId}> 
             <table className="table" id={this.state.childId}>
                 <tbody>
-                {this.header(this.props.table)}
+                {this.header()}
                 {this.props.table.Vals.map((row,i)=>{return this.row(row,i)})}
                 </tbody>
             </table>
