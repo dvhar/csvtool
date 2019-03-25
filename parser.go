@@ -34,6 +34,7 @@ func (q QuerySpecs) BTok() BToken {
 }
 func (q *QuerySpecs) BReset() { q.BIdx = 0; q.End = false }
 
+
 var m runtime.MemStats
 var totalMem uint64
 
@@ -58,6 +59,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     var toRow []interface{}
     var fromRow []interface{}
     var limit int
+    distinctCheck := make(map[interface{}]bool)
     if q.Quantity == 0 { limit = 1E9 } else { limit = q.Quantity }
 
     //run the query
@@ -84,7 +86,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         }
 
         //recursive descent parser finds matches and retrieves results
-        match, err := evalQuery(q, &res, &fromRow, &toRow)
+        match, err := evalQuery(q, &res, &fromRow, &toRow, &distinctCheck)
         if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
         if match { j++; res.Numrows++ }
         q.BReset()
@@ -111,7 +113,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 }
 
 //recursive descent parser for evaluating each row
-func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) (bool,error) {
+func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, dm *map[interface{}]bool) (bool,error) {
 
     //see if row matches expression
     match, err := evalWhere(q, fromRow)
@@ -119,7 +121,7 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     if !match { return false, nil }
 
     //see if row is distict if required
-    match, err = evalDistinct(q, res, fromRow)
+    match, err = evalDistinct(q, res, fromRow, dm)
     if !match { return false, nil }
 
     //copy entire row if selecting all
@@ -262,13 +264,14 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
     return evalSelectCol(q, res, fromRow, selected, count+1)
 }
 //see if row has distinct value if looking for one
-func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}) (bool,error) {
+func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, dm *map[interface{}]bool) (bool,error) {
     if q.DistinctIdx < 0 { return true, nil }
-    var match bool
     compVal := (*fromRow)[q.DistinctIdx]
-    for _,entry := range res.Vals {
-        match = compVal == entry[q.DistinctBackcheck]
-        if match { return false, nil }
+    _,ok := (*dm)[compVal]
+    if ok {
+        return false, nil
+    } else {
+        (*dm)[compVal] = true
     }
     return true,nil
 }
