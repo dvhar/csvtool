@@ -24,6 +24,7 @@ type QuerySpecs struct {
     SortCol int
     SortWay int
     Save bool
+    MemFull bool
     End bool
 }
 func (q *QuerySpecs) ANext() *AToken {
@@ -81,7 +82,7 @@ func inferTypes(q *QuerySpecs) error {
     //open file
     fp,err := os.Open(q.Fname)
     if err != nil { return errors.New("inferTypes: problem opening input file") }
-    defer fp.Close()
+    defer func(){ fp.Seek(0,0); fp.Close() }()
 
     cread := csv.NewReader(fp)
     line, err := cread.Read()
@@ -95,7 +96,7 @@ func inferTypes(q *QuerySpecs) error {
     //get samples and infer types from them
     for j:=0;j<10000;j++ {
         line, err := cread.Read()
-        if err != nil {break}
+        if err != nil { break }
         for i,cell := range line {
             entry := s.TrimSpace(cell)
             if entry == "NULL" || entry == "null" || entry == "NA" || entry == "" {
@@ -111,9 +112,8 @@ func inferTypes(q *QuerySpecs) error {
             }
         }
     }
-    fp.Seek(0,0)
     println("got column data types")
-    return  nil
+    return  err
 }
 
 //fill out source csv ColSpecs

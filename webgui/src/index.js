@@ -32,6 +32,7 @@ class DropdownQueryTextbox extends React.Component {
                     var query = document.getElementById("textBoxId").value;
                     this.props.submit({query : query});
                 }}>Submit Query</button>
+                <button onClick={()=>{ this.props.send({Type : bit.SK_STOP}); }}>Cancel Query</button>
                 </div>
             </div>
         );
@@ -283,7 +284,8 @@ class QuerySelect extends React.Component {
         var csvCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
                             title = {<>Enter CSV Query</>}
-                            submit = {(query)=>this.props.submitQuery(query)}
+                            submit = {this.props.submitQuery}
+                            send = {this.props.sendSocket}
                             s = {this.props.s}
                          />
                      </div>);
@@ -554,6 +556,9 @@ class Main extends React.Component {
             this.showLoadedQuery(dat);
         });
     }
+    sendSocket(request){
+        this.ws.send(JSON.stringify(request));
+    }
 
     viewHistory(position){
         var q = this.state.queryHistory[position];
@@ -587,6 +592,7 @@ class Main extends React.Component {
             s = {this.state}
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
             submitQuery = {(query)=>this.submitQuery(query)}
+            sendSocket = {(request)=>this.sendSocket(request)}
             showQuery = {this.state.showQuery}
             metaTables = {this.props.metaTables}
         />

@@ -37,6 +37,8 @@ func (q *QuerySpecs) BReset() { q.BIdx = 0; q.End = false }
 
 var m runtime.MemStats
 var totalMem uint64
+var stop int
+var active bool
 
 //run csv query
 func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
@@ -63,9 +65,32 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     if q.Quantity == 0 { limit = 1E9 } else { limit = q.Quantity }
 
     //run the query
+    active = true
     cread.Read()
     rowsChecked := 0
     for j:=0;j<limit; {
+
+        //watch out for memory ceiling
+        runtime.ReadMemStats(&m)
+        if m.Alloc > totalMem/3 {
+            q.MemFull = true
+            println("reached soft memory limit")
+            if !q.Save {
+                messager <- "Not enough memory for all results"
+                active = false
+                break
+            }
+        }
+        //see if user wants to cancel
+        if stop == 1 {
+            stop = 0
+            if q.Save { saver <- chanData{Type : CH_NEXT};  saver <- chanData{Type : CH_DONE} }
+            messager <- "query cancelled"
+            active = false
+            break
+        }
+
+
         //read line from csv file and allocate array for it
         line, err := cread.Read()
         if err != nil {break}
@@ -86,18 +111,10 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         }
 
         //recursive descent parser finds matches and retrieves results
-        match, err := evalQuery(q, &res, &fromRow, &toRow, &distinctCheck)
+        match, err := evalQuery(q, &res, &fromRow, &toRow, distinctCheck)
         if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
         if match { j++; res.Numrows++ }
         q.BReset()
-
-        //watch out for memory ceiling
-        runtime.ReadMemStats(&m)
-        if m.Alloc > totalMem/3 {
-            println("reached soft memory limit")
-            messager <- "Not enough memory for all results"
-            break
-        }
 
         //periodic updates
         rowsChecked++
@@ -109,11 +126,12 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     if err != nil { Println(err); return SingleQueryResult{}, err }
     messager <- "Finishing a query..."
     if q.Save { saver <- chanData{Type : CH_NEXT} }
+    active = false
     return res, nil
 }
 
 //recursive descent parser for evaluating each row
-func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, dm *map[interface{}]bool) (bool,error) {
+func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, distinct map[interface{}]bool) (bool,error) {
 
     //see if row matches expression
     match, err := evalWhere(q, fromRow)
@@ -121,12 +139,12 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     if !match { return false, nil }
 
     //see if row is distict if required
-    match, err = evalDistinct(q, res, fromRow, dm)
+    match, err = evalDistinct(q, res, fromRow, distinct)
     if !match { return false, nil }
 
     //copy entire row if selecting all
-    if q.SelectAll {
-        res.Vals = append(res.Vals, *fromRow)
+    if q.SelectAll  {
+        if !q.MemFull { res.Vals = append(res.Vals, *fromRow) }
         if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} }
         return true, nil
     }
@@ -136,7 +154,7 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     for ;q.BTok().Id != BT_SCOL || q.BTok().Id == EOS; { q.BNext() }
     if q.BTok().Id == EOS { return false, errors.New("No columns selected") }
     countSelected := evalSelectCol(q, res, fromRow, selected, 0)
-    if countSelected != q.ColSpec.NewWidth { return true, errors.New("returned "+Itoa(countSelected)+" columns. should be "+Itoa(q.ColSpec.NewWidth)) }
+    if countSelected != q.ColSpec.NewWidth { return false, errors.New("returned "+Itoa(countSelected)+" columns. should be "+Itoa(q.ColSpec.NewWidth)) }
     return true, nil
 }
 //see if there is a where token
@@ -256,22 +274,23 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
         (*selected)[count] = (*fromRow)[tok.Val.(int)]
         if count == q.ColSpec.NewWidth - 1 {
             //all columns selected
-            res.Vals = append(res.Vals, *selected)
+            if !q.MemFull { res.Vals = append(res.Vals, *selected) }
             if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} }
         }
     }
     q.BNext()
     return evalSelectCol(q, res, fromRow, selected, count+1)
 }
-//see if row has distinct value if looking for one
-func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, dm *map[interface{}]bool) (bool,error) {
+//see if row has distinct value if looking for one. make sure this is the last check before retrieving row
+func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, distinct map[interface{}]bool) (bool,error) {
     if q.DistinctIdx < 0 { return true, nil }
     compVal := (*fromRow)[q.DistinctIdx]
-    _,ok := (*dm)[compVal]
+    //ok means not distinct
+    _,ok := distinct[compVal]
     if ok {
         return false, nil
     } else {
-        (*dm)[compVal] = true
+        distinct[compVal] = true
     }
     return true,nil
 }

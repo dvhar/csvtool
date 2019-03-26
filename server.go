@@ -21,6 +21,7 @@ const (
     SK_MSG = iota
     SK_PING = iota
     SK_PONG = iota
+    SK_STOP = iota
 )
 type Client struct {
     conn *websocket.Conn
@@ -66,6 +67,10 @@ func (c* Client) reader(){
             return
         }
         json.Unmarshal(messageBytes, &message)
+        switch message.Type {
+            case SK_STOP:
+                if active { stop = 1 }
+        }
     }
 }
 

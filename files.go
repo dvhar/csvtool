@@ -68,7 +68,7 @@ func saveQueryFile(req *Qrequest, fullReturnData *ReturnData, full_json *[]byte)
     return err
 }
 
-//save query to csv
+//save query from memory to csv
 func saveCsv(fullReturnData *ReturnData) error {
     //set up csv writer and write heading
     extension := regexp.MustCompile(`\.csv$`)
