@@ -15,7 +15,7 @@ import * as serviceWorker from './serviceWorker';
 class DropdownQueryTextbox extends React.Component {
     constructor(props){
         super(props);
-        this.state = {clicked:0}
+        this.state = {clicked:this.props.open?1:0}
     }
     render(){
         var arrow = <span className={this.state.clicked==1?"dim":""}>{"\u25bc"}</span>
@@ -176,7 +176,8 @@ class TableGrid extends React.Component {
         super(props);
         this.state = {
             childId : Math.random(),
-            parentId : Math.random()
+            parentId : Math.random(),
+            headId : Math.random()
         }
     }
     header(){
@@ -208,8 +209,10 @@ class TableGrid extends React.Component {
         return(
             <div className="tableDiv" id={this.state.parentId}> 
             <table className="table" id={this.state.childId}>
-                <tbody>
+                <thead className="tableHead" id={this.state.headId}>
                 {this.header()}
+                </thead>
+                <tbody className="tableBody">
                 {this.props.table.Vals.map((row,i)=>{return this.row(row,i)})}
                 </tbody>
             </table>
@@ -219,8 +222,10 @@ class TableGrid extends React.Component {
     resize(){
         var inner = document.getElementById(this.state.childId);
         var outter = document.getElementById(this.state.parentId);
+        var head = document.getElementById(this.state.headId);
         var windoww = window.innerWidth;
         outter.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
+        //outter.addEventListener('scroll',function(){head.style.left=`${inner.getBoundingClientRect().left}px`});
     }
     componentDidUpdate(){ this.resize(); }
     componentDidMount(){ this.resize(); }
@@ -249,7 +254,11 @@ class QueryRender extends React.Component {
                     hideColumns = {this.props.hideColumns}
                     toggleColumn = {(i)=>this.toggleColumn(i)}
                 />    
-                <span>Rows: {this.props.table.Numrows}</span>
+                <div className="dropmenu tableModDiv">
+                    <div className="dropButton tableModButton">
+                        <span>Rows: {this.props.table.Numrows}</span>
+                    </div>
+                </div>
             </div>
             <TableGrid
                 table = {getWhere(this.props.table,this.props.rows.col,this.props.rows.val)}
@@ -275,9 +284,10 @@ class QuerySelect extends React.Component {
 
         var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
-                            title = {<h2>Enter SQL Query{"\u25bc"}</h2>}
+                            title = {<>Enter SQL Query</>}
                             submit = {(query)=>this.props.submitQuery(query)}
                             s = {this.props.s}
+                            open = {false}
                          />
                      </div>);
 
@@ -287,6 +297,7 @@ class QuerySelect extends React.Component {
                             submit = {this.props.submitQuery}
                             send = {this.props.sendSocket}
                             s = {this.props.s}
+                            open = {true}
                          />
                      </div>);
 
