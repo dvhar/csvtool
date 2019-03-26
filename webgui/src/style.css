@@ -84,9 +84,15 @@ html {
   top: 3em;
   max-height: calc(80vh - 100px);
   max-width: calc(95%);
-  overflow: auto;
   margin: auto;
   border: 2px solid black; }
+
+.tableBodyDiv {
+  overflow: auto; }
+
+.tableHeadDiv {
+  overflow: hidden;
+  border-bottom: none; }
 
 .querySelect {
   margin-top: 2.3em; }

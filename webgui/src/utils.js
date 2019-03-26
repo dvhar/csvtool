@@ -97,6 +97,9 @@ export function getWhere(queryResults,column,value){
 export function generateKeyDiagram(){
     console.log("ok");
 }
+export function max(a,b){
+    return a>b?a:b;
+}
 
 export const bit = {
     DAT_BLANK      : 0,

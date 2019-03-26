@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {postRequest,getUnique,getWhere,sortQuery,bit,t} from './utils.js';
+import {postRequest,getUnique,max,getWhere,sortQuery,bit,t} from './utils.js';
 import * as premades from './premades.js';
 import * as serviceWorker from './serviceWorker';
 //import Websocket from 'react-websocket';
@@ -177,22 +177,23 @@ class TableGrid extends React.Component {
         this.state = {
             childId : Math.random(),
             parentId : Math.random(),
-            headId : Math.random()
+            headId : Math.random(),
+            headpId : Math.random()
         }
     }
     header(){
         var names = this.props.table.Colnames.map((name,ii)=>{
             if (this.props.hideColumns[ii]===0) return (
-            <th key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}> 
+            <th key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}>
                 {this.props.table.Colnames[ii]}
             </th>
-        )});
+        )}).concat(<th></th>);
         var info = this.props.table.Types.map((name,ii)=>{
             if (this.props.hideColumns[ii]===0) return (
-            <th key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}> 
+            <td key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}>
                 {`${this.props.table.Pos[ii]}/${t[this.props.table.Types[ii]]}`}
-            </th>
-        )});
+            </td>
+        )}).concat(<th>{"__"}</th>);
         return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
     }
     row(row,idx){
@@ -207,25 +208,51 @@ class TableGrid extends React.Component {
         if (this.props.table.Vals === null)
             this.props.table.Vals = [];
         return(
-            <div className="tableDiv" id={this.state.parentId}> 
-            <table className="table" id={this.state.childId}>
+        <>
+            <div className="tableDiv tableHeadDiv" id={this.state.headpId}> 
+            <table className="table">
                 <thead className="tableHead" id={this.state.headId}>
                 {this.header()}
                 </thead>
+            </table>
+            </div>
+            <div className="tableDiv tableBodyDiv" id={this.state.parentId}> 
+            <table className="table" id={this.state.childId}>
                 <tbody className="tableBody">
                 {this.props.table.Vals.map((row,i)=>{return this.row(row,i)})}
                 </tbody>
             </table>
             </div>
+        </>
         )
     }
     resize(){
         var inner = document.getElementById(this.state.childId);
         var outter = document.getElementById(this.state.parentId);
-        var head = document.getElementById(this.state.headId);
+        var headi = document.getElementById(this.state.headId);
+        var heado = document.getElementById(this.state.headpId);
         var windoww = window.innerWidth;
-        outter.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
-        //outter.addEventListener('scroll',function(){head.style.left=`${inner.getBoundingClientRect().left}px`});
+
+        var tbody = inner.childNodes[0];
+        if (tbody.childNodes.length > 0 && tbody.childNodes[0].childNodes.length > 0){
+            var trow = tbody.childNodes[0].childNodes;
+            var bcell, hcell, br, hr;
+            var nw;
+            for (var i in trow){
+                bcell = trow[i];
+                hcell = headi.childNodes[0].childNodes[i];
+                //console.log( bcell.getBoundingClientRect().right, hcell.getBoundingClientRect().right);
+                if (bcell.offsetWidth && hcell.offsetWidth){
+                    nw = max(bcell.offsetWidth, hcell.offsetWidth);
+                        bcell.style.minWidth = hcell.style.minWidth = `${nw+2}px`;
+                }
+            }
+        }
+
+
+        outter.style.maxWidth = heado.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
+        outter.addEventListener('scroll',function(){ heado.scrollLeft = outter.scrollLeft; });
+
     }
     componentDidUpdate(){ this.resize(); }
     componentDidMount(){ this.resize(); }
