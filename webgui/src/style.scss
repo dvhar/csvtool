@@ -35,7 +35,7 @@ html {
     min-height: 100%;
     background-color: #DDDDDD;
     background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
-    background-image: url("/bg.jpg");
+    //background-image: url("/bg.jpg");
     background-attachment: fixed;
 }
 
@@ -140,6 +140,13 @@ html {
     overflow: hidden;
     border-bottom: none;
 }
+.tableQuery {
+    margin: auto;
+    display: table;
+    background-color: bisque;
+    border-radius: 1em;
+    padding: 0.3em;
+}
 //bigger query section
 .querySelect {
     margin-top: 2.3em;
@@ -233,3 +240,4 @@ html {
 }
 .show { display: block; }
 .dim { color: grey; }
+.noselect { user-select: none; }

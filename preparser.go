@@ -10,6 +10,7 @@ import (
 
 //copied types from old version
 type QuerySpecs struct {
+    ColSpec Columns
     Fname string
     Qstring string
     ATokArray []AToken
@@ -18,9 +19,7 @@ type QuerySpecs struct {
     BIdx int
     Quantity int
     DistinctIdx int
-    DistinctBackcheck int
     SelectAll bool
-    ColSpec Columns
     SortCol int
     SortWay int
     Save bool
@@ -159,7 +158,6 @@ func preTop(q* QuerySpecs) error {
         q.ANext(); q.ANext()
     }
     err = preSelectCols(q)
-    finishAggregates(q)
     return err
 }
 func selectAll(q* QuerySpecs) {
@@ -242,15 +240,6 @@ func preAggregates(q* QuerySpecs) error {
         return errors.New("Aggregate function not implemented: "+q.ATok().Val)
     }
     return preSelectCols(q)
-}
-func finishAggregates(q* QuerySpecs) error {
-    //need to go back and find new comparison index for distict checker
-    if q.DistinctIdx >= 0 {
-        var err error
-        q.DistinctBackcheck, err = getColumnIdx(q.ColSpec.NewNames, q.ColSpec.Names[q.DistinctIdx])
-        if err != nil { return errors.New("Distinct column index not found") }
-    }
-    return nil
 }
 func parseColumnIndex(q* QuerySpecs) (int,error) {
     c := q.ATok().Val

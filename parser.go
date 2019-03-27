@@ -75,7 +75,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         if m.Alloc > totalMem/3 {
             q.MemFull = true
             if !q.Save {
-                messager <- "Not enough memory for all results"
                 active = false
                 break
             }

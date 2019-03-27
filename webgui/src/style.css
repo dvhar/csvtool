@@ -2,7 +2,6 @@ html {
   min-height: 100%;
   background-color: #DDDDDD;
   background: linear-gradient(to bottom, #997d60 0%, #dab78c 45%, #c3a996 100%);
-  background-image: url("/bg.jpg");
   background-attachment: fixed; }
 
 .absolute-pos {
@@ -104,6 +103,13 @@ html {
   overflow: hidden;
   border-bottom: none; }
 
+.tableQuery {
+  margin: auto;
+  display: table;
+  background-color: bisque;
+  border-radius: 1em;
+  padding: 0.3em; }
+
 .querySelect {
   margin-top: 2.3em; }
 
@@ -187,3 +193,6 @@ html {
 
 .dim {
   color: grey; }
+
+.noselect {
+  user-select: none; }

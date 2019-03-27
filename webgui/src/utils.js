@@ -63,8 +63,14 @@ export function colIndex(queryResults,column){
     return -1;
 }
 
-export function sortQuery(queryResults,column){
-    queryResults.Vals.sort(function(a,b){ return String(a[column]) > String(b[column]) ? 1 : -1; });
+export function sortQuery(queryResults,column,way){
+    queryResults.Vals.sort(function(a,b){
+            var aa = a[column];
+            var bb = b[column];
+            if (queryResults.Types[column] == 1 || queryResults.Types[column] == 2)
+                return way*(Number(aa) > Number(bb) ? 1 : -1);
+            return way*(String(aa) > String(bb) ? 1 : -1);
+        });
 }
 
 export function getUnique(queryResults,column){
@@ -130,6 +136,14 @@ export const bit = {
     SK_PING         : 1,
     SK_PONG         : 2,
     SK_STOP         : 3,
+
+    T_NULL          : 0,
+    T_INT           : 1,
+    T_FLOAT         : 2,
+    T_DATE          : 3,
+    T_STRING        : 4,
+    T_UNKNOWN       : 5,
+
 
 };
 

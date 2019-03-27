@@ -16,7 +16,6 @@ const (
     KEYBIT =      1<<20
     LOGOP =       1<<24
     RELOP =       1<<25
-    PATH =        1<<26
     //parse helpers
     BT_SEL =      1<<28
     BT_WHR =      1<<29
@@ -72,7 +71,6 @@ var enumMap = map[int]string {
     KEYBIT :        "KEYBIT",
     LOGOP :         "LOGOP",
     RELOP :         "RELOP",
-    PATH :          "PATH",
     WORD :          "WORD",
     NUMBER :        "NUMBER",
     KEYWORD :       "KEYWORD",
@@ -133,7 +131,7 @@ var keywordMap = map[string]int {
 }
 var specialMap = map[string]int {
     "=" :  SP_EQ,
-    "!" : SP_NEGATE,
+    "!" :  SP_NEGATE,
     "<>" : SP_NOEQ,
     "<" :  SP_LESS,
     "<=" : SP_LESSEQ,

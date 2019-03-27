@@ -178,20 +178,27 @@ class TableGrid extends React.Component {
             childId : Math.random(),
             parentId : Math.random(),
             headId : Math.random(),
-            headpId : Math.random()
+            headpId : Math.random(),
+            sortWay : 1
         }
+    }
+    sorter(ii){
+        sortQuery(this.props.table,ii,this.state.sortWay);this.setState({sortWay:this.state.sortWay*-1});
     }
     header(){
         var names = this.props.table.Colnames.map((name,ii)=>{
             if (this.props.hideColumns[ii]===0) return (
-            <th key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}>
+            <th key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
                 {this.props.table.Colnames[ii]}
             </th>
         )}).concat(<th></th>);
         var info = this.props.table.Types.map((name,ii)=>{
             if (this.props.hideColumns[ii]===0) return (
-            <td key={ii} className="tableCell" onClick={()=>{sortQuery(this.props.table,ii);this.forceUpdate();}}>
-                {`${this.props.table.Pos[ii]}/${t[this.props.table.Types[ii]]}`}
+            <td key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
+                {`${this.props.table.Pos[ii]} `}
+                <span className="noselect">
+                - {t[this.props.table.Types[ii]]}
+                </span>
             </td>
         )}).concat(<th>{"__"}</th>);
         return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
@@ -237,19 +244,20 @@ class TableGrid extends React.Component {
         var tbody = inner.childNodes[0];
         if (tbody.childNodes.length > 0 && tbody.childNodes[0].childNodes.length > 0){
             var trow = tbody.childNodes[0].childNodes;
-            var bcell, hcell, br, hr;
-            var nw;
+            var bcell, hcell;
+            var newWidth;
             for (var i in trow){
                 bcell = trow[i];
                 hcell = headi.childNodes[0].childNodes[i];
                 if (bcell.offsetWidth && hcell.offsetWidth){
-                    nw = max(bcell.offsetWidth, hcell.offsetWidth);
-                        bcell.style.minWidth = hcell.style.minWidth = `${nw+1}px`;
+                    bcell.style.minWidth = hcell.style.minWidth = `0px`;
+                    newWidth = max(bcell.offsetWidth, hcell.offsetWidth);
+                        bcell.style.minWidth = hcell.style.minWidth = `${newWidth+1}px`;
                 }
             }
         }
 
-        //get header table and body table to have same size and scroll together
+        //give header table and body table same size and make them scroll together
         outter.style.maxWidth = heado.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
         outter.addEventListener('scroll',function(){ heado.scrollLeft = outter.scrollLeft; });
 
@@ -268,7 +276,7 @@ class QueryRender extends React.Component {
         return ( 
         <div className="viewContainer">
             <div className="tableModifiers">
-                <div> {this.props.table.Query} </div>
+                <div className="tableQuery"> {this.props.table.Query} </div>
                 <TableSelectRows 
                     title = {"Show with column value\u25bc"}
                     dropAction = {(column,value)=>{this.props.rows.col=column;this.props.rows.val=value;this.forceUpdate();}}
