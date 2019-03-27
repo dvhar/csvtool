@@ -120,6 +120,7 @@ var dbCon Connection
 var FPaths FilePaths
 var messager chan string
 var saver chan chanData
+var roger chan bool
 var browsersOpen = 0
 
 func main() {
@@ -127,6 +128,7 @@ func main() {
     flag.Parse()
     messager = make(chan string)
     saver = make(chan chanData)
+    roger = make(chan bool)
     go realtimeCsvSaver()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 

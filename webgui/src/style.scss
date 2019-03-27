@@ -7,7 +7,8 @@ $bbot: #7db9e8;
 $top-top: #FFD700;
 $top-bot: #FFFF70;
 $button1: #EEEEEE;
-$cell: #FAFAFA;
+$headcell: #FAFAFA;
+$bodycell: #FAFAFA;
 
 $ojgradient1: #feccb1;
 $ojgradient2: #f17432;
@@ -34,6 +35,8 @@ html {
     min-height: 100%;
     background-color: #DDDDDD;
     background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
+    background-image: url("/bg.jpg");
+    background-attachment: fixed;
 }
 
 //dropdown menu
@@ -106,11 +109,16 @@ html {
 }
 
 //table display
+.tableHead {
+    td { background-color: $headcell; }
+    th { background-color: $headcell; }
+}
+.tableBody td {
+    background-color: $bodycell;
+}
 .tableCell {
     text-align: center;
     white-space:nowrap;
-    background-color: $cell;
-    //border-radius: 4px;
     min-width: 4em;
 }
 .tableRow {

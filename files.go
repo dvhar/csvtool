@@ -168,6 +168,7 @@ func realtimeCsvSaver() {
                     err = writer.Write(c.Header)
                     output = make([]string, len(c.Header))
                     state = 2
+                    roger <- true
                 }
 
             case CH_ROW:
@@ -184,6 +185,7 @@ func realtimeCsvSaver() {
                         }
                     }
                     err = writer.Write(output)
+                    roger <- true
                 }
 
             case CH_NEXT:

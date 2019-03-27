@@ -46,7 +46,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //parse tokens and do stuff that only needs to be done once
     err := preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
-    saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}
+    if q.Save { saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-roger }
 
     //prepare input and output
     totalMem = memory.TotalMemory()
@@ -74,7 +74,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         runtime.ReadMemStats(&m)
         if m.Alloc > totalMem/3 {
             q.MemFull = true
-            println("reached soft memory limit")
             if !q.Save {
                 messager <- "Not enough memory for all results"
                 active = false
@@ -145,7 +144,7 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     //copy entire row if selecting all
     if q.SelectAll  {
         if !q.MemFull { res.Vals = append(res.Vals, *fromRow) }
-        if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} }
+        if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} ; <-roger }
         return true, nil
     }
 
@@ -275,7 +274,7 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
         if count == q.ColSpec.NewWidth - 1 {
             //all columns selected
             if !q.MemFull { res.Vals = append(res.Vals, *selected) }
-            if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} }
+            if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} ; <-roger}
         }
     }
     q.BNext()

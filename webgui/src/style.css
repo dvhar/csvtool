@@ -1,7 +1,9 @@
 html {
   min-height: 100%;
   background-color: #DDDDDD;
-  background: linear-gradient(to bottom, #997d60 0%, #dab78c 45%, #c3a996 100%); }
+  background: linear-gradient(to bottom, #997d60 0%, #dab78c 45%, #c3a996 100%);
+  background-image: url("/bg.jpg");
+  background-attachment: fixed; }
 
 .absolute-pos {
   position: absolute; }
@@ -69,10 +71,18 @@ html {
   background-color: #EEEEEE;
   border-radius: 4px; }
 
+.tableHead td {
+  background-color: #FAFAFA; }
+
+.tableHead th {
+  background-color: #FAFAFA; }
+
+.tableBody td {
+  background-color: #FAFAFA; }
+
 .tableCell {
   text-align: center;
   white-space: nowrap;
-  background-color: #FAFAFA;
   min-width: 4em; }
 
 .tableRow {

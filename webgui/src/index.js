@@ -210,15 +210,15 @@ class TableGrid extends React.Component {
         return(
         <>
             <div className="tableDiv tableHeadDiv" id={this.state.headpId}> 
-            <table className="table">
-                <thead className="tableHead" id={this.state.headId}>
+            <table className="tableHead">
+                <thead id={this.state.headId}>
                 {this.header()}
                 </thead>
             </table>
             </div>
             <div className="tableDiv tableBodyDiv" id={this.state.parentId}> 
-            <table className="table" id={this.state.childId}>
-                <tbody className="tableBody">
+            <table className="tableBody" id={this.state.childId}>
+                <tbody>
                 {this.props.table.Vals.map((row,i)=>{return this.row(row,i)})}
                 </tbody>
             </table>
@@ -233,6 +233,7 @@ class TableGrid extends React.Component {
         var heado = document.getElementById(this.state.headpId);
         var windoww = window.innerWidth;
 
+        //get header table and body table cells to line up
         var tbody = inner.childNodes[0];
         if (tbody.childNodes.length > 0 && tbody.childNodes[0].childNodes.length > 0){
             var trow = tbody.childNodes[0].childNodes;
@@ -241,15 +242,14 @@ class TableGrid extends React.Component {
             for (var i in trow){
                 bcell = trow[i];
                 hcell = headi.childNodes[0].childNodes[i];
-                //console.log( bcell.getBoundingClientRect().right, hcell.getBoundingClientRect().right);
                 if (bcell.offsetWidth && hcell.offsetWidth){
                     nw = max(bcell.offsetWidth, hcell.offsetWidth);
-                        bcell.style.minWidth = hcell.style.minWidth = `${nw+2}px`;
+                        bcell.style.minWidth = hcell.style.minWidth = `${nw+1}px`;
                 }
             }
         }
 
-
+        //get header table and body table to have same size and scroll together
         outter.style.maxWidth = heado.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
         outter.addEventListener('scroll',function(){ heado.scrollLeft = outter.scrollLeft; });
 
