@@ -227,8 +227,8 @@ func preSelectCols(q* QuerySpecs) error {
         newCol(q, ii)
         q.ANext()
         return preSelectCols(q)
-    } else { return err }
-    return nil
+    }
+    return err
 }
 func preAggregates(q* QuerySpecs) error {
     var err error
@@ -246,7 +246,7 @@ func parseColumnIndex(q* QuerySpecs) (int,error) {
     if q.ATok().Id != WORD { return 0,errors.New("Expected column, got "+c) }
     ii, err := Atoi(c)
     if err == nil {
-        if ii > q.ColSpec.Width { return 0,errors.New("Column number too big: "+c) }
+        if ii > q.ColSpec.Width { return 0,errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
         if ii < 1 { return 0,errors.New("Column number too small: "+c) }
         return ii-1, nil
     }

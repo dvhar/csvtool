@@ -376,6 +376,7 @@ class TopMenuBar extends React.Component {
             <Saver
                 changeTopDrop = {this.props.changeTopDrop}
             />
+            {/*
             <Opener
                 changeTopDrop = {this.props.changeTopDrop}
             />
@@ -383,6 +384,7 @@ class TopMenuBar extends React.Component {
                 changeTopDrop = {this.props.changeTopDrop}
                 mode = {this.props.s.mode}
             />
+            */}
             <div id="topMessage" className="topMessage">{this.props.s.topMessage}</div>
             <History
                 position = {this.props.s.historyPosition} 
@@ -432,7 +434,7 @@ class TopDropdown extends React.Component {
                 </div>
             ),
 
-            //FileIO bits: CJOS: 32 64 128 256
+            /*
             saveShow : (
                 <div id="saveShow" className="fileSelectShow dropContent">
                     <label className="dropContent">Save file:</label> 
@@ -446,6 +448,19 @@ class TopDropdown extends React.Component {
                     }}>save</button><br/>
                     <input className="dropContent saveRadio" name="ftype" type="radio" id="cradio" value="CSV"/>CSV - Save queries on page to their own csv file. A number will be added to file name if more than 1.<br/>
                     <input className="dropContent saveRadio" name="ftype" type="radio" id="jradio" value="JSON"/>JSON - Save queries on page to single json file.<br/>
+                </div>
+            ),*/
+
+            saveShow : (
+                <div id="saveShow" className="fileSelectShow dropContent">
+                    <p className="dropContent">Save queries on page to their own csv file. A number will be added to file name if more than 1.</p> 
+                    <label className="dropContent">Save file:</label> 
+                    <input id="savePath" className="pathInput" type="text" className="dropContent"/>
+                    <button className="" onClick={()=>{
+                        var path = document.getElementById("savePath").value;
+                        this.props.changeSavePath(path);
+                        this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|bit.F_CSV, filePath : path});
+                    }}>save</button><br/>
                 </div>
             ),
 
@@ -667,18 +682,14 @@ class Main extends React.Component {
         }
         this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 
     }
+    componentWillMount() { document.title = 'CSV Giant' }
 }
 
-function startRender(){
-    ReactDOM.render(
-        <Main 
-            metaTables = {["column info abridged","table key info","informationschema.colums","column info with keys"]}
-        />, 
-        document.getElementById('root'));
-}
-
-
-startRender();
+ReactDOM.render(
+    <Main 
+        metaTables = {["column info abridged","table key info","informationschema.colums","column info with keys"]}
+    />, 
+    document.getElementById('root'));
 
 
 

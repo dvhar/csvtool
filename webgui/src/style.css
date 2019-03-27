@@ -158,7 +158,8 @@ html {
   padding: 0.3em;
   background: #fdffe5;
   top: 2.2em;
-  position: absolute; }
+  position: absolute;
+  border: 1px solid black; }
 
 .fileSelectShow label {
   display: inline-block; }

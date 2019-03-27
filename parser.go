@@ -46,11 +46,12 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //parse tokens and do stuff that only needs to be done once
     err := preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
-    if q.Save { saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-roger }
+    if q.Save { saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
 
     //prepare input and output
     totalMem = memory.TotalMemory()
     fp,err := os.Open(q.Fname)
+    if err != nil { Println(err); return SingleQueryResult{}, err }
     cread := csv.NewReader(fp)
     res:= SingleQueryResult{
         Colnames : q.ColSpec.NewNames,
@@ -66,6 +67,10 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
     //run the query
     active = true
+    defer func(){
+        active = false
+        if q.Save { saver <- chanData{Type : CH_NEXT} }
+    }()
     cread.Read()
     rowsChecked := 0
     for j:=0;j<limit; {
@@ -74,17 +79,13 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         runtime.ReadMemStats(&m)
         if m.Alloc > totalMem/3 {
             q.MemFull = true
-            if !q.Save {
-                active = false
-                break
-            }
+            if !q.Save { break }
         }
         //see if user wants to cancel
         if stop == 1 {
             stop = 0
             if q.Save { saver <- chanData{Type : CH_NEXT};  saver <- chanData{Type : CH_DONE} }
             messager <- "query cancelled"
-            active = false
             break
         }
 
@@ -120,11 +121,10 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
             messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
         }
     }
+    if err != nil { Println(err); return SingleQueryResult{}, err }
     err = evalOrderBy(q, &res)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     messager <- "Finishing a query..."
-    if q.Save { saver <- chanData{Type : CH_NEXT} }
-    active = false
     return res, nil
 }
 
@@ -133,18 +133,17 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
 
     //see if row matches expression
     match, err := evalWhere(q, fromRow)
-    if err != nil{ return false, err }
-    if !match { return false, nil }
+    if err != nil || !match { return false, err }
 
     //see if row is distict if required
     match, err = evalDistinct(q, res, fromRow, distinct)
-    if !match { return false, nil }
+    if err != nil || !match { return false, err }
 
     //copy entire row if selecting all
     if q.SelectAll  {
         if !q.MemFull { res.Vals = append(res.Vals, *fromRow) }
-        if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} ; <-roger }
-        return true, nil
+        if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
+        return true, err
     }
 
     //select columns if doing that
@@ -153,7 +152,7 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     if q.BTok().Id == EOS { return false, errors.New("No columns selected") }
     countSelected := evalSelectCol(q, res, fromRow, selected, 0)
     if countSelected != q.ColSpec.NewWidth { return false, errors.New("returned "+Itoa(countSelected)+" columns. should be "+Itoa(q.ColSpec.NewWidth)) }
-    return true, nil
+    return true, err
 }
 //see if there is a where token
 func evalWhere(q *QuerySpecs, fromRow *[]interface{}) (bool, error) {
@@ -177,12 +176,13 @@ func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
     //if found a column
     if tok.Id == BT_WCOL {
         match, err = evalComparison(q, fromRow)
-        if negate { match = !match }
         if err != nil { return false, err }
+        if negate { match = !match }
     //if ( found instead of column
     } else if tok.Id == SP_LPAREN {
         q.BNext()
         match, err = evalMultiComparison(q, fromRow)
+        if err != nil { return false, err }
         if negate { match = !match }
         //eat closing paren, return if this expression is done
         q.BNext()
@@ -202,7 +202,7 @@ func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
             case KW_OR:  match = match || nextExpr
         }
     }
-    return match, nil
+    return match, err
 }
 //run each individual comparison
 func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
@@ -215,6 +215,8 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     }
     relop := q.BNext()
     compVal := q.BNext()
+    if (relop.Id & RELOP) == 0  { return false, errors.New("Bad relational operator. Valid ones are =, !=, <>, >, >=, <, <=") }
+    if compVal.Id != BT_WCOMP { return false, errors.New("Expected comparision value but got "+Sprint(compVal.Val)) }
 
     if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] != nil {
         switch relop.Val.(string) {
@@ -273,7 +275,7 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
         if count == q.ColSpec.NewWidth - 1 {
             //all columns selected
             if !q.MemFull { res.Vals = append(res.Vals, *selected) }
-            if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} ; <-roger}
+            if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} ; <-savedLine}
         }
     }
     q.BNext()
