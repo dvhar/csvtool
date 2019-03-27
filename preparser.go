@@ -349,14 +349,14 @@ func preAfterWhere(q* QuerySpecs) error {
     if q.ATok().Id == EOS { return nil }
     if q.ATok().Id == KW_ORDER {
         if q.ANext().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.ATok().Val) }
-        if q.ANext().Id != WORD { return errors.New("Expected column after 'order by'. Found "+q.ATok().Val) }
+        /*if*/ q.ANext()//.Id != WORD { return errors.New("Expected column after 'order by'. Found "+q.ATok().Val) }
         ii, err := parseColumnIndex(q)
         if err == nil {
             q.SortCol = ii
             q.SortWay = 1
             q.ANext()
             preOrderMethod(q)
-        } else { return errors.New("Expected column to order by. Found "+q.ATok().Val) }
+        } else { return err }
     }
     return nil
 }

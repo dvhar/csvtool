@@ -240,7 +240,7 @@ func scanner(s* StringLookahead) AToken {
             if state == 255 { return AToken { Id: 255, Val: "END", Line: lineNo } }
             Printf("error peek: %d state: %d nextstates: %d nextchar: %c\n",s.peek(),state, nextState, nextchar)
             //println(enumMap[nextState])
-            return AToken{ Id: ERROR, Val:"col: "+Itoa(colNo), Line: lineNo }
+            return AToken{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
         }
 
         if (nextState & FINAL) != 0 {
@@ -267,7 +267,7 @@ func scanner(s* StringLookahead) AToken {
                 } else {
                     println("error: unknown special. peek: "+Itoa(s.peek())+" state: "+Itoa(state)+" ns: "+Itoa(nextState));
                     println(enumMap[nextState])
-                    return AToken{ Id: ERROR, Val:"col: "+Itoa(colNo), Line: lineNo }
+                    return AToken{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
                 }
             } else {
                 return AToken { Id: nextState, Val: S, Line: lineNo }
@@ -283,7 +283,7 @@ func scanner(s* StringLookahead) AToken {
             } else if (nextchar != ' ' && nextchar != '\t' && nextchar != '\n' && nextchar != ';'){
                 S += string(nextchar)
             }
-            if nextchar == '\n' { lineNo++ }
+            if nextchar == '\n' { lineNo++; colNo=0 }
             if nextchar == EOS {
                 return AToken { Id: EOS, Val: "END", Line: lineNo }
             }
@@ -321,11 +321,9 @@ func tokenizeQspec(q *QuerySpecs) error {
     for {
         t := scanner(input)
         q.ATokArray = append(q.ATokArray, t)
-        //Printf("%10v   %15s  '%s'\n",t,enumMap[t.Id],t.Val)
         if t.Id == ERROR { return errors.New("scanner error: "+t.Val) }
         if t.Id == EOS { break }
     }
-    //Println(q.ATokArray)
     return nil
 }
 
