@@ -6,6 +6,7 @@ import (
   s "strings"
   d "github.com/araddon/dateparse"
   . "strconv"
+  "time"
 )
 
 //copied types from old version
@@ -286,6 +287,9 @@ func preWhere(q* QuerySpecs) error {
     }
     //if found a word, it must be column
     if tok.Id == WORD {
+        //TODO: between
+        if q.APeek().Id == KW_BETWEEN { return preBetween(q) }
+
         ii, err := parseColumnIndex(q)
         if err == nil {
             q.BTokArray = append(q.BTokArray, BToken{BT_WCOL, ii, q.ColSpec.Types[ii]})
@@ -298,7 +302,10 @@ func preWhere(q* QuerySpecs) error {
     if (tok.Id & RELOP) != 0 {
         q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
         q.ANext()
-        return preWhereVal(q)
+        tok,err := tokFromQuotes(q)
+        if err != nil { return err }
+        q.BTokArray = append(q.BTokArray, tok)
+        return preWhere(q)
     }
     //parentheses, logops, negater
     if tok.Id == SP_LPAREN || tok.Id == SP_RPAREN || (tok.Id & LOGOP)!=0 || tok.Id == SP_NEGATE {
@@ -308,8 +315,58 @@ func preWhere(q* QuerySpecs) error {
     }
     return errors.New("Unexpected token in the where section: "+tok.Val)
 }
+//turn between clause into 2 comparisons with parenthese
+func preBetween(q* QuerySpecs) error {
+    var columnVal, val1, val2, relop1, relop2 BToken
+    var firstSmaller bool
+
+    //get comparison column and type
+    ii, err := parseColumnIndex(q)
+    if err != nil { return err }
+    columnVal = BToken{BT_WCOL, ii, q.ColSpec.Types[ii]}
+    lastType = q.ColSpec.Types[ii]
+
+    //eat between token and get comparison values
+    q.ANext()
+    q.ANext()
+    val1, err = tokFromQuotes(q)
+    if err != nil { return err }
+    if q.ATok().Id != KW_AND { return errors.New("Expected 'and' in between clause, got "+q.ATok().Val) }
+    q.ANext()
+    val2, err = tokFromQuotes(q)
+    if err != nil { return err }
+
+    //see which is smaller
+    if val1.Dtype == T_NULL || val2.Dtype == T_NULL { return errors.New("Cannot use 'null' in between clause") }
+    switch val1.Dtype {
+        case T_INT:    firstSmaller = val1.Val.(int) < val2.Val.(int)
+        case T_FLOAT:  firstSmaller = val1.Val.(float64) < val2.Val.(float64)
+        case T_DATE:   firstSmaller = val1.Val.(time.Time).Before(val2.Val.(time.Time))
+        case T_STRING: firstSmaller = val1.Val.(string) < val2.Val.(string)
+    }
+    if firstSmaller {
+        relop1 = BToken{SP_GREATEQ, ">=", 0}
+        relop2 = BToken{SP_LESS, "<", 0}
+    } else {
+        relop1 = BToken{SP_LESS, "<", 0}
+        relop2 = BToken{SP_GREATEQ, ">=", 0}
+    }
+
+    //add tokens to B array
+    q.BTokArray = append(q.BTokArray, BToken{SP_LPAREN, "(", 0})
+    q.BTokArray = append(q.BTokArray, columnVal)
+    q.BTokArray = append(q.BTokArray, relop1)
+    q.BTokArray = append(q.BTokArray, val1)
+    q.BTokArray = append(q.BTokArray, BToken{KW_AND, "and", 0})
+    q.BTokArray = append(q.BTokArray, columnVal)
+    q.BTokArray = append(q.BTokArray, relop2)
+    q.BTokArray = append(q.BTokArray, val2)
+    q.BTokArray = append(q.BTokArray, BToken{SP_RPAREN, ")", 0})
+
+    return preWhere(q)
+}
 //comparison values in where section
-func preWhereVal(q* QuerySpecs) error {
+func tokFromQuotes(q* QuerySpecs) (BToken,error) {
     var good bool
     var tok BToken
     var err error
@@ -323,7 +380,7 @@ func preWhereVal(q* QuerySpecs) error {
         quote := q.ATok().Id
         var S string
         for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
-        if q.ATok().Id == EOS { return errors.New("Quote was not terminated") }
+        if q.ATok().Id == EOS { return tok, errors.New("Quote was not terminated") }
         tok = BToken{BT_WCOMP, S, lastType}
         good = true
     }
@@ -337,12 +394,10 @@ func preWhereVal(q* QuerySpecs) error {
             case T_NULL:   tok.Val = nil
             case T_STRING: tok.Val = tok.Val.(string)
         }
-        if err != nil { return err }
-        q.BTokArray = append(q.BTokArray, tok)
         q.ANext()
-        return preWhere(q)
+        return tok, err
     }
-    return errors.New("Expected a comparision value but got "+q.ATok().Val)
+    return tok, errors.New("Expected a comparision value but got "+q.ATok().Val)
 }
 //modify this if adding 'group by' function. currently order is only thing after where
 func preAfterWhere(q* QuerySpecs) error {

@@ -35,6 +35,7 @@ const (
     KW_BY =       BT_AFTWR|KEYWORD|iota
     KW_DISTINCT = BT_AGG|KEYWORD|iota
     KW_ORDHOW =   KEYWORD|iota
+    KW_BETWEEN =  KEYWORD|iota
     KW_TOP =      BT_SEL|KEYWORD|iota
     //special bits
     SPECIALBIT =  1<<21
@@ -127,6 +128,7 @@ var keywordMap = map[string]int {
     "distinct" :  KW_DISTINCT,
     "top" :       KW_TOP,
     "asc" :       KW_ORDHOW,
+    "between" :   KW_BETWEEN,
     "not" :       SP_NEGATE,
 }
 var specialMap = map[string]int {
@@ -324,6 +326,7 @@ func tokenizeQspec(q *QuerySpecs) error {
         if t.Id == ERROR { return errors.New("scanner error: "+t.Val) }
         if t.Id == EOS { break }
     }
+    //Println(q.ATokArray)
     return nil
 }
 
