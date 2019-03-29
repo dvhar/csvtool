@@ -110,10 +110,10 @@ class TableGrid extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            childId : Math.random(),
-            parentId : Math.random(),
-            headId : Math.random(),
-            headpId : Math.random(),
+            tableBodyId : Math.random(),
+            tableBodyDivId : Math.random(),
+            tableHeadId : Math.random(),
+            tableHeadDivId : Math.random(),
             sortWay : 1
         }
     }
@@ -126,7 +126,7 @@ class TableGrid extends React.Component {
             <th key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
                 {this.props.table.Colnames[ii]}
             </th>
-        )}).concat(<th></th>);
+        )});
         var info = this.props.table.Types.map((name,ii)=>{
             if (this.props.hideColumns[ii]===0) return (
             <td key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
@@ -135,7 +135,7 @@ class TableGrid extends React.Component {
                 - {t[this.props.table.Types[ii]]}
                 </span>
             </td>
-        )}).concat(<th>{"__"}</th>);
+        )});
         return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
     }
     row(row,idx){
@@ -151,15 +151,15 @@ class TableGrid extends React.Component {
             this.props.table.Vals = [];
         return(
         <>
-            <div className="tableDiv tableHeadDiv" id={this.state.headpId}> 
+            <div className="tableDiv tableHeadDiv" id={this.state.tableHeadDivId}> 
             <table className="tableHead">
-                <thead id={this.state.headId}>
+                <thead id={this.state.tableHeadId}>
                 {this.header()}
                 </thead>
             </table>
             </div>
-            <div className="tableDiv tableBodyDiv" id={this.state.parentId}> 
-            <table className="tableBody" id={this.state.childId}>
+            <div className="tableDiv tableBodyDiv" id={this.state.tableBodyDivId}> 
+            <table className="tableBody" id={this.state.tableBodyId}>
                 <tbody>
                 {this.props.table.Vals.map((row,i)=>{return this.row(row,i)})}
                 </tbody>
@@ -169,21 +169,21 @@ class TableGrid extends React.Component {
         )
     }
     resize(){
-        var inner = document.getElementById(this.state.childId);
-        var outter = document.getElementById(this.state.parentId);
-        var headi = document.getElementById(this.state.headId);
-        var heado = document.getElementById(this.state.headpId);
+        var tableBodyDom    = document.getElementById(this.state.tableBodyId);
+        var tableBodyDivDom = document.getElementById(this.state.tableBodyDivId);
+        var tableHeadDom    = document.getElementById(this.state.tableHeadId);
+        var tableHeadDivDom = document.getElementById(this.state.tableHeadDivId);
         var windoww = window.innerWidth;
 
         //get header table and body table cells to line up
-        var tbody = inner.childNodes[0];
+        var tbody = tableBodyDom.childNodes[0];
         if (tbody.childNodes.length > 0 && tbody.childNodes[0].childNodes.length > 0){
             var trow = tbody.childNodes[0].childNodes;
             var bcell, hcell;
             var newWidth;
             for (var i in trow){
                 bcell = trow[i];
-                hcell = headi.childNodes[0].childNodes[i];
+                hcell = tableHeadDom.childNodes[0].childNodes[i];
                 if (bcell.offsetWidth && hcell.offsetWidth){
                     bcell.style.minWidth = hcell.style.minWidth = `0px`;
                     newWidth = max(bcell.offsetWidth, hcell.offsetWidth);
@@ -192,9 +192,15 @@ class TableGrid extends React.Component {
             }
         }
 
-        //give header table and body table same size and make them scroll together
-        outter.style.maxWidth = heado.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
-        outter.addEventListener('scroll',function(){ heado.scrollLeft = outter.scrollLeft; });
+        //give header table and body the right size
+        tableHeadDivDom.style.maxWidth =  tableBodyDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth+15,windoww*1.00)}px`;
+        if (tableBodyDom.offsetWidth > tableBodyDivDom.offsetWidth && tableBodyDom.offsetHeight > tableBodyDivDom.offsetHeight){
+            tableHeadDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth+15,windoww*1.00-30)}px`;
+            tableHeadDivDom.style.margin = 0;
+        } else if (tableBodyDom.offsetHeight <= tableBodyDivDom.offsetHeight)
+            tableHeadDivDom.style.maxWidth =  tableBodyDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth,windoww*1.00)}px`;
+        //make head and body scroll together
+        tableBodyDivDom.addEventListener('scroll',function(){ tableHeadDivDom.scrollLeft = tableBodyDivDom.scrollLeft; });
 
     }
     componentDidUpdate(){ this.resize(); }
