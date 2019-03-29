@@ -67,7 +67,7 @@ export function sortQuery(queryResults,column,way){
     queryResults.Vals.sort(function(a,b){
             var aa = a[column];
             var bb = b[column];
-            if (queryResults.Types[column] == 1 || queryResults.Types[column] == 2)
+            if (queryResults.Types[column] === 1 || queryResults.Types[column] === 2)
                 return way*(Number(aa) > Number(bb) ? 1 : -1);
             return way*(String(aa) > String(bb) ? 1 : -1);
         });

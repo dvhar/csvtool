@@ -2,355 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {postRequest,getUnique,max,getWhere,sortQuery,bit,t} from './utils.js';
-import * as premades from './premades.js';
+import {postRequest,bit} from './utils.js';
+import * as command from './command.js';
+import * as display from './display.js';
+import * as help from './help.js';
 import * as serviceWorker from './serviceWorker';
-//import Websocket from 'react-websocket';
-//import io from 'socket.io-client';
-//const socket = io('/socket/');
-//socket.on('connect', function(){console.log("connected to socket");});
-//socket.on('event', function(data){console.log(data);});
-//socket.on('disconnect', function(){console.log("disconnected from socket");});
 
-class DropdownQueryTextbox extends React.Component {
-    constructor(props){
-        super(props);
-        this.state = {clicked:this.props.open?1:0}
-    }
-    render(){
-        var arrow = <span className={this.state.clicked==1?"dim":""}>{"\u25bc"}</span>
-        return(
-            <div className="dropmenu queryMenuDiv">
-                <div className="dropButton queryMenuButton" onClick={()=>{this.setState({clicked:this.state.clicked^1})}}>
-                    <h2>{this.props.title}{arrow}</h2>
-                </div>
-                <div className={`dropmenu-content ${this.state.clicked==1?"show":""}`}>
-                <textarea rows="10" className="queryTextEntry" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
-                </textarea>
-                <br/>
-                <button onClick={()=>{
-                    var query = document.getElementById("textBoxId").value;
-                    this.props.submit({query : query});
-                }}>Submit Query</button>
-                <button onClick={()=>{ this.props.send({Type : bit.SK_STOP}); }}>Cancel Query</button>
-                </div>
-            </div>
-        );
-    }
-    componentDidMount(){ console.log("mounted dq box"); }
-}
-
-function DropdownQueryMenu(props){
-    return(
-        <div className="dropmenu queryMenuDiv">
-            <div className="dropButton queryMenuButton">
-                {props.title}
-            </div>
-            <div className="dropmenu-content">
-            <select size={String(props.size)} className="dropSelect" id="premadeMultiSelect" multiple>
-                {props.contents.map((v,i)=><option key={i} data-key={v.key} data-idx={i}>{v.label}</option>)}
-            </select>
-            <button onClick={()=>{
-                    var queries = "";
-                    var selected = document.getElementById("premadeMultiSelect").selectedOptions;
-                    for (var i in selected)
-                        if (i == Number(i))
-                            queries += premades.metaDataQueries[selected[i].getAttribute("data-idx")].query;
-                    props.submit({query : queries});
-                }}
-            >Submit</button>
-            </div>
-        </div>
-    )
-}
-
-
-//drop down list for what columns to hide
-class TableSelectColumns extends React.Component {
-    constructor(props){
-        super(props);
-        this.state = {
-            title: this.props.title,
-        }
-    }
-    dropItem(choice,idx,order){
-        if (choice !== null)
-        return (
-            <option className={`tableButton1${this.props.hideColumns[idx]?" hiddenColumn":""}`} key={idx} onClick={()=>this.props.toggleColumn(idx)}>
-                {choice}
-            </option>
-        )
-    }
-
-    SelectColumnDropdown(title, size, contents){
-        return(
-            <div className="dropmenu tableModDiv">
-                <div className="dropButton tableModButton">
-                    {title}
-                </div>
-                <div className="dropmenu-content absolute-pos tableModDrop">
-                <select size={String(size)} className="dropSelect">
-                    {contents}
-                </select>
-                </div>
-            </div>
-        )
-    }
-
-    render(){
-        return (
-            <div className="dropmenu tableModDiv">
-                <div className="dropButton tableModButton">
-                    {this.props.title}
-                </div>
-                <div className="dropmenu-content absolute-pos tableModDrop">
-                <select size={String(Math.min(20,this.props.table.Colnames.length))} className="dropSelect">
-                    {this.props.table.Colnames.map((name,i)=>this.dropItem(name,i))}
-                </select>
-                </div>
-            </div>
-        )
-    }
-}
-
-//drop down list for choosing section of table
-//required props: title, table, firstDropItems, secondDropItems, dropAction
-class TableSelectRows extends React.Component {
-    constructor(props){
-        super(props);
-        this.state = {
-            title: this.props.title,
-            secondDrop : false,
-            firstChoice : "",
-            secondDropItems : [],
-        }
-    }
-    dropItem(choice,idx,order){
-        if (choice !== null)
-        return (
-            <option className="tableButton1" key={idx} onClick={()=>{ 
-                    switch (order){
-                        case 'first':
-                            this.setState({secondDrop:true,
-                                           firstChoice: choice,
-                                           secondDropItems: getUnique(this.props.table,choice) }); 
-                            break;
-                        case 'second':
-                            this.props.dropAction(this.state.firstChoice,choice);
-                            break;
-                    }
-                }}>
-                {choice}
-            </option>
-        )
-    }
-    render(){
-        var dropdowns = [
-                <select className="dropSelect" size={Math.min(20,this.props.firstDropItems.length)}>
-                    {this.props.firstDropItems.map((name,i)=>this.dropItem(name,i,'first'))}
-                </select>
-        ];
-        if (this.state.secondDrop)
-            dropdowns.push(
-                <select className="dropSelect" size={Math.min(20,this.state.secondDropItems.length+1)}>
-                    {["*"].concat(this.state.secondDropItems.sort()).map((name,i)=>this.dropItem(name,i,'second'))}
-                </select>
-            );
-        return (
-            <div className="dropmenu tableModDiv">
-                <div className="dropButton tableModButton">
-                {this.props.title}
-                </div>
-                <div className="dropmenu-content absolute-pos tableModDrop">
-                {dropdowns}
-                </div>
-            </div>
-        )
-    }
-}
-
-//display html table of sql query
-//required props: hideColumns, table
-class TableGrid extends React.Component {
-    constructor(props){
-        super(props);
-        this.state = {
-            childId : Math.random(),
-            parentId : Math.random(),
-            headId : Math.random(),
-            headpId : Math.random(),
-            sortWay : 1
-        }
-    }
-    sorter(ii){
-        sortQuery(this.props.table,ii,this.state.sortWay);this.setState({sortWay:this.state.sortWay*-1});
-    }
-    header(){
-        var names = this.props.table.Colnames.map((name,ii)=>{
-            if (this.props.hideColumns[ii]===0) return (
-            <th key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
-                {this.props.table.Colnames[ii]}
-            </th>
-        )}).concat(<th></th>);
-        var info = this.props.table.Types.map((name,ii)=>{
-            if (this.props.hideColumns[ii]===0) return (
-            <td key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
-                {`${this.props.table.Pos[ii]} `}
-                <span className="noselect">
-                - {t[this.props.table.Types[ii]]}
-                </span>
-            </td>
-        )}).concat(<th>{"__"}</th>);
-        return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
-    }
-    row(row,idx){
-        return( 
-            <tr key={idx} className="tableRow"> 
-                {row.map((name,idx)=>{ 
-                    if (this.props.hideColumns[idx]===0) return( <td key={idx} className="tableCell"> {name} </td>) })}
-            </tr>
-        )
-    }
-    render(){
-        if (this.props.table.Vals === null)
-            this.props.table.Vals = [];
-        return(
-        <>
-            <div className="tableDiv tableHeadDiv" id={this.state.headpId}> 
-            <table className="tableHead">
-                <thead id={this.state.headId}>
-                {this.header()}
-                </thead>
-            </table>
-            </div>
-            <div className="tableDiv tableBodyDiv" id={this.state.parentId}> 
-            <table className="tableBody" id={this.state.childId}>
-                <tbody>
-                {this.props.table.Vals.map((row,i)=>{return this.row(row,i)})}
-                </tbody>
-            </table>
-            </div>
-        </>
-        )
-    }
-    resize(){
-        var inner = document.getElementById(this.state.childId);
-        var outter = document.getElementById(this.state.parentId);
-        var headi = document.getElementById(this.state.headId);
-        var heado = document.getElementById(this.state.headpId);
-        var windoww = window.innerWidth;
-
-        //get header table and body table cells to line up
-        var tbody = inner.childNodes[0];
-        if (tbody.childNodes.length > 0 && tbody.childNodes[0].childNodes.length > 0){
-            var trow = tbody.childNodes[0].childNodes;
-            var bcell, hcell;
-            var newWidth;
-            for (var i in trow){
-                bcell = trow[i];
-                hcell = headi.childNodes[0].childNodes[i];
-                if (bcell.offsetWidth && hcell.offsetWidth){
-                    bcell.style.minWidth = hcell.style.minWidth = `0px`;
-                    newWidth = max(bcell.offsetWidth, hcell.offsetWidth);
-                        bcell.style.minWidth = hcell.style.minWidth = `${newWidth+1}px`;
-                }
-            }
-        }
-
-        //give header table and body table same size and make them scroll together
-        outter.style.maxWidth = heado.style.maxWidth = `${Math.min(inner.offsetWidth+20,windoww*1.00)}px`;
-        outter.addEventListener('scroll',function(){ heado.scrollLeft = outter.scrollLeft; });
-
-    }
-    componentDidUpdate(){ this.resize(); }
-    componentDidMount(){ this.resize(); }
-}
-
-//query results section
-class QueryRender extends React.Component {
-    toggleColumn(column){
-        this.props.hideColumns[column] ^= 1;
-        this.forceUpdate();
-    }
-    render(){
-        return ( 
-        <div className="viewContainer">
-            <div className="tableModifiers">
-                <div className="tableQuery"> {this.props.table.Query} </div>
-                <TableSelectRows 
-                    title = {"Show with column value\u25bc"}
-                    dropAction = {(column,value)=>{this.props.rows.col=column;this.props.rows.val=value;this.forceUpdate();}}
-                    table = {this.props.table}
-                    firstDropItems = {this.props.table.Colnames}
-                />
-                <TableSelectColumns
-                    title = {"Show/Hide columns\u25bc"}
-                    table = {this.props.table}
-                    hideColumns = {this.props.hideColumns}
-                    toggleColumn = {(i)=>this.toggleColumn(i)}
-                />    
-                <div className="dropmenu tableModDiv">
-                    <div className="dropButton tableModButton">
-                        <span>Rows: {this.props.table.Numrows}</span>
-                    </div>
-                </div>
-            </div>
-            <TableGrid
-                table = {getWhere(this.props.table,this.props.rows.col,this.props.rows.val)}
-                hideColumns = {this.props.hideColumns}
-                toggleColumn = {(i)=>this.toggleColumn(i)}
-            />
-        </div>
-        )
-    }
-}
-
-class QuerySelect extends React.Component {
-    render(){
-        var sqlServerMetaDataMenu = ( <div className="queryMenuContainer"> 
-                         <DropdownQueryMenu
-                            title = {<h2>View database schema query{"\u25bc"}</h2>}
-                            size = {premades.metaDataQueries.length}
-                            //make this run multi-select queries
-                            contents = {premades.metaDataQueries}
-                            submit = {(query)=>this.props.submitQuery(query)}
-                         />
-                     </div>);
-
-        var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
-                         <DropdownQueryTextbox
-                            title = {<>Enter SQL Query</>}
-                            submit = {(query)=>this.props.submitQuery(query)}
-                            s = {this.props.s}
-                            open = {false}
-                         />
-                     </div>);
-
-        var csvCustomQueryEntry = ( <div className="queryMenuContainer"> 
-                         <DropdownQueryTextbox
-                            title = {<>Enter CSV Query</>}
-                            submit = {this.props.submitQuery}
-                            send = {this.props.sendSocket}
-                            s = {this.props.s}
-                            open = {true}
-                         />
-                     </div>);
-
-        var selectors = [];
-
-        if (this.props.s.mode === "MSSQL")
-            selectors.push(sqlServerMetaDataMenu, sqlServerCustomQueryEntry);
-        else
-            selectors.push(csvCustomQueryEntry);
-
-        return (
-            <div className="querySelect"> 
-            {selectors} 
-            {this.props.showQuery} 
-            </div>
-        );
-    }
-}
 
 class TopMenuBar extends React.Component {
     render(){
@@ -375,6 +32,10 @@ class TopMenuBar extends React.Component {
             />
             <Saver
                 changeTopDrop = {this.props.changeTopDrop}
+            />
+            <Helper
+                showHelp = {this.props.showHelp}
+                toggleHelp = {this.props.toggleHelp}
             />
             {/*
             <Opener
@@ -425,8 +86,8 @@ class TopDropdown extends React.Component {
 
             openShow : (
                 <div id="openShow" className="fileSelectShow dropContent">
-                    <p className="dropContent">This is for opening JSON files saved by this program. If you want to open a CSV, run a query on it.</p> 
-                    <input id="openPath" className="pathInput" type="text" className="dropContent"/>
+                    <p className="dropContent">{"This is for opening JSON files saved by this program. If you want to open a CSV, run a query on it."}</p> 
+                    <input id="openPath" className="pathInput dropContent" type="text"/>
                     <button className="" onClick={()=>{
                         var path = document.getElementById("openPath").value;
                         this.props.submitQuery({fileIO : bit.F_OPEN, filePath : path});
@@ -434,28 +95,11 @@ class TopDropdown extends React.Component {
                 </div>
             ),
 
-            /*
-            saveShow : (
-                <div id="saveShow" className="fileSelectShow dropContent">
-                    <label className="dropContent">Save file:</label> 
-                    <input id="savePath" className="pathInput" type="text" className="dropContent"/>
-                    <button className="" onClick={()=>{
-                        var jradio = document.getElementById("jradio").checked;
-                        var path = document.getElementById("savePath").value;
-                        this.props.changeSavePath(path);
-                        var filetype = jradio? bit.F_JSON : bit.F_CSV;
-                        this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|filetype, filePath : path});
-                    }}>save</button><br/>
-                    <input className="dropContent saveRadio" name="ftype" type="radio" id="cradio" value="CSV"/>CSV - Save queries on page to their own csv file. A number will be added to file name if more than 1.<br/>
-                    <input className="dropContent saveRadio" name="ftype" type="radio" id="jradio" value="JSON"/>JSON - Save queries on page to single json file.<br/>
-                </div>
-            ),*/
-
             saveShow : (
                 <div id="saveShow" className="fileSelectShow dropContent">
                     <p className="dropContent">Save queries on page to their own csv file. A number will be added to file name if more than 1.</p> 
                     <label className="dropContent">Save file:</label> 
-                    <input id="savePath" className="pathInput" type="text" className="dropContent"/>
+                    <input id="savePath" className="pathInput dropContent" type="text"/>
                     <button className="" onClick={()=>{
                         var path = document.getElementById("savePath").value;
                         this.props.changeSavePath(path);
@@ -514,12 +158,13 @@ class TopDropdown extends React.Component {
             case "loginShow":
                 document.getElementById("dbUrl").value = "";
                 document.getElementById("dbName").value = "";
-            default: break;
+                break;
         }
     }
     componentDidMount(){ this.defValue(); }
     componentDidUpdate(){ this.defValue(); }
 }
+/*
 class ModeSelect extends React.Component {
     toggleForm(){ this.props.changeTopDrop("modeShow");}
     render(){
@@ -537,11 +182,19 @@ class Opener extends React.Component {
         )
     }
 }
-
+*/
 class Saver extends React.Component {
     toggleForm(){ this.props.changeTopDrop("saveShow");}
     render(){
         return( <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>)
+    }
+}
+
+class Helper extends React.Component {
+    render(){
+        var label = "Help";
+        if (this.props.showHelp) label = "Hide Help";
+        return( <button className="topButton dropContent" id="saveButton" onClick={()=>this.props.toggleHelp()}>{label}</button>)
     }
 }
 
@@ -572,6 +225,7 @@ class Main extends React.Component {
             queryHistory: ['',],
             historyPosition : 0,
             showQuery : <></>,
+            showHelp : 0,
         }
         this.topDropReset = this.topDropReset.bind(this);
 
@@ -594,7 +248,7 @@ class Main extends React.Component {
         else if (results.Status & bit.DAT_GOOD){
             this.setState({
                 showQuery : results.Entries.map(
-                    tab => <QueryRender 
+                    tab => <display.QueryRender 
                                table = {tab} 
                                hideColumns = {new Int8Array(tab.Numcols)}
                                rows = {new Object({col:"",val:"*"})}
@@ -648,8 +302,14 @@ class Main extends React.Component {
             changeSavePath = {(path)=>this.setState({ savepath : path })}
             changeMode = {(mode)=>this.changeMode(mode)}
             changeTopDrop = {(section)=>this.setState({ topDropdown : section })}
+            toggleHelp = {()=>{this.setState({showHelp:this.state.showHelp^1})}}
+            showHelp = {this.state.showHelp}
         />
-        <QuerySelect
+        <help.Help
+            show = {this.state.showHelp}
+            toggleHelp = {()=>{this.setState({showHelp:this.state.showHelp^1})}}
+        />
+        <command.QuerySelect
             s = {this.state}
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
             submitQuery = {(query)=>this.submitQuery(query)}
@@ -673,10 +333,6 @@ class Main extends React.Component {
             switch (dat.Type) {
                 case bit.SK_MSG:
                     that.setState({ topMessage : dat.Text }); 
-                    break;
-                case bit.SK_PING:
-                    that.ws.send(JSON.stringify({Type:2, Text:"pong"}));
-                default:
                     break;
             }
         }

@@ -197,3 +197,16 @@ html {
 
 .noselect {
   user-select: none; }
+
+.helpBox {
+  display: block;
+  position: fixed;
+  width: 90%;
+  left: 5%;
+  height: 90%;
+  border: 1px solid black;
+  background-color: beige;
+  margin: auto;
+  border-radius: 1em;
+  padding: 1em;
+  overflow-y: scroll; }
