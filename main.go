@@ -4,6 +4,7 @@ import (
     //"github.com/Jeffail/gabs"
     "database/sql"
     "regexp"
+    "runtime"
     "net/url"
     "strings"
     "errors"
@@ -135,8 +136,15 @@ func main() {
     //initialize file paths
     cwd, err := os.Getwd()
     if err == nil {
-        FPaths.OpenPath = cwd + "/"
-        FPaths.SavePath  = cwd + "/"
+        switch runtime.GOOS {
+        case "windows":
+            FPaths.OpenPath = cwd + "\\"
+            FPaths.SavePath  = cwd + "\\"
+        case "darwin": fallthrough
+        default:
+            FPaths.OpenPath = cwd + "/"
+            FPaths.SavePath  = cwd + "/"
+        }
         FPaths.Status = 0
     } else {
         FPaths.Status = FP_OERROR | FP_SERROR

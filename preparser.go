@@ -1,3 +1,4 @@
+//file provides the preParseTokens function
 package main
 import (
   "encoding/csv"
@@ -9,7 +10,6 @@ import (
   "time"
 )
 
-//copied types from old version
 type QuerySpecs struct {
     ColSpec Columns
     Fname string
@@ -55,7 +55,6 @@ const (
     T_FLOAT = iota
     T_DATE = iota
     T_STRING = iota
-    T_UNKNOWN = iota
 )
 type BToken struct {
     Id int
@@ -74,9 +73,8 @@ func getColumnIdx(colNames []string, column string) (int, error) {
     }
     return 0, errors.New("getColumnIdx: column " + column + " not found")
 }
-//end of copy types
 
-//get column types from file name
+//get column types from first 10000 rows
 func inferTypes(q *QuerySpecs) error {
 
     //open file

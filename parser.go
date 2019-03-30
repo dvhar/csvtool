@@ -209,6 +209,7 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     match := false
     negate := 0
     compCol := q.BTok()
+    //flip result if 'not' or '!' in front of relop
     if q.BPeek().Id == SP_NEGATE {
         negate ^= 1
         q.BNext()
@@ -218,6 +219,7 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     if (relop.Id & RELOP) == 0  { return false, errors.New("Bad relational operator. Valid ones are =, !=, <>, >, >=, <, <=") }
     if compVal.Id != BT_WCOMP { return false, errors.New("Expected comparision value but got "+Sprint(compVal.Val)) }
 
+    //if neither comparison value or column are null
     if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] != nil {
         switch relop.Val.(string) {
             case "<>": negate ^= 1
@@ -249,13 +251,20 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
                 }
         }
 
-    //if comparing to null
+    //if comparison value is null
     } else if compVal.Val == nil {
         switch relop.Val.(string) {
             case "<>": negate ^= 1
                        fallthrough
             case "=" : match = (*fromRow)[compCol.Val.(int)] == nil
             default  : return false, errors.New("Invalid operation with null: "+relop.Val.(string)+". Valid operators: = != <>")
+        }
+    //if only column is null
+    } else if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] == nil  {
+        switch relop.Val.(string) {
+            case "<>": negate ^= 1
+                       fallthrough
+            default: match = false
         }
     }
     //Println(relop,negate,match,compVal,(*fromRow)[compCol.Val.(int)])
