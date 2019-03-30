@@ -136,6 +136,8 @@ export const bit = {
     SK_PING         : 1,
     SK_PONG         : 2,
     SK_STOP         : 3,
+    SK_DIRLIST      : 4,
+    SK_FILECLICK    : 5,
 
     T_NULL          : 0,
     T_INT           : 1,

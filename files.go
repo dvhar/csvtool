@@ -225,3 +225,10 @@ func pathChecker(savePath string) error {
     if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.csv` }
     return nil
 }
+
+func fileBrowser() error {
+    for c := range fileclick {
+        Println(c)
+    }
+    return nil
+}

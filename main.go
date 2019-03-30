@@ -122,12 +122,14 @@ var FPaths FilePaths
 var messager chan string
 var saver chan chanData
 var savedLine chan bool
+var fileclick chan string
 var browsersOpen = 0
 
 func main() {
     //get password and other flags
     flag.Parse()
     messager = make(chan string)
+    fileclick = make(chan string)
     saver = make(chan chanData)
     savedLine = make(chan bool)
     go realtimeCsvSaver()

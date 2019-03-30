@@ -171,6 +171,17 @@ html {
 .saveRadio {
   margin: 0.6em; }
 
+.fileBrowser {
+  min-width: 40em;
+  max-height: 30em; }
+
+.browseDirs {
+  width: 90%;
+  height: 80%;
+  background-color: white;
+  border: 1px solid black;
+  color: darkblue; }
+
 .modeShow {
   padding: 0.3em;
   background: #fdffe5;

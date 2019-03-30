@@ -22,6 +22,8 @@ const (
     SK_PING = iota
     SK_PONG = iota
     SK_STOP = iota
+    SK_DIRLIST = iota
+    SK_FILECLICK = iota
 )
 type Client struct {
     conn *websocket.Conn
@@ -67,9 +69,13 @@ func (c* Client) reader(){
             return
         }
         json.Unmarshal(messageBytes, &message)
+        Printf("%+v\n",message)
         switch message.Type {
             case SK_STOP:
                 if active { stop = 1 }
+            case SK_FILECLICK:
+                fileclick <- message.Text
+                println("clicked: "+message.Text);
         }
     }
 }
@@ -77,7 +83,10 @@ func (c* Client) reader(){
 //each new client gets a websocket
 func socketHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
-        upgrader := websocket.Upgrader{} // use default options
+        upgrader := websocket.Upgrader{
+            ReadBufferSize:  2048,
+            WriteBufferSize: 2048,
+        }
         sconn, err := upgrader.Upgrade(w, r, nil)
         if err != nil {
             Println("upgrade:", err)
