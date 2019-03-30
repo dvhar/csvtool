@@ -124,6 +124,7 @@ var saver chan chanData
 var savedLine chan bool
 var fileclick chan string
 var browsersOpen = 0
+var slash string
 
 func main() {
     //get password and other flags
@@ -133,20 +134,21 @@ func main() {
     saver = make(chan chanData)
     savedLine = make(chan bool)
     go realtimeCsvSaver()
+    go fileBrowser()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
     //initialize file paths
     cwd, err := os.Getwd()
     if err == nil {
         switch runtime.GOOS {
-        case "windows":
-            FPaths.OpenPath = cwd + "\\"
-            FPaths.SavePath  = cwd + "\\"
-        case "darwin": fallthrough
-        default:
-            FPaths.OpenPath = cwd + "/"
-            FPaths.SavePath  = cwd + "/"
+            case "windows":
+                slash = "\\"
+            case "darwin": fallthrough
+            default:
+                slash = "/"
         }
+        FPaths.OpenPath = cwd + slash
+        FPaths.SavePath  = cwd + slash
         FPaths.Status = 0
     } else {
         FPaths.Status = FP_OERROR | FP_SERROR

@@ -226,9 +226,43 @@ func pathChecker(savePath string) error {
     return nil
 }
 
+type Directory struct {
+    Path string
+    Parent string
+    Files []string
+    Dirs []string
+}
 func fileBrowser() error {
-    for c := range fileclick {
-        Println(c)
+    extension := regexp.MustCompile(`\.csv$`)
+    var thisDir Directory
+
+    for path := range fileclick {
+
+        thisDir = Directory{}
+
+        //clean clicked path and get parent
+        path := filepath.Clean(path)
+        files, _ := filepath.Glob(path+slash+"*")
+
+        thisDir.Path = path
+        thisDir.Parent = filepath.Dir(path)
+
+        //get subdirs and csv files
+        for _,file := range files {
+            ps, err := os.Stat(file)
+            if err != nil { continue }
+            if ps.Mode().IsDir() {
+                println("D: "+file)
+                thisDir.Dirs = append(thisDir.Dirs, file)
+            } else if extension.MatchString(file) {
+                println("F: "+file)
+                thisDir.Files = append(thisDir.Files, file)
+            }
+        }
+
+        Println(thisDir)
+
     }
+
     return nil
 }

@@ -173,6 +173,7 @@ class Browser extends React.Component {
         this.state = {
             defaultPath : this.props.path || "/home/dave/",
         }
+        this.props.send({Type : bit.SK_FILECLICK, Text : this.state.defaultPath});
     }
     render(){
         return (
@@ -180,7 +181,7 @@ class Browser extends React.Component {
             <p className="dropContent">Browse files</p> 
             <div className="browseDirs dropContent">
             <span className="dropContent" onClick={()=>{
-                this.props.send({Type : bit.SK_STOP});
+                this.props.send({Type : bit.SK_FILECLICK, Text : this.state.defaultPath});
             }}>{this.state.defaultPath}</span>
             </div>
         </div>

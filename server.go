@@ -69,13 +69,13 @@ func (c* Client) reader(){
             return
         }
         json.Unmarshal(messageBytes, &message)
-        Printf("%+v\n",message)
+        //Printf("%+v\n",message)
         switch message.Type {
             case SK_STOP:
                 if active { stop = 1 }
+                println("stopped");
             case SK_FILECLICK:
                 fileclick <- message.Text
-                println("clicked: "+message.Text);
         }
     }
 }
