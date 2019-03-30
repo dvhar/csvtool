@@ -123,6 +123,7 @@ var messager chan string
 var saver chan chanData
 var savedLine chan bool
 var fileclick chan string
+var directory chan Directory
 var browsersOpen = 0
 var slash string
 
@@ -131,6 +132,7 @@ func main() {
     flag.Parse()
     messager = make(chan string)
     fileclick = make(chan string)
+    directory = make(chan Directory)
     saver = make(chan chanData)
     savedLine = make(chan bool)
     go realtimeCsvSaver()

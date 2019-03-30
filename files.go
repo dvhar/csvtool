@@ -252,15 +252,12 @@ func fileBrowser() error {
             ps, err := os.Stat(file)
             if err != nil { continue }
             if ps.Mode().IsDir() {
-                println("D: "+file)
                 thisDir.Dirs = append(thisDir.Dirs, file)
             } else if extension.MatchString(file) {
-                println("F: "+file)
                 thisDir.Files = append(thisDir.Files, file)
             }
         }
-
-        Println(thisDir)
+        directory <- thisDir
 
     }
 

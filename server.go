@@ -34,6 +34,10 @@ type sockMessage struct {
     Type int
     Text string
 }
+type sockDirMessage struct {
+    Type int
+    Dir Directory
+}
 //write loop for each websocket client
 func (c* Client) writer(){
     ticker := time.NewTicker(time.Second)
@@ -44,15 +48,21 @@ func (c* Client) writer(){
         ticker.Stop()
     }()
     var sendSock sockMessage
+    var sendDirSock sockDirMessage
     var sendBytes []byte
     for {
         select {
             case msg := <-messager:
                 sendSock = sockMessage{ Type: SK_MSG, Text:msg }
+                sendBytes,_ = json.Marshal(sendSock)
             case <-ticker.C:
                 sendSock = sockMessage{ Type: SK_PING }
+                sendBytes,_ = json.Marshal(sendSock)
+            case dir := <-directory:
+                sendDirSock = sockDirMessage{ Type: SK_DIRLIST, Dir: dir }
+                Println(sendDirSock)
+                sendBytes,_ = json.Marshal(sendDirSock)
         }
-        sendBytes,_ = json.Marshal(sendSock)
         err := c.conn.WriteMessage(1, sendBytes)
         if err != nil { println("socket writer failed"); return }
     }
@@ -273,7 +283,6 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
         ret.SavePath = FPaths.SavePath
         ret.OpenPath = FPaths.OpenPath
         ret.Status = FPaths.Status
-        println("s: "+ ret.SavePath + "\no: " +ret.OpenPath)
 
         full_json,_ := json.Marshal(ret)
         Fprint(w, string(full_json))

@@ -136,7 +136,7 @@ class Main extends React.Component {
                     that.setState({ topMessage : dat.Text }); 
                     break;
                 case bit.SK_DIRLIST:
-                    console.log(dat.Text);
+                    console.log(dat);
             }
         }
         this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 
