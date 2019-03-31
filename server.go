@@ -83,9 +83,8 @@ func (c* Client) reader(){
         switch message.Type {
             case SK_STOP:
                 if active { stop = 1 }
-                println("stopped");
             case SK_FILECLICK:
-                fileclick <- message.Text
+                go fileBrowser(message.Text)
         }
     }
 }

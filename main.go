@@ -136,7 +136,6 @@ func main() {
     saver = make(chan chanData)
     savedLine = make(chan bool)
     go realtimeCsvSaver()
-    go fileBrowser()
     if *dbpass == "" { *dbpass = os.Getenv("MSSQL_CLI_PASSWORD") }
 
     //initialize file paths

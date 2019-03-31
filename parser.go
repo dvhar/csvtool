@@ -73,6 +73,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     }()
     cread.Read()
     rowsChecked := 0
+    stop = 0
     for j:=0;j<limit; {
 
         //watch out for memory ceiling

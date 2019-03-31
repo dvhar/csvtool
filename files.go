@@ -226,40 +226,32 @@ func pathChecker(savePath string) error {
     return nil
 }
 
+//payload type sent to the browser
 type Directory struct {
     Path string
     Parent string
     Files []string
     Dirs []string
 }
-func fileBrowser() error {
+//send directory payload to socket writer when given a path
+func fileBrowser(path string) {
     extension := regexp.MustCompile(`\.csv$`)
-    var thisDir Directory
 
-    for path := range fileclick {
+    //clean directory path, get parent, and prepare output
+    path = filepath.Clean(path)
+    files, _ := filepath.Glob(path+slash+"*")
+    thisDir := Directory{Path: path, Parent: filepath.Dir(path)}
 
-        thisDir = Directory{}
-
-        //clean clicked path and get parent
-        path := filepath.Clean(path)
-        files, _ := filepath.Glob(path+slash+"*")
-
-        thisDir.Path = path
-        thisDir.Parent = filepath.Dir(path)
-
-        //get subdirs and csv files
-        for _,file := range files {
-            ps, err := os.Stat(file)
-            if err != nil { continue }
-            if ps.Mode().IsDir() {
-                thisDir.Dirs = append(thisDir.Dirs, file)
-            } else if extension.MatchString(file) {
-                thisDir.Files = append(thisDir.Files, file)
-            }
+    //get subdirs and csv files
+    for _,file := range files {
+        ps, err := os.Stat(file)
+        if err != nil { continue }
+        if ps.Mode().IsDir() {
+            thisDir.Dirs = append(thisDir.Dirs, file)
+        } else if extension.MatchString(file) {
+            thisDir.Files = append(thisDir.Files, file)
         }
-        directory <- thisDir
-
     }
 
-    return nil
+    directory <- thisDir
 }
