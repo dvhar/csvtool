@@ -18,6 +18,7 @@ export class TopMenuBar extends React.Component {
                 openpath = {this.props.s.openpath}
                 savepath = {this.props.s.savepath}
                 sendSocket = {this.props.sendSocket}
+                openDirlist = {this.props.openDirlist}
             />
             <LoginForm
                 changeTopDrop = {this.props.changeTopDrop}
@@ -106,7 +107,7 @@ class TopDropdown extends React.Component {
 
             browseShow : ( <Browser
                                 path = {this.props.openpath}
-                                dirlist = {this.props.dirlist}
+                                openDirlist = {this.props.openDirlist}
                                 send = {this.props.sendSocket}
                             /> ),
 
@@ -166,26 +167,72 @@ class TopDropdown extends React.Component {
     componentDidMount(){ this.defValue(); }
     componentDidUpdate(){ this.defValue(); }
 }
+
+class FileSelector extends React.Component {
+    constructor(props){
+        super(props);
+        this.state = { rowId : Math.random(), }
+    }
+    render() {
+        return (
+        <>
+            <input type="hidden" value={this.props.path} id={this.state.rowId}/>
+            <span className="dropContent browseFile browseEntry" onClick={()=>{
+                var item = document.getElementById(this.state.rowId);    
+                item.select();
+                document.execCommand("copy");
+            }} 
+            >{this.props.path}</span>
+        </>
+        )
+    }
+}
 //file browser
 class Browser extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            defaultPath : this.props.path || "/home/dave/",
+            defaultPath : this.props.openDirlist.Path || "/",
         }
         this.props.send({Type : bit.SK_FILECLICK, Text : this.state.defaultPath});
     }
+    clickPath(path){
+        console.log("clicked");
+        this.setState({ defaultPath : path });
+        this.props.send({Type : bit.SK_FILECLICK, Text : path});
+    }
+    dirlist(){
+        if (this.props.openDirlist.Dirs) return (
+        this.props.openDirlist.Dirs.map(path => <span className="dropContent browseDir browseEntry" onClick={()=>this.clickPath(path)}>{path}</span>)
+        );
+    }
+    filelist(){
+        if (this.props.openDirlist.Files) return (
+        this.props.openDirlist.Files.map(path => <FileSelector path={path} />)
+        );
+    }
+
     render(){
         return (
         <div id="browseShow" className="fileSelectShow fileBrowser dropContent">
             <p className="dropContent">Browse files</p> 
-            <div className="browseDirs dropContent">
-            <span className="dropContent" onClick={()=>{
-                this.props.send({Type : bit.SK_FILECLICK, Text : this.state.defaultPath});
-            }}>{this.state.defaultPath}</span>
+            <div className="browseDirs dropContent" id="innerBrowser">
+            <span className="dropContent browseDir browseEntry" onClick={()=>{ this.clickPath(this.props.openDirlist.Parent);
+            }}><b>←</b></span>
+            <span className="dropContent browseDir browseCurrent">{this.props.openDirlist.Path}</span>
+            {this.dirlist()}
+            {this.filelist()}
             </div>
         </div>
         )
+    }
+    componentDidUpdate(){
+        var innerBox = document.getElementById("innerBrowser");
+        var outterBox = document.getElementById("browseShow");
+        var size = outterBox.offsetHeight;
+        if (innerBox.offsetHeight > 480){
+            innerBox.style.height = `${size-80}px`;
+        }
     }
 }
 /*

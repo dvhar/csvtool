@@ -224,11 +224,26 @@ html {
     max-height: 30em;
 }
 .browseDirs {
-    width: 90%;
     height: 80%;
     background-color: white;
     border: 1px solid black;
+    overflow: scroll;
+}
+.browseDir {
+    display: block;
+    width: 100%;
     color: darkblue;
+}
+.browseFile {
+    display: block;
+    width: 100%;
+    color: darkGreen;
+}
+.browseCurrent {
+    background: #aff;
+}
+.browseEntry:hover {
+    background-color: bisque;
 }
 
 //mode select section

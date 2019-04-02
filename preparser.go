@@ -285,7 +285,7 @@ func preWhere(q* QuerySpecs) error {
     }
     //if found a word, it must be column
     if tok.Id == WORD {
-        //TODO: between
+        //between
         if q.APeek().Id == KW_BETWEEN { return preBetween(q) }
 
         ii, err := parseColumnIndex(q)
