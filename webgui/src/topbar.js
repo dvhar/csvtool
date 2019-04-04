@@ -15,10 +15,10 @@ export class TopMenuBar extends React.Component {
                 submitQuery = {this.props.submitQuery}
                 mode = {this.props.s.mode}
                 section = {this.props.s.topDropdown}
-                openpath = {this.props.s.openpath}
                 savepath = {this.props.s.savepath}
                 sendSocket = {this.props.sendSocket}
                 openDirlist = {this.props.openDirlist}
+                changeOpenPath = {this.props.changeOpenPath}
             />
             <LoginForm
                 changeTopDrop = {this.props.changeTopDrop}
@@ -106,9 +106,9 @@ class TopDropdown extends React.Component {
             ),
 
             browseShow : ( <Browser
-                                path = {this.props.openpath}
                                 openDirlist = {this.props.openDirlist}
                                 send = {this.props.sendSocket}
+                                changeOpenPath = {this.props.changeOpenPath}
                             /> ),
 
             loginShow : (
@@ -191,14 +191,15 @@ class FileSelector extends React.Component {
 class Browser extends React.Component {
     constructor(props) {
         super(props);
+        this.props.send({Type : bit.SK_FILECLICK, Text : this.props.openDirlist.Path});
+        this.handleChange = this.handleChange.bind(this);
         this.state = {
-            defaultPath : this.props.openDirlist.Path || "/",
-        }
-        this.props.send({Type : bit.SK_FILECLICK, Text : this.state.defaultPath});
+            innerBoxId : Math.random(),
+            outterBoxId : Math.random(),
+            currentDirId : Math.random(),
+        };
     }
     clickPath(path){
-        console.log("clicked");
-        this.setState({ defaultPath : path });
         this.props.send({Type : bit.SK_FILECLICK, Text : path});
     }
     dirlist(){
@@ -211,15 +212,17 @@ class Browser extends React.Component {
         this.props.openDirlist.Files.map(path => <FileSelector path={path} />)
         );
     }
+    handleChange(e){
+        this.props.changeOpenPath(e.target.value);
+    }
 
     render(){
         return (
-        <div id="browseShow" className="fileSelectShow fileBrowser dropContent">
-            <p className="dropContent">Browse files</p> 
-            <div className="browseDirs dropContent" id="innerBrowser">
+        <div id={this.state.outterBoxId} className="fileSelectShow fileBrowser dropContent">
+            <input className="dropContent browseDir browseCurrent" id={this.state.currentDirId} value={this.props.openDirlist.Path} onChange={this.handleChange}/>
+            <div className="browseDirs dropContent" id={this.state.innerBoxId}>
             <span className="dropContent browseDir browseEntry" onClick={()=>{ this.clickPath(this.props.openDirlist.Parent);
             }}><b>←</b></span>
-            <span className="dropContent browseDir browseCurrent">{this.props.openDirlist.Path}</span>
             {this.dirlist()}
             {this.filelist()}
             </div>
@@ -227,12 +230,21 @@ class Browser extends React.Component {
         )
     }
     componentDidUpdate(){
-        var innerBox = document.getElementById("innerBrowser");
-        var outterBox = document.getElementById("browseShow");
+        const innerBox = document.getElementById(this.state.innerBoxId);
+        const outterBox = document.getElementById(this.state.outterBoxId);
         var size = outterBox.offsetHeight;
         if (innerBox.offsetHeight > 480){
             innerBox.style.height = `${size-80}px`;
         }
+    }
+    componentDidMount(){
+        var that = this;
+        const dirText = document.getElementById(this.state.currentDirId);
+        dirText.addEventListener("keyup", function(event) {
+            if (event.key === "Enter") {
+                that.clickPath(that.props.openDirlist.Path)
+            }
+        });
     }
 }
 /*

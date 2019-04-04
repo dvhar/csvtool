@@ -179,7 +179,7 @@ html {
   height: 80%;
   background-color: white;
   border: 1px solid black;
-  overflow: scroll; }
+  overflow: auto; }
 
 .browseDir {
   display: block;
@@ -192,7 +192,9 @@ html {
   color: darkGreen; }
 
 .browseCurrent {
-  background: #aff; }
+  background: #f9f5ff;
+  width: -webkit-fill-available;
+  width: -moz-available; }
 
 .browseEntry:hover {
   background-color: bisque; }

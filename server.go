@@ -60,7 +60,6 @@ func (c* Client) writer(){
                 sendBytes,_ = json.Marshal(sendSock)
             case dir := <-directory:
                 sendDirSock = sockDirMessage{ Type: SK_DIRLIST, Dir: dir }
-                Println(sendDirSock)
                 sendBytes,_ = json.Marshal(sendDirSock)
         }
         err := c.conn.WriteMessage(1, sendBytes)

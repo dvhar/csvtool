@@ -240,6 +240,11 @@ func fileBrowser(path string) {
     //clean directory path, get parent, and prepare output
     path = filepath.Clean(path)
     files, _ := filepath.Glob(path+slash+"*")
+    _, err := os.Open(path)
+    if err != nil {
+        messager <- "invalid path: "+path
+        return
+    }
     thisDir := Directory{Path: path, Parent: filepath.Dir(path)}
 
     //get subdirs and csv files

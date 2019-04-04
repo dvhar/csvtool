@@ -19,7 +19,6 @@ class Main extends React.Component {
             topMessage : "",
             topDropdown : "nothing",
             savepath : "",
-            openpath : "",
             openDirlist : {},
             queryHistory: ['',],
             historyPosition : 0,
@@ -32,7 +31,6 @@ class Main extends React.Component {
         postRequest({path:"/info/",body:{}})
         .then(dat=>{
             this.setState({ savepath : dat.Status & bit.FP_SERROR===1 ? "" : dat.SavePath,
-                            openpath : dat.Status & bit.FP_OERROR===1 ? "" : dat.OpenPath,
                             openDirlist : dat.Status & bit.FP_OERROR===1 ? "" : { Path: dat.OpenPath } });
         });
 
@@ -87,6 +85,10 @@ class Main extends React.Component {
             this.setState({ topDropdown : "nothing" }); 
         },50);
     }
+    changeOpenPath(path){
+        this.state.openDirlist.Path = path;
+        this.forceUpdate();
+    }
 
     render(){
     
@@ -105,6 +107,7 @@ class Main extends React.Component {
             toggleHelp = {()=>{this.setState({showHelp:this.state.showHelp^1})}}
             showHelp = {this.state.showHelp}
             openDirlist = {this.state.openDirlist}
+            changeOpenPath = {(path)=>this.changeOpenPath(path)}
             sendSocket = {(request)=>this.sendSocket(request)}
         />
         <help.Help
@@ -137,7 +140,6 @@ class Main extends React.Component {
                     that.setState({ topMessage : dat.Text }); 
                     break;
                 case bit.SK_DIRLIST:
-                    console.log(dat);
                     that.setState({ openDirlist : dat.Dir });
             }
         }
