@@ -33,6 +33,8 @@ func realtimeCsvSaver() {
                     numTotal = c.Number
                     numRecieved = 0
                     state = 1
+                } else {
+                    messager <- Sprint(err)
                 }
 
             case CH_HEADER:
@@ -88,15 +90,13 @@ func pathChecker(savePath string) error {
     //if given a real path
     if err == nil {
         if pathStat.Mode().IsDir() {
-            messager <- "Must specify a file name to save"
             return errors.New("Must specify a file name to save")
         } //else given a real file
     } else {
         _, err := os.Stat(filepath.Dir(savePath))
         //if base path doesn't exist
         if err != nil {
-            messager <- "Invalid path: " + savePath
-            return errors.New("Invalid path")
+            return errors.New("Invalid path: "+savePath)
         } //else given new file
     }
     //set realtime save paths

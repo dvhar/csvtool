@@ -136,20 +136,24 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         //attempt query
         println("requesting query")
         retData.Entries,err = runQueries(&req)
-        if (req.FileIO & F_CSV) != 0 { saver <- chanData{Type : CH_DONE} }
+        successMessage := "Query successful. Returning data"
+        if (req.FileIO & F_CSV) != 0 {
+            saver <- chanData{Type : CH_DONE}
+            successMessage = "Save successful."
+        }
         if err != nil {
             retData.Status |= DAT_ERROR
-            retData.Message = Sprint(err)
+            messager <- Sprint(err)
         } else {
             retData.Status |= DAT_GOOD
-            messager <- "Query successful. Returning data"
+            messager <- successMessage
         }
 
         full_json,_ := json.Marshal(retData)
 
         //update json with save message
         rowLimit(&retData)
-        if retData.Clipped { messager <- "Showing only top 1000" }
+        if (retData.Status & DAT_GOOD)!=0 && retData.Clipped && req.FileIO == 0 { messager <- "Showing only top 1000" }
         full_json,_ = json.Marshal(retData)
         Fprint(w, string(full_json))
         full_json = []byte("")
