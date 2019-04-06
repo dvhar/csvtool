@@ -143,7 +143,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         }
         if err != nil {
             retData.Status |= DAT_ERROR
-            messager <- Sprint(err)
+            retData.Message = Sprint(err)
         } else {
             retData.Status |= DAT_GOOD
             messager <- successMessage

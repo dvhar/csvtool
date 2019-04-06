@@ -82,12 +82,12 @@ func inferTypes(q *QuerySpecs) error {
 
     //open file
     fp,err := os.Open(q.Fname)
-    if err != nil { return errors.New("inferTypes: problem opening input file") }
+    if err != nil { return errors.New("problem opening input file") }
     defer func(){ fp.Seek(0,0); fp.Close() }()
 
     cread := csv.NewReader(fp)
     line, err := cread.Read()
-    if err != nil { return errors.New("inferTypes: problem reading input file") }
+    if err != nil { return errors.New("problem reading input file") }
     //get col names and initialize blank types
     for i,entry := range line {
         q.ColSpec.Names = append(q.ColSpec.Names, entry)
@@ -106,7 +106,7 @@ func inferTypes(q *QuerySpecs) error {
             if entry == "NULL" || entry == "null" || entry == "NA" || entry == "" {
               q.ColSpec.Types[i] = max(T_NULL, q.ColSpec.Types[i])
             } else if LeadingZeroString.MatchString(entry) {
-              q.ColSpec.Types[i] = max(T_STRING, q.ColSpec.Types[i])
+              q.ColSpec.Types[i] = T_STRING
             } else if _, err := Atoi(entry); err == nil {
               q.ColSpec.Types[i] = max(T_INT, q.ColSpec.Types[i])
             } else if _, err := ParseFloat(entry,64); err == nil {
@@ -114,7 +114,7 @@ func inferTypes(q *QuerySpecs) error {
             } else if _,err := d.ParseAny(entry); err == nil{
               q.ColSpec.Types[i] = max(T_DATE, q.ColSpec.Types[i])
             } else {
-              q.ColSpec.Types[i] = max(T_STRING, q.ColSpec.Types[i])
+              q.ColSpec.Types[i] = T_STRING
             }
         }
     }
@@ -125,8 +125,9 @@ func inferTypes(q *QuerySpecs) error {
 //fill out source csv ColSpecs
 func evalFrom(q *QuerySpecs) error {
     //go straight to the from token or end
+    if q.ATok().Id != KW_SELECT { return errors.New("Query must start with select. found "+q.ATok().Val) }
     for ; q.ATok().Id != KW_FROM && q.ATok().Id != EOS ; {q.ANext()}
-    if q.ATok().Id == EOS && q.Fname == "" { return errors.New("No file to query") }
+    if q.ATok().Id == EOS && q.Fname == "" { return errors.New("Could not find a valid 'from file' part of query") }
     if q.ATok().Id == EOS && q.Fname != "" { return inferTypes(q) }
     if q.ATok().Id == KW_FROM && q.APeek().Id != WORD {
         return errors.New("Unexpected token after 'from': "+q.APeek().Val) }
@@ -136,7 +137,7 @@ func evalFrom(q *QuerySpecs) error {
         q.AReset()
         return err
     }
-    return errors.New("Unknown problem parsing 'from' file")
+    return errors.New("Unknown problem parsing 'from file' part of query")
 }
 
 //top-level recursive descent pre-parser builds Token arrays and QuerySpecs
@@ -155,7 +156,7 @@ func preParseTokens(q* QuerySpecs) error {
         q.ANext()
         return preParseTop(q)
     }
-    return errors.New("query must start with select. found "+q.ATok().Val)
+    return errors.New("Query must start with select. found "+q.ATok().Val)
 }
 func preParseTop(q* QuerySpecs) error {
     var err error
@@ -228,7 +229,7 @@ func preParseSelectCols(q* QuerySpecs) error {
         return errors.New("Expected select column but found "+q.ATok().Val)
     }
     //parse selected column
-    ii, err := parseColumnIndex(q)
+    ii, err := preParseColumnIndex(q)
     if err == nil {
         q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, ii, q.ColSpec.Types[ii]})
         newCol(q, ii)
@@ -241,14 +242,14 @@ func preParseAggregates(q* QuerySpecs) error {
     var err error
     if q.ATok().Id == KW_DISTINCT {
         if q.ANext().Id != WORD { return errors.New("Expected a column after 'distinct'. Got "+q.ATok().Val) }
-        q.DistinctIdx, err = parseColumnIndex(q)
+        q.DistinctIdx, err = preParseColumnIndex(q)
         if err != nil { return err }
     } else {
         return errors.New("Aggregate function not implemented: "+q.ATok().Val)
     }
     return preParseSelectCols(q)
 }
-func parseColumnIndex(q* QuerySpecs) (int,error) {
+func preParseColumnIndex(q* QuerySpecs) (int,error) {
     c := q.ATok().Val
     if q.ATok().Id != WORD { return 0,errors.New("Expected column, got "+c) }
     ii, err := Atoi(c)
@@ -277,7 +278,7 @@ func preParseFrom(q* QuerySpecs) error {
     //if found a where token
     if q.ATok().Id == KW_WHERE {
         q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
-        q.ANext()
+        if q.ANext().Id == EOS { return errors.New("Expected a comparison after 'where'") }
         return preParseWhere(q)
     }
     return errors.New("Unexpected token in 'from' section: "+q.ATok().Val)
@@ -296,7 +297,7 @@ func preParseWhere(q* QuerySpecs) error {
         //between
         if q.APeek().Id == KW_BETWEEN { return preParseBetween(q) }
 
-        ii, err := parseColumnIndex(q)
+        ii, err := preParseColumnIndex(q)
         if err == nil {
             q.BTokArray = append(q.BTokArray, BToken{BT_WCOL, ii, q.ColSpec.Types[ii]})
             lastType = q.ColSpec.Types[ii]
@@ -319,7 +320,7 @@ func preParseWhere(q* QuerySpecs) error {
         q.ANext()
         return preParseWhere(q)
     }
-    return errors.New("Unexpected token in the where section: "+tok.Val)
+    return errors.New("Unexpected token in the 'where' section: "+tok.Val)
 }
 //turn between clause into 2 comparisons with parenthese
 func preParseBetween(q* QuerySpecs) error {
@@ -327,7 +328,7 @@ func preParseBetween(q* QuerySpecs) error {
     var firstSmaller bool
 
     //get comparison column and type
-    ii, err := parseColumnIndex(q)
+    ii, err := preParseColumnIndex(q)
     if err != nil { return err }
     columnVal = BToken{BT_WCOL, ii, q.ColSpec.Types[ii]}
     lastType = q.ColSpec.Types[ii]
@@ -343,7 +344,7 @@ func preParseBetween(q* QuerySpecs) error {
     if err != nil { return err }
 
     //see which is smaller
-    if val1.Dtype == T_NULL || val2.Dtype == T_NULL { return errors.New("Cannot use 'null' in between clause") }
+    if val1.Dtype == T_NULL || val2.Dtype == T_NULL { return errors.New("Cannot use 'null' with 'between'") }
     switch val1.Dtype {
         case T_INT:    firstSmaller = val1.Val.(int) < val2.Val.(int)
         case T_FLOAT:  firstSmaller = val1.Val.(float64) < val2.Val.(float64)
@@ -411,7 +412,7 @@ func preParseAfterWhere(q* QuerySpecs) error {
     if q.ATok().Id == KW_ORDER {
         if q.ANext().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.ATok().Val) }
         /*if*/ q.ANext()//.Id != WORD { return errors.New("Expected column after 'order by'. Found "+q.ATok().Val) }
-        ii, err := parseColumnIndex(q)
+        ii, err := preParseColumnIndex(q)
         if err == nil {
             q.NeedAllRows = true
             q.SortCol = ii

@@ -116,7 +116,6 @@ class Main extends React.Component {
             submitQuery = {(query)=>this.submitQuery(query)}
             sendSocket = {(request)=>this.sendSocket(request)}
             showQuery = {this.state.showQuery}
-            metaTables = {this.props.metaTables}
         />
         </>
         )
@@ -145,9 +144,7 @@ class Main extends React.Component {
 }
 
 ReactDOM.render(
-    <Main 
-        metaTables = {["column info abridged","table key info","informationschema.colums","column info with keys"]}
-    />, 
+    <Main/>, 
     document.getElementById('root'));
 
 

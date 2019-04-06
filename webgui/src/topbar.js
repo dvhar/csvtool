@@ -94,6 +94,7 @@ class TopDropdown extends React.Component {
     componentDidUpdate(){ this.defValue(); }
 }
 
+//attempt at copying file path to clipboard - not working yet
 class FileSelector extends React.Component {
     constructor(props){
         super(props);
