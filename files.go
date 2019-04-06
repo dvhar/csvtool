@@ -106,26 +106,27 @@ func pathChecker(savePath string) error {
     return nil
 }
 
-//payload type sent to the browser
+//payload type sent to and from the browser
 type Directory struct {
     Path string
     Parent string
+    Mode string
     Files []string
     Dirs []string
 }
 //send directory payload to socket writer when given a path
-func fileBrowser(path string) {
+func fileBrowser(pathRequest Directory) {
     extension := regexp.MustCompile(`\.csv$`)
 
     //clean directory path, get parent, and prepare output
-    path = filepath.Clean(path)
+    path := filepath.Clean(pathRequest.Path)
     files, _ := filepath.Glob(path+slash+"*")
     _, err := os.Open(path)
     if err != nil {
         messager <- "invalid path: "+path
         return
     }
-    thisDir := Directory{Path: path, Parent: filepath.Dir(path)}
+    thisDir := Directory{Path: path, Parent: filepath.Dir(path), Mode: pathRequest.Mode}
 
     //get subdirs and csv files
     for _,file := range files {

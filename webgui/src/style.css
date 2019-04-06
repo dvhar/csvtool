@@ -171,6 +171,9 @@ html {
 .saveRadio {
   margin: 0.6em; }
 
+.saveButton {
+  float: right; }
+
 .fileBrowser {
   min-width: 40em;
   max-height: 33em; }

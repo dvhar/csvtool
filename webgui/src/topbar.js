@@ -16,15 +16,17 @@ export class TopMenuBar extends React.Component {
                 savepath = {this.props.s.savepath}
                 sendSocket = {this.props.sendSocket}
                 openDirlist = {this.props.openDirlist}
-                changeOpenPath = {this.props.changeOpenPath}
+                saveDirlist = {this.props.saveDirlist}
+                changeOpenPath = {(path)=>this.props.changeFilePath({type:"open",path:path})}
+                changeSavePath = {(path)=>this.props.changeFilePath({type:"save",path:path})}
             />
-            <Saver
+            <SaveButton
                 changeTopDrop = {this.props.changeTopDrop}
             />
             <BrowseButton
                 changeTopDrop = {this.props.changeTopDrop}
             />
-            <Helper
+            <HelpButton
                 showHelp = {this.props.showHelp}
                 toggleHelp = {this.props.toggleHelp}
             />
@@ -59,39 +61,24 @@ class TopDropdown extends React.Component {
     render(){
         var dropdownContents = {
             nothing : <></>,
-
-            saveShow : (
-                <div id="saveShow" className="fileSelectShow dropContent">
-                    <p className="dropContent">Save queries on page to their own csv file. A number will be added to file name if more than 1.</p> 
-                    <label className="dropContent">Save file:</label> 
-                    <input id="savePath" className="pathInput dropContent" type="text"/>
-                    <button className="" onClick={()=>{
-                        var path = document.getElementById("savePath").value;
-                        this.props.changeSavePath(path);
-                        this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|bit.F_CSV, filePath : path});
-                    }}>save</button><br/>
-                </div>
-            ),
-
+            saveShow : ( <Browser
+                             dirlist = {this.props.saveDirlist}
+                             send = {this.props.sendSocket}
+                             changeOpenPath = {this.props.changeSavePath}
+                             submitQuery = {this.props.submitQuery}
+                             currentQuery = {this.props.currentQuery}
+                             type = {"save"}
+                          /> ),
             browseShow : ( <Browser
-                                openDirlist = {this.props.openDirlist}
-                                send = {this.props.sendSocket}
-                                changeOpenPath = {this.props.changeOpenPath}
+                               dirlist = {this.props.openDirlist}
+                               send = {this.props.sendSocket}
+                               changeOpenPath = {this.props.changeOpenPath}
+                               type = {"open"}
                             /> ),
 
         }
         return dropdownContents[this.props.section];
     }
-
-    defValue(){ 
-        switch(this.props.section){
-            case "saveShow":
-                document.getElementById("savePath").value = this.props.savepath;
-                break
-        }
-    }
-    componentDidMount(){ this.defValue(); }
-    componentDidUpdate(){ this.defValue(); }
 }
 
 //attempt at copying file path to clipboard - not working yet
@@ -118,7 +105,7 @@ class FileSelector extends React.Component {
 class Browser extends React.Component {
     constructor(props) {
         super(props);
-        this.props.send({Type : bit.SK_FILECLICK, Text : this.props.openDirlist.Path});
+        this.props.send({Type : bit.SK_FILECLICK, Text : this.props.dirlist.Path, Mode: this.props.type});
         this.handleChange = this.handleChange.bind(this);
         this.state = {
             innerBoxId : Math.random(),
@@ -127,16 +114,16 @@ class Browser extends React.Component {
         };
     }
     clickPath(path){
-        this.props.send({Type : bit.SK_FILECLICK, Text : path});
+        this.props.send({Type : bit.SK_FILECLICK, Text : path, Mode : this.props.type});
     }
     dirlist(){
-        if (this.props.openDirlist.Dirs) return (
-        this.props.openDirlist.Dirs.map(path => <span className="dropContent browseDir browseEntry" onClick={()=>this.clickPath(path)}>{path}</span>)
+        if (this.props.dirlist.Dirs) return (
+        this.props.dirlist.Dirs.map(path => <span className="dropContent browseDir browseEntry" onClick={()=>this.clickPath(path)}>{path}</span>)
         );
     }
     filelist(){
-        if (this.props.openDirlist.Files) return (
-        this.props.openDirlist.Files.map(path => <FileSelector path={path} />)
+        if (this.props.dirlist.Files) return (
+        this.props.dirlist.Files.map(path => <FileSelector path={path} />)
         );
     }
     handleChange(e){
@@ -144,12 +131,22 @@ class Browser extends React.Component {
     }
 
     render(){
+        var header = [];
+        if (this.props.type === "open")
+            header.push( <><span>To open a file copy the file path, paste into query box, and run a query.</span><br/></> );
+        if (this.props.type === "save")
+            header.push( <><span>Save queries on page to their own csv file. A number will be added to file name if more than 1.</span>
+                <button className="saveButton" onClick={()=>{
+                    var path = document.getElementById(this.state.currentDirId).value;
+                    this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|bit.F_CSV, filePath : path});
+                }}>save</button><br/></> );
+
         return (
         <div id={this.state.outterBoxId} className="fileSelectShow fileBrowser dropContent">
-            <span>To open a file copy the file path, paste into query box, and run a query.</span><br/>
-            <input className="dropContent browseDir browseCurrent" id={this.state.currentDirId} value={this.props.openDirlist.Path} onChange={this.handleChange}/>
+            {header}
+            <input className="dropContent browseDir browseCurrent" id={this.state.currentDirId} value={this.props.dirlist.Path} onChange={this.handleChange}/>
             <div className="browseDirs dropContent" id={this.state.innerBoxId}>
-            <span className="dropContent browseDir browseEntry" onClick={()=>{ this.clickPath(this.props.openDirlist.Parent);
+            <span className="dropContent browseDir browseEntry" onClick={()=>{ this.clickPath(this.props.dirlist.Parent);
             }}><b>←</b></span>
             {this.dirlist()}
             {this.filelist()}
@@ -170,12 +167,12 @@ class Browser extends React.Component {
         const dirText = document.getElementById(this.state.currentDirId);
         dirText.addEventListener("keyup", function(event) {
             if (event.key === "Enter") {
-                that.clickPath(that.props.openDirlist.Path)
+                that.clickPath(that.props.dirlist.Path)
             }
         });
     }
 }
-class Saver extends React.Component {
+class SaveButton extends React.Component {
     toggleForm(){ this.props.changeTopDrop("saveShow");}
     render(){
         return( <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>)
@@ -189,7 +186,7 @@ class BrowseButton extends React.Component {
     }
 }
 
-class Helper extends React.Component {
+class HelpButton extends React.Component {
     render(){
         var label = "Help";
         if (this.props.showHelp) label = "Hide Help";

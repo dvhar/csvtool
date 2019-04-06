@@ -17,8 +17,8 @@ class Main extends React.Component {
         this.state = {
             topMessage : "",
             topDropdown : "nothing",
-            savepath : "",
             openDirlist : {},
+            saveDirlist : {},
             queryHistory: ['',],
             historyPosition : 0,
             showQuery : <></>,
@@ -29,15 +29,15 @@ class Main extends React.Component {
         //get initial file path
         postRequest({path:"/info/",body:{}})
         .then(dat=>{
-            this.setState({ savepath : dat.Status & bit.FP_SERROR===1 ? "" : dat.SavePath,
-                            openDirlist : dat.Status & bit.FP_OERROR===1 ? "" : { Path: dat.OpenPath } });
+            this.setState({ openDirlist : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.OpenPath },
+                            saveDirlist : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.SavePath } });
         });
 
     }
     showLoadedQuery(results){
         if (results.Status & bit.DAT_ERROR){
             if (results.Message === undefined || results.Message === ""){
-                alert("Could not make query. Bad connection or syntax?");
+                alert("Could not make query or get error message from query engine");
                 console.log(results);
             }else
                 alert(results.Message);
@@ -82,8 +82,12 @@ class Main extends React.Component {
             this.setState({ topDropdown : "nothing" }); 
         },50);
     }
-    changeOpenPath(path){
-        this.state.openDirlist.Path = path;
+    changeFilePath(whichPath){
+        if (whichPath.type == "open"){
+            this.state.openDirlist.Path = whichPath.path;
+        } else if (whichPath.type == "save"){
+            this.state.saveDirlist.Path = whichPath.path;
+        }
         this.forceUpdate();
     }
 
@@ -98,12 +102,12 @@ class Main extends React.Component {
             updateTopMessage = {(message)=>this.setState({ topMessage : message })}
             submitQuery = {(query)=>this.submitQuery(query)}
             viewHistory = {(position)=>this.viewHistory(position)}
-            changeSavePath = {(path)=>this.setState({ savepath : path })}
             changeTopDrop = {(section)=>this.setState({ topDropdown : section })}
             toggleHelp = {()=>{this.setState({showHelp:this.state.showHelp^1})}}
             showHelp = {this.state.showHelp}
             openDirlist = {this.state.openDirlist}
-            changeOpenPath = {(path)=>this.changeOpenPath(path)}
+            saveDirlist = {this.state.saveDirlist}
+            changeFilePath = {(path)=>this.changeFilePath(path)}
             sendSocket = {(request)=>this.sendSocket(request)}
         />
         <help.Help
@@ -130,12 +134,16 @@ class Main extends React.Component {
         this.ws.onclose = function(e) { console.log("CLOSE"); that.ws = null; } 
         this.ws.onmessage = function(e) { 
             var dat = JSON.parse(e.data);
+            console.log(dat);
             switch (dat.Type) {
                 case bit.SK_MSG:
                     that.setState({ topMessage : dat.Text }); 
                     break;
                 case bit.SK_DIRLIST:
-                    that.setState({ openDirlist : dat.Dir });
+                    switch (dat.Dir.Mode){
+                        case "open": that.setState({ openDirlist : dat.Dir });
+                        case "save": that.setState({ saveDirlist : dat.Dir });
+                    }
             }
         }
         this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 

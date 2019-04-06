@@ -33,6 +33,7 @@ type Client struct {
 type sockMessage struct {
     Type int
     Text string
+    Mode string
 }
 type sockDirMessage struct {
     Type int
@@ -83,7 +84,7 @@ func (c* Client) reader(){
             case SK_STOP:
                 if active { stop = 1 }
             case SK_FILECLICK:
-                go fileBrowser(message.Text)
+                go fileBrowser(Directory{Path : message.Text, Mode : message.Mode})
         }
     }
 }
