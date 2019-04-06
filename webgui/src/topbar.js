@@ -219,6 +219,7 @@ class Browser extends React.Component {
     render(){
         return (
         <div id={this.state.outterBoxId} className="fileSelectShow fileBrowser dropContent">
+            <span>To open a file copy the file path, paste into query box, and run a query.</span><br/>
             <input className="dropContent browseDir browseCurrent" id={this.state.currentDirId} value={this.props.openDirlist.Path} onChange={this.handleChange}/>
             <div className="browseDirs dropContent" id={this.state.innerBoxId}>
             <span className="dropContent browseDir browseEntry" onClick={()=>{ this.clickPath(this.props.openDirlist.Parent);
