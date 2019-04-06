@@ -19,7 +19,9 @@ type QuerySpecs struct {
     BTokArray []BToken
     AIdx int
     BIdx int
-    Quantity int
+    QuantityLimit int
+    QuantityRetrieved int
+    NeedAllRows bool
     DistinctIdx int
     SelectAll bool
     SortCol int
@@ -158,7 +160,7 @@ func preParseTokens(q* QuerySpecs) error {
 func preParseTop(q* QuerySpecs) error {
     var err error
     if q.ATok().Id == KW_TOP {
-        q.Quantity, err = Atoi(q.APeek().Val)
+        q.QuantityLimit, err = Atoi(q.APeek().Val)
         if err != nil { return errors.New("Expected number after 'top'. found "+q.APeek().Val) }
         q.ANext(); q.ANext()
     }
@@ -411,6 +413,7 @@ func preParseAfterWhere(q* QuerySpecs) error {
         /*if*/ q.ANext()//.Id != WORD { return errors.New("Expected column after 'order by'. Found "+q.ATok().Val) }
         ii, err := parseColumnIndex(q)
         if err == nil {
+            q.NeedAllRows = true
             q.SortCol = ii
             q.SortWay = 1
             q.ANext()

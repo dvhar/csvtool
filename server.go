@@ -189,7 +189,6 @@ func rowLimit(retData *ReturnData) {
     for i, query := range retData.Entries {
         if query.Numrows > 1000 {
             retData.Entries[i].Vals = query.Vals[:1000]
-            //retData.Entries[i].Numrows = 1000
             retData.Clipped = true
             runtime.GC()
         }

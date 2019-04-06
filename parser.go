@@ -43,7 +43,7 @@ var active bool
 //run csv query
 func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
-    //parse tokens and do stuff that only needs to be done once
+    //pre-parse tokens and do stuff that only needs to be done once
     err := preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
@@ -63,7 +63,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     var fromRow []interface{}
     var limit int
     distinctCheck := make(map[interface{}]bool)
-    if q.Quantity == 0 { limit = 1E9 } else { limit = q.Quantity }
+    if q.QuantityLimit == 0 { limit = 1<<62 } else { limit = q.QuantityLimit }
 
     //run the query
     active = true
@@ -82,6 +82,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
             q.MemFull = true
             if !q.Save { break }
         }
+
         //see if user wants to cancel
         if stop == 1 {
             stop = 0
@@ -89,7 +90,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
             messager <- "query cancelled"
             break
         }
-
 
         //read line from csv file and allocate array for it
         line, err := cread.Read()
@@ -142,7 +142,10 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
 
     //copy entire row if selecting all
     if q.SelectAll  {
-        if !q.MemFull { res.Vals = append(res.Vals, *fromRow) }
+        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= 1000 ) {
+            res.Vals = append(res.Vals, *fromRow)
+            q.QuantityRetrieved++
+        }
         if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
         return true, err
     }
@@ -284,7 +287,10 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
         (*selected)[count] = (*fromRow)[tok.Val.(int)]
         if count == q.ColSpec.NewWidth - 1 {
             //all columns selected
-            if !q.MemFull { res.Vals = append(res.Vals, *selected) }
+            if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= 1000 ) {
+                res.Vals = append(res.Vals, *selected)
+                q.QuantityRetrieved++
+            }
             if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} ; <-savedLine}
         }
     }

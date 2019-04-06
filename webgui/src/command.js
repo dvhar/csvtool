@@ -51,6 +51,7 @@ export class QuerySelect extends React.Component {
     }
 }
 
+//old premade queries for deprecated SQL server feature
 function DropdownQueryMenu(props){
     return(
         <div className="dropmenu queryMenuDiv">
@@ -95,7 +96,7 @@ class DropdownQueryTextbox extends React.Component {
                     var query = document.getElementById("textBoxId").value;
                     this.props.submit({query : query});
                 }}>Submit Query</button>
-                <button onClick={()=>{ this.props.send({Type : bit.SK_STOP}); }}>Cancel Query</button>
+                <button onClick={()=>{ this.props.send({Type : bit.SK_STOP}); }}>End Query Early</button>
                 </div>
             </div>
         );
