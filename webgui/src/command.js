@@ -1,29 +1,10 @@
 import React from 'react';
 import {bit} from './utils.js';
-import * as premades from './premades.js';
 
 
 
 export class QuerySelect extends React.Component {
     render(){
-        var sqlServerMetaDataMenu = ( <div className="queryMenuContainer"> 
-                         <DropdownQueryMenu
-                            title = {<h2>View database schema query{"\u25bc"}</h2>}
-                            size = {premades.metaDataQueries.length}
-                            //make this run multi-select queries
-                            contents = {premades.metaDataQueries}
-                            submit = {(query)=>this.props.submitQuery(query)}
-                         />
-                     </div>);
-
-        var sqlServerCustomQueryEntry = ( <div className="queryMenuContainer"> 
-                         <DropdownQueryTextbox
-                            title = {<>Enter SQL Query</>}
-                            submit = {(query)=>this.props.submitQuery(query)}
-                            s = {this.props.s}
-                            open = {false}
-                         />
-                     </div>);
 
         var csvCustomQueryEntry = ( <div className="queryMenuContainer"> 
                          <DropdownQueryTextbox
@@ -37,10 +18,7 @@ export class QuerySelect extends React.Component {
 
         var selectors = [];
 
-        if (this.props.s.mode === "MSSQL")
-            selectors.push(sqlServerMetaDataMenu, sqlServerCustomQueryEntry);
-        else
-            selectors.push(csvCustomQueryEntry);
+        selectors.push(csvCustomQueryEntry);
 
         return (
             <div className="querySelect"> 
@@ -49,31 +27,6 @@ export class QuerySelect extends React.Component {
             </div>
         );
     }
-}
-
-//old premade queries for deprecated SQL server feature
-function DropdownQueryMenu(props){
-    return(
-        <div className="dropmenu queryMenuDiv">
-            <div className="dropButton queryMenuButton">
-                {props.title}
-            </div>
-            <div className="dropmenu-content">
-            <select size={String(props.size)} className="dropSelect" id="premadeMultiSelect" multiple>
-                {props.contents.map((v,i)=><option key={i} data-key={v.key} data-idx={i}>{v.label}</option>)}
-            </select>
-            <button onClick={()=>{
-                    var queries = "";
-                    var selected = document.getElementById("premadeMultiSelect").selectedOptions;
-                    for (var i in selected)
-                        if (i === Number(i))
-                            queries += premades.metaDataQueries[selected[i].getAttribute("data-idx")].query;
-                    props.submit({query : queries});
-                }}
-            >Submit</button>
-            </div>
-        </div>
-    )
 }
 
 class DropdownQueryTextbox extends React.Component {

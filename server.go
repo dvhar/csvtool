@@ -110,13 +110,8 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
 func httpserver(serverUrl string, done chan bool) {
 
     http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
-    http.HandleFunc("/query", queryHandler())
     http.HandleFunc("/query/", queryHandler())
-    http.HandleFunc("/login", loginHandler())
-    http.HandleFunc("/login/", loginHandler())
-    http.HandleFunc("/info", infoHandler())
     http.HandleFunc("/info/", infoHandler())
-    http.HandleFunc("/socket", socketHandler())
     http.HandleFunc("/socket/", socketHandler())
     http.ListenAndServe(serverUrl, nil)
     done <- true
@@ -137,41 +132,20 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         json.Unmarshal(body,&req)
         retData.Status = DAT_BLANK
         retData.OriginalQuery = req.Query
-        retData.Mode = req.Mode
-
-        //handle request to open file
-        if (req.FileIO & F_OPEN) != 0 {
-            full_json,_ := openQueryFile(&req, &retData)
-            Fprint(w, string(full_json))
-            return
-        }
-
-        //return null query if no connection
-        if req.Mode == "MSSQL" && dbCon.Err != nil {
-            println("no database connection")
-            retData.Entries = append(retData.Entries,SingleQueryResult{})
-            retData.Message = "No database connection"
 
         //attempt query
+        println("requesting query")
+        retData.Entries,err = runQueries(&req)
+        if (req.FileIO & F_CSV) != 0 { saver <- chanData{Type : CH_DONE} }
+        if err != nil {
+            retData.Status |= DAT_ERROR
+            retData.Message = Sprint(err)
         } else {
-            println("requesting query")
-            retData.Entries,err = runQueries(dbCon.Db, &req)
-            if (req.FileIO & F_CSV) != 0 { saver <- chanData{Type : CH_DONE} }
-            if err != nil {
-                retData.Status |= DAT_ERROR
-                retData.Message = Sprint(err)
-            } else {
-                retData.Status |= DAT_GOOD
-                messager <- "Query successful. Returning data"
-            }
+            retData.Status |= DAT_GOOD
+            messager <- "Query successful. Returning data"
         }
 
         full_json,_ := json.Marshal(retData)
-
-        //save queries if not saving from one csv to another
-        if (req.FileIO & F_SAVE)!=0 && ((req.FileIO & F_JSON)!=0 || req.Mode=="MSSQL") {
-            saveQueryFile(&req, &retData, &full_json)
-        }
 
         //update json with save message
         rowLimit(&retData)
@@ -192,71 +166,6 @@ func rowLimit(retData *ReturnData) {
             retData.Clipped = true
             runtime.GC()
         }
-    }
-}
-
-func loginHandler() (func(http.ResponseWriter, *http.Request)) {
-    return func(w http.ResponseWriter, r *http.Request) {
-
-        //struct that matches incoming json requests
-        type Lrequest struct {
-            Login string
-            Pass string
-            Server string
-            Database string
-            Action string
-        }
-        //struct for return json
-        type Lreturn struct {
-            Login string
-            Server string
-            Database string
-            Status int
-            Message string
-        }
-        var ret Lreturn
-        ret.Status = dbCon.Status
-        ret.Login = dbCon.Login
-        ret.Server = dbCon.Server
-        ret.Database = dbCon.Database
-
-        //handle request
-        body, _ := ioutil.ReadAll(r.Body)
-        var req Lrequest
-        var full_json []uint8
-        //println(formatRequest(r))
-        println("got login request")
-        json.Unmarshal(body,&req)
-
-        switch(req.Action){
-            case "login":
-                newCon := sqlConnect(req.Login, req.Pass, req.Server, req.Database)
-                //prepare response
-                if newCon.Err == nil {
-                    dbCon = newCon
-                    ret.Status = dbCon.Status
-                    ret.Login = dbCon.Login
-                    ret.Server = dbCon.Server
-                    ret.Database = dbCon.Database
-                    println("Connected to "+dbCon.Database)
-                } else {
-                    ret.Status = CON_UNCHANGED
-                }
-
-            case "check":
-                ret.Status = CON_CHECKED
-        }
-
-        switch(dbCon.Status){
-            case CON_CHANGED:
-                ret.Message = "Logged in to " + dbCon.Database
-            case CON_ERROR:
-                ret.Message = "Connection Error"
-            default:
-                ret.Message = "Not logged in"
-        }
-        full_json,_ = json.Marshal(ret)
-        Fprint(w, string(full_json))
     }
 }
 

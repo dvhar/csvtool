@@ -15,7 +15,6 @@ class Main extends React.Component {
         super(props);
 
         this.state = {
-            mode : "CSV",
             topMessage : "",
             topDropdown : "nothing",
             savepath : "",
@@ -59,12 +58,11 @@ class Main extends React.Component {
             Query: querySpecs.query || "", 
             FileIO: querySpecs.fileIO || 0, 
             FilePath: querySpecs.filePath || "", 
-            Mode: querySpecs.mode || this.state.mode
             };
         postRequest({path:"/query/",body:fullQuery}).then(dat=>{
             if ((dat.Status & bit.DAT_GOOD) && (!querySpecs.backtrack)){
                 this.setState({ historyPosition : this.state.queryHistory.length,
-                                queryHistory : this.state.queryHistory.concat({query : dat.OriginalQuery, mode: dat.Mode}) });
+                                queryHistory : this.state.queryHistory.concat({query : dat.OriginalQuery}) });
             }
             this.showLoadedQuery(dat);
         });
@@ -76,9 +74,8 @@ class Main extends React.Component {
     viewHistory(position){
         var q = this.state.queryHistory[position];
         this.setState({ historyPosition : position });
-        this.submitQuery({ query : q.query, backtrack : true, mode: q.mode});
+        this.submitQuery({ query : q.query, backtrack : true});
     }
-    changeMode(mode){ this.setState({ mode : mode }); }
     topDropReset(e){ 
         setTimeout(()=>{
         if (!e.target.matches('.dropContent'))
@@ -102,7 +99,6 @@ class Main extends React.Component {
             submitQuery = {(query)=>this.submitQuery(query)}
             viewHistory = {(position)=>this.viewHistory(position)}
             changeSavePath = {(path)=>this.setState({ savepath : path })}
-            changeMode = {(mode)=>this.changeMode(mode)}
             changeTopDrop = {(section)=>this.setState({ topDropdown : section })}
             toggleHelp = {()=>{this.setState({showHelp:this.state.showHelp^1})}}
             showHelp = {this.state.showHelp}
