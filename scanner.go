@@ -233,15 +233,11 @@ func scanner(s* StringLookahead) AToken {
     var S string
 
     for ; (state & FINAL) == 0 && state < NUM_STATES ; {
-        //println("peek: state "+Itoa(state)+" peek: "+Itoa(s.peek()))
-        //println("res: "+Itoa(table[state][s.peek()]))
-        //println(S)
         nextState = table[state][s.peek()]
         if (nextState & ERROR) != 0 {
         //end of string
             if state == 255 { return AToken { Id: 255, Val: "END", Line: lineNo } }
             Printf("error peek: %d state: %d nextstates: %d nextchar: %c\n",s.peek(),state, nextState, nextchar)
-            //println(enumMap[nextState])
             return AToken{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
         }
 

@@ -38,7 +38,7 @@ const (
     CH_NEXT = iota
     CH_SAVPREP = iota
 )
-type chanData struct {
+type saveData struct {
     Message string
     Number int
     Type int
@@ -92,7 +92,7 @@ type Qrequest struct {
 
 var FPaths FilePaths
 var messager chan string
-var saver chan chanData
+var saver chan saveData
 var savedLine chan bool
 var fileclick chan string
 var directory chan Directory
@@ -105,7 +105,7 @@ func main() {
     messager = make(chan string)
     fileclick = make(chan string)
     directory = make(chan Directory)
-    saver = make(chan chanData)
+    saver = make(chan saveData)
     savedLine = make(chan bool)
     go realtimeCsvSaver()
 
@@ -183,7 +183,7 @@ func runQueries(req *Qrequest) ([]SingleQueryResult, error) {
     req.Qamount = len(queries)
     //send info to realtime saver
     if (req.FileIO & F_CSV) != 0 {
-        saver <- chanData{
+        saver <- saveData{
             Number : req.Qamount,
             Type : CH_SAVPREP,
             Message : req.FilePath,

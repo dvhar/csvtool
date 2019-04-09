@@ -83,11 +83,10 @@ class Main extends React.Component {
         },50);
     }
     changeFilePath(whichPath){
-        if (whichPath.type == "open"){
+        if (whichPath.type == "open")
             this.state.openDirlist.Path = whichPath.path;
-        } else if (whichPath.type == "save"){
+        if (whichPath.type == "save")
             this.state.saveDirlist.Path = whichPath.path;
-        }
         this.forceUpdate();
     }
 
@@ -134,7 +133,7 @@ class Main extends React.Component {
         this.ws.onclose = function(e) { console.log("CLOSE"); that.ws = null; } 
         this.ws.onmessage = function(e) { 
             var dat = JSON.parse(e.data);
-            console.log(dat);
+            //console.log(dat);
             switch (dat.Type) {
                 case bit.SK_MSG:
                     that.setState({ topMessage : dat.Text }); 
@@ -142,8 +141,11 @@ class Main extends React.Component {
                 case bit.SK_DIRLIST:
                     switch (dat.Dir.Mode){
                         case "open": that.setState({ openDirlist : dat.Dir });
+                            break;
                         case "save": that.setState({ saveDirlist : dat.Dir });
+                            break;
                     }
+                    break;
             }
         }
         this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 

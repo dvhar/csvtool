@@ -46,7 +46,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //pre-parse tokens and do stuff that only needs to be done once
     err := preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
-    if q.Save { saver <- chanData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
+    if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
 
     //prepare input and output
     totalMem = memory.TotalMemory()
@@ -69,7 +69,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     active = true
     defer func(){
         active = false
-        if q.Save { saver <- chanData{Type : CH_NEXT} }
+        if q.Save { saver <- saveData{Type : CH_NEXT} }
     }()
     cread.Read()
     rowsChecked := 0
@@ -86,7 +86,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         //see if user wants to cancel
         if stop == 1 {
             stop = 0
-            if q.Save { saver <- chanData{Type : CH_NEXT};  saver <- chanData{Type : CH_DONE} }
+            if q.Save { saver <- saveData{Type : CH_NEXT};  saver <- saveData{Type : CH_DONE} }
             messager <- "query cancelled"
             break
         }
@@ -130,14 +130,14 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 }
 
 //recursive descent parser for evaluating each row
-func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, distinct map[interface{}]bool) (bool,error) {
+func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
 
-    //see if row matches expression
+    //see if row matches condition
     match, err := evalWhere(q, fromRow)
     if err != nil || !match { return false, err }
 
     //see if row is distict if required
-    match, err = evalDistinct(q, res, fromRow, distinct)
+    match, err = evalDistinct(q, res, fromRow, distinctCheck)
     if err != nil || !match { return false, err }
 
     //copy entire row if selecting all
@@ -146,7 +146,7 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
             res.Vals = append(res.Vals, *fromRow)
             q.QuantityRetrieved++
         }
-        if q.Save { saver <- chanData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
+        if q.Save { saver <- saveData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
         return true, err
     }
 
@@ -188,7 +188,7 @@ func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
         match, err = evalMultiComparison(q, fromRow)
         if err != nil { return false, err }
         if negate { match = !match }
-        //eat closing paren, return if this expression is done
+        //eat closing paren, return if this comparison is done
         q.BNext()
         if q.BPeek().Id == EOS || q.BPeek().Id == SP_RPAREN || (q.BPeek().Id & BT_AFTWR)!=0 {
             return match, err
@@ -291,22 +291,22 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
                 res.Vals = append(res.Vals, *selected)
                 q.QuantityRetrieved++
             }
-            if q.Save { saver <- chanData{Type : CH_ROW, Row : selected} ; <-savedLine}
+            if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
         }
     }
     q.BNext()
     return evalSelectCol(q, res, fromRow, selected, count+1)
 }
 //see if row has distinct value if looking for one. make sure this is the last check before retrieving row
-func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, distinct map[interface{}]bool) (bool,error) {
+func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
     if q.DistinctIdx < 0 { return true, nil }
     compVal := (*fromRow)[q.DistinctIdx]
     //ok means not distinct
-    _,ok := distinct[compVal]
+    _,ok := distinctCheck[compVal]
     if ok {
         return false, nil
     } else {
-        distinct[compVal] = true
+        distinctCheck[compVal] = true
     }
     return true,nil
 }

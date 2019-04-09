@@ -17,8 +17,8 @@ export class TopMenuBar extends React.Component {
                 sendSocket = {this.props.sendSocket}
                 openDirlist = {this.props.openDirlist}
                 saveDirlist = {this.props.saveDirlist}
-                changeOpenPath = {(path)=>this.props.changeFilePath({type:"open",path:path})}
                 changeSavePath = {(path)=>this.props.changeFilePath({type:"save",path:path})}
+                changeOpenPath = {(path)=>this.props.changeFilePath({type:"open",path:path})}
             />
             <SaveButton
                 changeTopDrop = {this.props.changeTopDrop}
@@ -64,7 +64,7 @@ class TopDropdown extends React.Component {
             saveShow : ( <Browser
                              dirlist = {this.props.saveDirlist}
                              send = {this.props.sendSocket}
-                             changeOpenPath = {this.props.changeSavePath}
+                             changePath = {this.props.changeSavePath}
                              submitQuery = {this.props.submitQuery}
                              currentQuery = {this.props.currentQuery}
                              type = {"save"}
@@ -72,7 +72,7 @@ class TopDropdown extends React.Component {
             browseShow : ( <Browser
                                dirlist = {this.props.openDirlist}
                                send = {this.props.sendSocket}
-                               changeOpenPath = {this.props.changeOpenPath}
+                               changePath = {this.props.changeOpenPath}
                                type = {"open"}
                             /> ),
 
@@ -127,7 +127,7 @@ class Browser extends React.Component {
         );
     }
     handleChange(e){
-        this.props.changeOpenPath(e.target.value);
+        this.props.changePath(e.target.value);
     }
 
     render(){
