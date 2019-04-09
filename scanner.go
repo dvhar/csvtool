@@ -117,7 +117,7 @@ var enumMap = map[int]string {
 //characters of special tokens
 var specials = []int{ '*','=','!','<','>','\'','"','(',')',',' }
 //non-alphanumeric characters of words
-var others = []int{ '/','\\',':','-','_','.','%' }
+var others = []int{ '/','\\',':','-','_','.','%','[',']' }
 var keywordMap = map[string]int {
     "and" :       KW_AND,
     "or" :        KW_OR,

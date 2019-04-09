@@ -117,6 +117,7 @@ type Directory struct {
 //send directory payload to socket writer when given a path
 func fileBrowser(pathRequest Directory) {
     extension := regexp.MustCompile(`\.csv$`)
+    hiddenDir := regexp.MustCompile(`/\.[^/]+$`)
 
     //clean directory path, get parent, and prepare output
     path := filepath.Clean(pathRequest.Path)
@@ -133,7 +134,9 @@ func fileBrowser(pathRequest Directory) {
         ps, err := os.Stat(file)
         if err != nil { continue }
         if ps.Mode().IsDir() {
-            thisDir.Dirs = append(thisDir.Dirs, file)
+            if !hiddenDir.MatchString(file) {
+                thisDir.Dirs = append(thisDir.Dirs, file)
+            }
         } else if extension.MatchString(file) {
             thisDir.Files = append(thisDir.Files, file)
         }

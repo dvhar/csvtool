@@ -160,6 +160,7 @@ func preParseTokens(q* QuerySpecs) error {
     }
     return errors.New("Query must start with select. found "+q.ATok().Val)
 }
+
 func preParseTop(q* QuerySpecs) error {
     var err error
     if q.ATok().Id == KW_TOP {
@@ -170,6 +171,7 @@ func preParseTop(q* QuerySpecs) error {
     err = preParseSelectCols(q)
     return err
 }
+
 func selectAll(q* QuerySpecs) {
     q.SelectAll = true
     q.ColSpec.NewNames = q.ColSpec.Names
@@ -178,6 +180,7 @@ func selectAll(q* QuerySpecs) {
     q.ColSpec.NewPos = make([]int,q.ColSpec.Width)
     for i,_ := range q.ColSpec.NewNames { q.ColSpec.NewPos[i] = i+1 }
 }
+
 func newCol(q* QuerySpecs,ii int) {
     if !q.SelectAll {
         q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[ii])
@@ -186,6 +189,7 @@ func newCol(q* QuerySpecs,ii int) {
         q.ColSpec.NewWidth++
     }
 }
+
 func preParseSelectCols(q* QuerySpecs) error {
     //eat commas
     for ;q.ATok().Id == SP_COMMA; { q.ANext() }
@@ -240,6 +244,7 @@ func preParseSelectCols(q* QuerySpecs) error {
     }
     return err
 }
+
 func preParseAggregates(q* QuerySpecs) error {
     var err error
     if q.ATok().Id == KW_DISTINCT {
@@ -251,6 +256,7 @@ func preParseAggregates(q* QuerySpecs) error {
     }
     return preParseSelectCols(q)
 }
+
 func preParseColumnIndex(q* QuerySpecs) (int,error) {
     c := q.ATok().Val
     if q.ATok().Id != WORD { return 0,errors.New("Expected column, got "+c) }
@@ -265,6 +271,7 @@ func preParseColumnIndex(q* QuerySpecs) (int,error) {
         return ii, nil
     } else { return 0,errors.New("Column name not found: "+c) }
 }
+
 func preParseFrom(q* QuerySpecs) error {
     //go past where zone
     if (q.ATok().Id & BT_AFTWR) != 0 {
@@ -320,7 +327,7 @@ func preParseWhere(q* QuerySpecs) error {
             tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".*")
             re = regexp.MustCompile("_")
             tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".")
-            tok.Val = regexp.MustCompile("^"+tok.Val.(string)+"$")
+            tok.Val = regexp.MustCompile("(?i)^"+tok.Val.(string)+"$")
         }
         if err != nil { return err }
         q.BTokArray = append(q.BTokArray, tok)
@@ -334,6 +341,7 @@ func preParseWhere(q* QuerySpecs) error {
     }
     return errors.New("Unexpected token in the 'where' section: "+tok.Val)
 }
+
 //turn between clause into 2 comparisons with parenthese
 func preParseBetween(q* QuerySpecs) error {
     var columnVal, val1, val2, relop1, relop2 BToken
@@ -384,6 +392,7 @@ func preParseBetween(q* QuerySpecs) error {
 
     return preParseWhere(q)
 }
+
 //comparison values in where section
 func tokFromQuotes(q* QuerySpecs) (BToken,error) {
     var good bool
@@ -420,6 +429,7 @@ func tokFromQuotes(q* QuerySpecs) (BToken,error) {
     }
     return tok, errors.New("Expected a comparision value but got "+q.ATok().Val)
 }
+
 //modify this if adding 'group by' function. currently order is only thing after where
 func preParseAfterWhere(q* QuerySpecs) error {
     if q.ATok().Id == EOS { return nil }
@@ -437,6 +447,7 @@ func preParseAfterWhere(q* QuerySpecs) error {
     }
     return nil
 }
+
 func preParseOrderMethod(q* QuerySpecs) error {
     if q.ATok().Id == EOS { return nil }
     if q.ATok().Id == KW_ORDHOW { q.SortWay = 2 }

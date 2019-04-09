@@ -60,7 +60,7 @@ export class Help extends React.Component {
                 <h4>Selecting rows that match a certain condition</h4>
                 Use the 'where' keyword. Columns can be specified by name or number, though be careful not to confuse column numbers for comparision values like in the third example below. Use any combinatin of 'column [relational operator] value', parentheses, 'and', 'or', 'not', and 'between'. Put quotation marks around anything that contains spaces. Dates are handled nicely, so 'May 18 1955' is the same as 5/18/1955. Empty entries evaluate to 'null'.
                 <br/><br/>
-                Valid relational operators are {'=,  !=,  <>,  >,  <,  >=,  <=,  and '}'between'. '!' is evaluated the same as 'not', and can be put in front of a relational operator or a whole comparison.
+                Valid relational operators are {'=,  !=,  <>,  >,  <,  >=,  <=, like, and between'}. '!' is evaluated the same as 'not', and can be put in front of a relational operator or a whole comparison.
                 <br/><br/>
                 Examples:
                 <blockquote>
@@ -68,7 +68,7 @@ export class Help extends React.Component {
                 <br/>
                 select from /home/user/pets.csv where dateOfBirth {'<'} 'april 10 1980' or age between 20 and 30
                 <br/>
-                select from /home/user/pets.csv where {'(1 < 13 or fuzzy = very) and not (3 = null or weight >= 50)'}
+                select from /home/user/pets.csv where {'(1 < 13 or fuzzy = very) and not (3 = null or weight >= 50 or name not like a_b%)'}
                 </blockquote>
                 <h4>Sorting results</h4>
                 Use 'order by', followed by one column name or number, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified.
