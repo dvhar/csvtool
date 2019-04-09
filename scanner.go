@@ -36,6 +36,7 @@ const (
     KW_DISTINCT = BT_AGG|KEYWORD|iota
     KW_ORDHOW =   KEYWORD|iota
     KW_BETWEEN =  KEYWORD|iota
+    KW_LIKE =     RELOP|KEYWORD|iota
     KW_TOP =      BT_SEL|KEYWORD|iota
     //special bits
     SPECIALBIT =  1<<21
@@ -116,7 +117,7 @@ var enumMap = map[int]string {
 //characters of special tokens
 var specials = []int{ '*','=','!','<','>','\'','"','(',')',',' }
 //non-alphanumeric characters of words
-var others = []int{ '/','\\',':','-','_','.' }
+var others = []int{ '/','\\',':','-','_','.','%' }
 var keywordMap = map[string]int {
     "and" :       KW_AND,
     "or" :        KW_OR,
@@ -129,6 +130,7 @@ var keywordMap = map[string]int {
     "top" :       KW_TOP,
     "asc" :       KW_ORDHOW,
     "between" :   KW_BETWEEN,
+    "like" :      KW_LIKE,
     "not" :       SP_NEGATE,
 }
 var specialMap = map[string]int {

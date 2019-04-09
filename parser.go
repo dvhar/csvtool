@@ -9,6 +9,7 @@ import (
   d "github.com/araddon/dateparse"
   . "strconv"
   "time"
+  "regexp"
   "errors"
   "sort"
 )
@@ -226,6 +227,7 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     //if neither comparison value or column are null
     if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] != nil {
         switch relop.Val.(string) {
+            case "like":  match = compVal.Val.(*regexp.Regexp).MatchString(Sprint((*fromRow)[compCol.Val.(int)]))
             case "<>": negate ^= 1
                        fallthrough
             case "=" :

@@ -8,6 +8,7 @@ import (
   s "strings"
   d "github.com/araddon/dateparse"
   . "strconv"
+  . "fmt"
   "time"
 )
 
@@ -28,6 +29,7 @@ type QuerySpecs struct {
     SortWay int
     Save bool
     MemFull bool
+    Like bool
     End bool
 }
 func (q *QuerySpecs) ANext() *AToken {
@@ -307,9 +309,19 @@ func preParseWhere(q* QuerySpecs) error {
     }
     //if found a relop, add it to array and call WCOMP parser
     if (tok.Id & RELOP) != 0 {
+        if tok.Id == KW_LIKE { q.Like = true; }
         q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
         q.ANext()
         tok,err := tokFromQuotes(q)
+        //if relop is 'like', compile a regex
+        if q.Like {
+            q.Like = false
+            re := regexp.MustCompile("%")
+            tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".*")
+            re = regexp.MustCompile("_")
+            tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".")
+            tok.Val = regexp.MustCompile("^"+tok.Val.(string)+"$")
+        }
         if err != nil { return err }
         q.BTokArray = append(q.BTokArray, tok)
         return preParseWhere(q)
@@ -393,6 +405,8 @@ func tokFromQuotes(q* QuerySpecs) (BToken,error) {
     }
     //give interface the right type and append token
     if good {
+        //keep wcomp a string if using regex
+        if q.Like { q.ANext(); return tok, err }
         if s.ToLower(tok.Val.(string)) == "null" { tok.Dtype = T_NULL }
         switch tok.Dtype {
             case T_INT:    tok.Val,err = Atoi(tok.Val.(string))
