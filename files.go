@@ -127,16 +127,14 @@ func fileBrowser(pathRequest Directory) {
         messager <- "invalid path: "+path
         return
     }
-    thisDir := Directory{Path: path, Parent: filepath.Dir(path), Mode: pathRequest.Mode}
+    thisDir := Directory{Path: path+slash, Parent: filepath.Dir(path), Mode: pathRequest.Mode}
 
     //get subdirs and csv files
     for _,file := range files {
         ps, err := os.Stat(file)
         if err != nil { continue }
-        if ps.Mode().IsDir() {
-            if !hiddenDir.MatchString(file) {
-                thisDir.Dirs = append(thisDir.Dirs, file)
-            }
+        if ps.Mode().IsDir() && !hiddenDir.MatchString(file) {
+            thisDir.Dirs = append(thisDir.Dirs, file+slash)
         } else if extension.MatchString(file) {
             thisDir.Files = append(thisDir.Files, file)
         }

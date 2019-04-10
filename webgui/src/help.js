@@ -12,7 +12,7 @@ export class Help extends React.Component {
             The program will show you the first 1000 results in the browser, with 2 options for viewing certain rows or columns. The result table header includes the column number and data type. You can click on a column header to sort the top 1000 results by that column.
             <h3>How to save files</h3>
             <hr/>
-            After running a query, hit the save button. All the queries on the page will be run again, but this time they will be saved to csv files. If there are multiple queries on the page, you still only need to specify one file and a number will be added to the filename for each one. For file-size reasons, the 'order by' option does not currently effect output files, only the results that are displayed in the browser.
+            After running a query, hit the save button. Navigate to where you want to save, type in the file name, and hit the save button the right. All the queries on the page will be run again, but this time they will be saved to csv files. If there are multiple queries on the page, you still only need to specify one file and a number will be added to the filename for each one.
             <h3>How to use the query language</h3>
             <hr/>
             This program uses a new dialect of SQL to efficiently handle huge csv files and not all SQL standards have been implemented. Keywords are case-insensitive, column names and values are not. Joins and subqueries are not currently implemented.

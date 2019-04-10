@@ -33,11 +33,11 @@ const (
     KW_WHERE =    BT_WHR|KEYWORD|iota
     KW_ORDER =    BT_AFTWR|KEYWORD|iota
     KW_BY =       BT_AFTWR|KEYWORD|iota
+    KW_TOP =      BT_SEL|KEYWORD|iota
     KW_DISTINCT = BT_AGG|KEYWORD|iota
     KW_ORDHOW =   KEYWORD|iota
     KW_BETWEEN =  KEYWORD|iota
     KW_LIKE =     RELOP|KEYWORD|iota
-    KW_TOP =      BT_SEL|KEYWORD|iota
     //special bits
     SPECIALBIT =  1<<21
     SPECIAL =      FINAL|SPECIALBIT
@@ -117,7 +117,7 @@ var enumMap = map[int]string {
 //characters of special tokens
 var specials = []int{ '*','=','!','<','>','\'','"','(',')',',' }
 //non-alphanumeric characters of words
-var others = []int{ '/','\\',':','-','_','.','%','[',']' }
+var others = []int{ '/','\\',':','-','_','.','%','[',']','^' }
 var keywordMap = map[string]int {
     "and" :       KW_AND,
     "or" :        KW_OR,
