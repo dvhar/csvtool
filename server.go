@@ -140,7 +140,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         successMessage := "Query successful. Returning data"
         if (req.FileIO & F_CSV) != 0 {
             saver <- saveData{Type : CH_DONE}
-            successMessage = "Save successful."
+            successMessage = "Saved to "+FPaths.SavePath
         }
         if err != nil {
             retData.Status |= DAT_ERROR

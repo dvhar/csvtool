@@ -39,7 +39,7 @@ class DropdownQueryTextbox extends React.Component {
         return(
             <div className="dropmenu queryMenuDiv">
                 <div className="dropButton queryMenuButton" onClick={()=>{this.setState({clicked:this.state.clicked^1})}}>
-                    <h2>{this.props.title}{arrow}</h2>
+                    <h2 className="commandtitle">{this.props.title}{arrow}</h2>
                 </div>
                 <div className={`dropmenu-content ${this.state.clicked===1?"show":""}`}>
                 <textarea rows="10" className="queryTextEntry" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>

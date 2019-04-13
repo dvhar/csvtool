@@ -85,6 +85,9 @@ html {
     //@include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
     @include sgradient($ttop,$ttp,$bbt,$bbot);
 }
+.commandtitle {
+    margin: auto;
+}
 .queryMenuButton {
     padding: .2em .5em;
     background-color: $button1;

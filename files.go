@@ -99,7 +99,7 @@ func pathChecker(savePath string) error {
             return errors.New("Invalid path: "+savePath)
         } //else given new file
     }
-    //set realtime save paths
+    //set savepath and append csv extension if needed
     FPaths.SavePath = savePath
     extension := regexp.MustCompile(`\.csv$`)
     if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.csv` }

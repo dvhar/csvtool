@@ -47,6 +47,9 @@ html {
   background: #2989d8;
   background: linear-gradient(to bottom, #2989d8 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
 
+.commandtitle {
+  margin: auto; }
+
 .queryMenuButton {
   padding: .2em .5em;
   background-color: #EEEEEE;

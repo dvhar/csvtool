@@ -6,8 +6,18 @@ export PATH=$PATH:$GOPATH/bin
 next steps:
     more query language features
         -aggragates, between, expressions
-        -alter csv to hide sensitive data
     more powerful gui
         -show more data
         -query building
-    ask if vals starting with 0 like 000232342 need to keep leading zero
+
+
+figure out joins:
+    -have 2 files
+    -load just cols to join from 1st file where conditions match query
+        -include file pointers to row they came from
+    -scan second file
+        -when find query match, bin search array from 1st file
+        -for all join matches:
+            -go to file pointer and get row
+            -append columns from both files and save
+

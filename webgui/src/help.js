@@ -7,25 +7,26 @@ export class Help extends React.Component {
             <div className="helpBox">
             <h3>What this software does</h3>
             <hr/>
-            Query data from csv files, display it, and save it to new csv files. It is specifically designed to handle huge csv files without eating  up all you computer's resources.
+            Query data from csv files, display it, and save it to new csv files. It can handle huge csv files without eating  up all you computer's resources.
             <br/>
-            The program will show you the first 1000 results in the browser, with 2 options for viewing certain rows or columns. The result table header includes the column number and data type. You can click on a column header to sort the top 1000 results by that column.
+            The program will show you the first 1000 results in the browser, with 2 options for viewing certain rows or columns. You can click on a column header to sort the top 1000 results by that column.
             <h3>How to save files</h3>
             <hr/>
-            After running a query, hit the save button. Navigate to where you want to save, type in the file name, and hit the save button the right. All the queries on the page will be run again, but this time they will be saved to csv files. If there are multiple queries on the page, you still only need to specify one file and a number will be added to the filename for each one.
+            After running a query, hit the save button. Navigate to where you want to save, type in the file name, and hit the save button to the right. All the queries on the page will run again, but this time they will be saved to csv files. If there are multiple queries on the page, you still only need to specify one file and a number will be added to the filename for each one.
             <h3>How to use the query language</h3>
             <hr/>
-            This program uses a new dialect of SQL to efficiently handle huge csv files and not all SQL standards have been implemented. Keywords are case-insensitive, column names and values are not. Joins and subqueries are not currently implemented.
+            This program uses a custom version of SQL based on TSQL. Some features like Joins and subqueries are not currently implemented.
             <blockquote>
-                Query components must be in this order: select [columns] [from file] [where conditions] [order by column]
                 <h4>Specifying a file</h4>
-                Use the 'from' keyword followed by the full path of the file. You can query different files at the same time by separating queries with a semicolon.
+                Use the 'from' keyword followed by the full path of the file. Click 'Browse Files' to find files, and copy/paste it into the query. You can query different files at the same time by separating queries with a semicolon.
                 <h4>Selecting some columns</h4>
-                Columns can be specified by name or number. If some columns have the same name, the later ones must be specified by number. Commas are optional, so you can easily copy and paste column names or numbers from a result table header into a new query.
+                Columns can be specified by name or number. If some columns have the same name, the later ones must be specified by number. Commas are optional, so you can easily copy and paste column names or numbers from a table header into a new query.
                 <br/><br/>
                 Example: selecting columns 1-3, dogs, and cats from a file<br/>
                 <blockquote>
                     select 1 2 3 dogs cats from /home/user/pets.csv
+                    <br/>
+                    select 1 2 3 dogs cats from C:\users\dave\pets.csv
                 </blockquote>
                 <h4>Selecting all columns</h4>
                 'select * ' works how you'd expect. If you don't specify any columns at all, it will also select all. 
@@ -38,7 +39,7 @@ export class Help extends React.Component {
                 select from /home/user/pets.csv
                 </blockquote>
                 <h4>selecting rows with a distinct value</h4>
-                Use the 'distinct' keyword in front of the column. If selecting all, use 'distinct' and '*'.
+                Put the 'distinct' keyword in front of the column that you want to be distinct.
                 <br/><br/>
                 Examples:
                 <blockquote>
@@ -49,7 +50,7 @@ export class Help extends React.Component {
                     select distinct dogs * from /home/user/pets.csv
                 </blockquote>
                 <h4>Selecting a number of rows</h4>
-                Use the 'top' keyword after 'select', just like TSQL. Be careful not to confuse the number after 'top' for a column number.
+                Use the 'top' keyword after 'select'. Be careful not to confuse the number after 'top' for a column number.
                 <br/><br/>
                 Examples: selecting columns 1-3, dogs, and cats from a file, but only fetch 100 results. Then select all columns.<br/>
                 <blockquote>
@@ -72,7 +73,7 @@ export class Help extends React.Component {
                 </blockquote>
                 <h4>Sorting results</h4>
                 Use 'order by', followed by one column name or number, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified.
-                The results sent to the browser are sorted, but saving files does not preserve the order. This feature may be implemented in the future, but file size would depend on how much memory your computer has (though they could still be pretty big).
+                The results sent to the browser are sorted, but saving files does not preserve the order.
                 <br/><br/>
                 Examples:
                 <blockquote>
@@ -83,9 +84,9 @@ export class Help extends React.Component {
                 select from /home/user/pets.csv order by 2
                 </blockquote>
             </blockquote>
-            <h3>Cancelling a query, viewing older queries, and exiting</h3>
+            <h3>Ending queries early, viewing older queries, and exiting</h3>
             <hr/>
-            If a query is taking too long, hit the cancel button and the query will end and display the results that it found.
+            If a query is taking too long, hit the button next to submit and the query will end and display the results that it found.
             <br/>
             The browser remembers previous queries. In the top-right corner, it will show you which query you are on. You can re-run other queries by hitting the forward and back arrows around the numbers.
             <br/>
