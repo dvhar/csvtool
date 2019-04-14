@@ -49,6 +49,8 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
 
+    Printf("%+v", q)
+
     //prepare input and output
     totalMem = memory.TotalMemory()
     fp,err := os.Open(q.Fname)

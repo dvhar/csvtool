@@ -31,6 +31,8 @@ type QuerySpecs struct {
     MemFull bool
     Like bool
     End bool
+    ParseCol int
+    LastColumn BToken
 }
 func (q *QuerySpecs) ANext() *AToken {
     if q.AIdx < len(q.ATokArray)-1 { q.AIdx++ }
@@ -60,6 +62,9 @@ const (
     T_FLOAT = iota
     T_DATE = iota
     T_STRING = iota
+
+    COL_APPEND = iota
+    COL_GETIDX = iota
 )
 type BToken struct {
     Id int
@@ -77,6 +82,22 @@ func getColumnIdx(colNames []string, column string) (int, error) {
         }
     }
     return 0, errors.New("getColumnIdx: column " + column + " not found")
+}
+func selectAll(q* QuerySpecs) {
+    q.SelectAll = true
+    q.ColSpec.NewNames = q.ColSpec.Names
+    q.ColSpec.NewTypes = q.ColSpec.Types
+    q.ColSpec.NewWidth = q.ColSpec.Width
+    q.ColSpec.NewPos = make([]int,q.ColSpec.Width)
+    for i,_ := range q.ColSpec.NewNames { q.ColSpec.NewPos[i] = i+1 }
+}
+func newCol(q* QuerySpecs,ii int) {
+    if !q.SelectAll {
+        q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[ii])
+        q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[ii])
+        q.ColSpec.NewPos = append(q.ColSpec.NewPos, ii+1)
+        q.ColSpec.NewWidth++
+    }
 }
 
 //get column types from first 10000 rows
@@ -123,6 +144,21 @@ func inferTypes(q *QuerySpecs) error {
     println("got column data types")
     return  err
 }
+//return index of column at current token
+func preParseColumnIndex(q* QuerySpecs) (int,error) {
+    c := q.ATok().Val
+    if q.ATok().Id != WORD { return 0,errors.New("Expected column, got "+c) }
+    ii, err := Atoi(c)
+    if err == nil {
+        if ii > q.ColSpec.Width { return 0,errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
+        if ii < 1 { return 0,errors.New("Column number too small: "+c) }
+        return ii-1, nil
+    }
+    ii, err = getColumnIdx(q.ColSpec.Names, c)
+    if err == nil {
+        return ii, nil
+    } else { return 0,errors.New("Column name not found: "+c) }
+}
 
 //fill out source csv ColSpecs
 func evalFrom(q *QuerySpecs) error {
@@ -142,219 +178,224 @@ func evalFrom(q *QuerySpecs) error {
     return errors.New("Unknown problem parsing 'from file' part of query")
 }
 
-//top-level recursive descent pre-parser builds Token arrays and QuerySpecs
-//saves main parser some time during query. currently only called once.
+//recursive descent pre-parser builds Token arrays and QuerySpecs
 func preParseTokens(q* QuerySpecs) error {
+
     //first turn query string into A tokens
     err := tokenizeQspec(q)
     if err != nil { return err }
 
-    //open file and get column info
+    //then open file and get column info
     err = evalFrom(q)
     if err != nil { return err }
 
-    //must start with select token. maybe add 'update' later
-    if q.ATok().Id == KW_SELECT {
-        q.ANext()
-        return preParseTop(q)
-    }
-    return errors.New("Query must start with select. found "+q.ATok().Val)
+    //select section
+    err =  preParseSelect(q)
+    if err != nil { return err }
+
+    //skip from section because already evaluated
+    preParseFrom(q)
+
+    //where section
+    err =  preParseWhere(q)
+    if err != nil { return err }
+    Println("AW: ",q.ATok())
+    //Order by
+    err =  preParseOrder(q)
+    return err
+}
+
+func preParseSelect(q* QuerySpecs) error {
+    if q.ATok().Id != KW_SELECT { return errors.New("Expected 'select' token. found "+q.ATok().Val) }
+    q.ANext()
+    err := preParseTop(q)
+    if err != nil { return err }
+    return preParseSelections(q)
 }
 
 func preParseTop(q* QuerySpecs) error {
+    //terminal
     var err error
     if q.ATok().Id == KW_TOP {
         q.QuantityLimit, err = Atoi(q.APeek().Val)
         if err != nil { return errors.New("Expected number after 'top'. found "+q.APeek().Val) }
         q.ANext(); q.ANext()
     }
-    err = preParseSelectCols(q)
-    return err
+    return nil
 }
 
-func selectAll(q* QuerySpecs) {
-    q.SelectAll = true
-    q.ColSpec.NewNames = q.ColSpec.Names
-    q.ColSpec.NewTypes = q.ColSpec.Types
-    q.ColSpec.NewWidth = q.ColSpec.Width
-    q.ColSpec.NewPos = make([]int,q.ColSpec.Width)
-    for i,_ := range q.ColSpec.NewNames { q.ColSpec.NewPos[i] = i+1 }
+func preParseSelections(q* QuerySpecs) error {
+    switch q.ATok().Id {
+        case SP_ALL:
+            selectAll(q)
+            q.ANext()
+            return preParseSelections(q)
+        //specials
+        case KW_DISTINCT:
+            err := preParseSpecial(q)
+            if err != nil { return err }
+            return preParseSelections(q)
+        //column
+        case WORD: fallthrough
+        case SP_SQUOTE: fallthrough
+        case SP_DQUOTE:
+            q.ParseCol = COL_APPEND
+            err := preParseColumn(q)
+            if err != nil { return err }
+            return preParseSelections(q)
+        case KW_FROM:
+            if q.ColSpec.NewWidth == 0 { selectAll(q) }
+    }
+    return nil
 }
 
-func newCol(q* QuerySpecs,ii int) {
-    if !q.SelectAll {
-        q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[ii])
-        q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[ii])
-        q.ColSpec.NewPos = append(q.ColSpec.NewPos, ii+1)
-        q.ColSpec.NewWidth++
-    }
-}
-
-func preParseSelectCols(q* QuerySpecs) error {
-    //eat commas
-    for ;q.ATok().Id == SP_COMMA; { q.ANext() }
-    //construct string from values between quotes
-    if q.ATok().Id == SP_SQUOTE || q.ATok().Id == SP_DQUOTE {
-        quote := q.ATok().Id
-        var S string
-        for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
-        if q.ATok().Id == EOS { return errors.New("Quote was not terminated") }
-        q.ANext()
-        ii, err := getColumnIdx(q.ColSpec.Names, S)
-        if err != nil { return errors.New("Column name not found: "+S) }
-        q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, ii, q.ColSpec.Types[ii]})
-        newCol(q, ii)
-        return preParseSelectCols(q)
-    }
-    //go to from zone
-    if q.ATok().Id == KW_FROM || q.ATok().Id == KW_WHERE {
-        if q.ColSpec.NewWidth == 0 { selectAll(q) }
-        return preParseFrom(q)
-    }
-    //go past where zone
-    if (q.ATok().Id & BT_AFTWR) != 0 {
-        if q.ColSpec.NewWidth == 0 { selectAll(q) }
-        return preParseAfterWhere(q)
-    }
-    //check for premature ending
-    if q.ATok().Id == EOS && q.Fname == "" {
-        return errors.New("Query ended before specifying a file")
-    }
-    //check for select all
-    if q.ATok().Id == SP_ALL {
-        selectAll(q)
-        q.ANext()
-        return preParseSelectCols(q)
-    }
-    //check for aggragate keywords
-    if (q.ATok().Id & BT_AGG) != 0 {
-        return preParseAggregates(q)
-    }
-    //check for invalid select columns
-    if q.ATok().Id != WORD {
-        return errors.New("Expected select column but found "+q.ATok().Val)
-    }
-    //parse selected column
-    ii, err := preParseColumnIndex(q)
-    if err == nil {
-        q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, ii, q.ColSpec.Types[ii]})
-        newCol(q, ii)
-        q.ANext()
-        return preParseSelectCols(q)
-    }
-    return err
-}
-
-func preParseAggregates(q* QuerySpecs) error {
+func preParseColumn(q* QuerySpecs) error {
+    var ii int
     var err error
-    if q.ATok().Id == KW_DISTINCT {
-        if q.ANext().Id != WORD { return errors.New("Expected a column after 'distinct'. Got "+q.ATok().Val) }
-        q.DistinctIdx, err = preParseColumnIndex(q)
-        if err != nil { return err }
-    } else {
-        return errors.New("Aggregate function not implemented: "+q.ATok().Val)
+    switch q.ATok().Id {
+        //parse selected column
+        case WORD:
+            ii, err = preParseColumnIndex(q)
+        //parse column from quotes
+        case SP_SQUOTE: fallthrough
+        case SP_DQUOTE:
+            quote := q.ATok().Id
+            var S string
+            for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
+            if q.ATok().Id == EOS { return errors.New("Quote was not terminated") }
+            ii, err = getColumnIdx(q.ColSpec.Names, S)
     }
-    return preParseSelectCols(q)
+    if err != nil { return err }
+    //see if appending to token array or just getting index
+    switch q.ParseCol {
+        case COL_APPEND:
+            q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, ii, q.ColSpec.Types[ii]})
+            newCol(q, ii)
+        case COL_GETIDX:
+            q.ParseCol = ii
+    }
+    q.ANext()
+    return err
 }
 
-func preParseColumnIndex(q* QuerySpecs) (int,error) {
-    c := q.ATok().Val
-    if q.ATok().Id != WORD { return 0,errors.New("Expected column, got "+c) }
-    ii, err := Atoi(c)
-    if err == nil {
-        if ii > q.ColSpec.Width { return 0,errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
-        if ii < 1 { return 0,errors.New("Column number too small: "+c) }
-        return ii-1, nil
+func preParseSpecial(q* QuerySpecs) error {
+    switch q.ATok().Id {
+        case KW_DISTINCT:
+            q.ANext()
+            q.ParseCol = COL_GETIDX
+            err := preParseColumn(q)
+            if err != nil { return err }
+            q.DistinctIdx = q.ParseCol
+            if !q.SelectAll {
+                q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, q.ParseCol, q.ColSpec.Types[q.ParseCol]})
+                newCol(q, q.ParseCol)
+            }
+            return err
     }
-    ii, err = getColumnIdx(q.ColSpec.Names, c)
-    if err == nil {
-        return ii, nil
-    } else { return 0,errors.New("Column name not found: "+c) }
+    return errors.New("Function not implemented:"+q.ATok().Val)
 }
 
 func preParseFrom(q* QuerySpecs) error {
-    //go past where zone
-    if (q.ATok().Id & BT_AFTWR) != 0 {
-        return preParseAfterWhere(q)
+    if q.ATok().Id != KW_FROM { return errors.New("Expected 'from'. Found: "+q.ATok().Val) }
+    q.ANext()
+    q.ANext()
+    if q.ATok().Id == KW_AS {
+        q.ANext()
+        q.ANext()
     }
-    //skip from - already got that
-    if q.ATok().Id == KW_FROM {
-        q.ANext(); q.ANext()
-        return preParseFrom(q)
-    }
-    //if there is no where
-    if q.ATok().Id == EOS { return nil }
-    //if found a where token
-    if q.ATok().Id == KW_WHERE {
-        q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
-        if q.ANext().Id == EOS { return errors.New("Expected a comparison after 'where'") }
-        return preParseWhere(q)
-    }
-    return errors.New("Unexpected token in 'from' section: "+q.ATok().Val)
+    return nil
 }
 
-var lastType int
-func preParseWhere(q* QuerySpecs) error {
-    tok := q.ATok()
-    //if token that only appears after where section
-    if tok.Id == EOS { return nil }
-    if (tok.Id & BT_AFTWR) != 0 {
-        return preParseAfterWhere(q)
+func preParseWhere(q*QuerySpecs) error {
+    if q.ATok().Id != KW_WHERE { return nil }
+    q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
+    q.ANext()
+    return preParseConditions(q)
+}
+func preParseConditions(q*QuerySpecs) error {
+    //negater before conditions
+    if q.ATok().Id == SP_NEGATE {
+        q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
+        q.ANext()
     }
-    //if found a word, it must be column
-    if tok.Id == WORD {
-        //between
-        if q.APeek().Id == KW_BETWEEN { return preParseBetween(q) }
-
-        ii, err := preParseColumnIndex(q)
-        if err == nil {
-            q.BTokArray = append(q.BTokArray, BToken{BT_WCOL, ii, q.ColSpec.Types[ii]})
-            lastType = q.ColSpec.Types[ii]
+    switch q.ATok().Id {
+        case SP_LPAREN:
+            tok := q.ATok()
+            q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
+            q.ANext();
+            err := preParseConditions(q)
+            if err != nil { return err }
+            tok = q.ATok()
+            if tok.Id != SP_RPAREN { return errors.New("No closing parentheses. Found: "+tok.Val) }
+            q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
             q.ANext()
-            return preParseWhere(q)
-        } else { return err }
+            return preparseMore(q)
+        case WORD: fallthrough
+        case SP_DQUOTE: fallthrough
+        case SP_SQUOTE:
+            err := preParseCompare(q)
+            if err != nil { return err }
+            return preparseMore(q)
     }
-    //if found a relop, add it to array and call WCOMP parser
-    if (tok.Id & RELOP) != 0 {
+    return errors.New("Unexpected token in conditional: "+q.ATok().Val)
+}
+func preParseCompare(q* QuerySpecs) error {
+    q.ParseCol = COL_GETIDX
+    err := preParseColumn(q)
+    if err != nil { return err }
+    ii := q.ParseCol
+    q.LastColumn = BToken{BT_WCOL, ii, q.ColSpec.Types[ii]}
+    return preParseRel(q)
+}
+func preParseRel(q* QuerySpecs) error {
+    //negater before relop
+    if q.ATok().Id == SP_NEGATE {
+        q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
+        q.ANext()
+    }
+    //between
+    if q.ATok().Id == KW_BETWEEN { return preParseBetween(q) }
+    //relop and value
+    if (q.ATok().Id & RELOP) != 0 {
+        q.BTokArray = append(q.BTokArray, q.LastColumn)
+        tok := q.ATok()
         if tok.Id == KW_LIKE { q.Like = true; }
         q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
         q.ANext()
-        tok,err := tokFromQuotes(q)
+        btok,err := tokFromQuotes(q)
         //if relop is 'like', compile a regex
         if q.Like {
             q.Like = false
             re := regexp.MustCompile("%")
-            tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".*")
+            btok.Val = re.ReplaceAllString(Sprint(btok.Val), ".*")
             re = regexp.MustCompile("_")
-            tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".")
-            tok.Val = regexp.MustCompile("(?i)^"+tok.Val.(string)+"$")
+            btok.Val = re.ReplaceAllString(Sprint(btok.Val), ".")
+            btok.Val = regexp.MustCompile("(?i)^"+btok.Val.(string)+"$")
         }
-        if err != nil { return err }
-        q.BTokArray = append(q.BTokArray, tok)
-        return preParseWhere(q)
+        q.BTokArray = append(q.BTokArray, btok)
+        return err
     }
-    //parentheses, logops, negater
-    if tok.Id == SP_LPAREN || tok.Id == SP_RPAREN || (tok.Id & LOGOP)!=0 || tok.Id == SP_NEGATE {
-        q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
-        q.ANext()
-        return preParseWhere(q)
-    }
-    return errors.New("Unexpected token in the 'where' section: "+tok.Val)
+    return errors.New("Expected relop. Found: "+q.ATok().Val)
+}
+func preparseMore(q* QuerySpecs) error {
+    if (q.ATok().Id & LOGOP) == 0 { return nil }
+    q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
+    q.ANext()
+    return preParseConditions(q)
 }
 
 //turn between clause into 2 comparisons with parenthese
 func preParseBetween(q* QuerySpecs) error {
     var columnVal, val1, val2, relop1, relop2 BToken
     var firstSmaller bool
+    var err error
 
     //get comparison column and type
-    ii, err := preParseColumnIndex(q)
-    if err != nil { return err }
-    columnVal = BToken{BT_WCOL, ii, q.ColSpec.Types[ii]}
-    lastType = q.ColSpec.Types[ii]
+    //ii, err := preParseColumnIndex(q)
+    //if err != nil { return err }
+    columnVal = q.LastColumn
 
     //eat between token and get comparison values
-    q.ANext()
     q.ANext()
     val1, err = tokFromQuotes(q)
     if err != nil { return err }
@@ -390,7 +431,7 @@ func preParseBetween(q* QuerySpecs) error {
     q.BTokArray = append(q.BTokArray, val2)
     q.BTokArray = append(q.BTokArray, BToken{SP_RPAREN, ")", 0})
 
-    return preParseWhere(q)
+    return err
 }
 
 //comparison values in where section
@@ -400,7 +441,7 @@ func tokFromQuotes(q* QuerySpecs) (BToken,error) {
     var err error
     //add to array if just a word
     if q.ATok().Id == WORD {
-        tok = BToken{BT_WCOMP, q.ATok().Val, lastType}
+        tok = BToken{BT_WCOMP, q.ATok().Val, q.LastColumn.Dtype}
         good = true
     }
     //construct string from values between quotes
@@ -409,7 +450,7 @@ func tokFromQuotes(q* QuerySpecs) (BToken,error) {
         var S string
         for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
         if q.ATok().Id == EOS { return tok, errors.New("Quote was not terminated") }
-        tok = BToken{BT_WCOMP, S, lastType}
+        tok = BToken{BT_WCOMP, S, q.LastColumn.Dtype}
         good = true
     }
     //give interface the right type and append token
@@ -430,16 +471,17 @@ func tokFromQuotes(q* QuerySpecs) (BToken,error) {
     return tok, errors.New("Expected a comparision value but got "+q.ATok().Val)
 }
 
-//modify this if adding 'group by' function. currently order is only thing after where
-func preParseAfterWhere(q* QuerySpecs) error {
+//currently order is only thing after where
+func preParseOrder(q* QuerySpecs) error {
     if q.ATok().Id == EOS { return nil }
     if q.ATok().Id == KW_ORDER {
         if q.ANext().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.ATok().Val) }
-        /*if*/ q.ANext()//.Id != WORD { return errors.New("Expected column after 'order by'. Found "+q.ATok().Val) }
-        ii, err := preParseColumnIndex(q)
+        q.ANext()
+        q.ParseCol = COL_GETIDX
+        err := preParseColumn(q)
         if err == nil {
             q.NeedAllRows = true
-            q.SortCol = ii
+            q.SortCol = q.ParseCol
             q.SortWay = 1
             q.ANext()
             preParseOrderMethod(q)
@@ -448,8 +490,6 @@ func preParseAfterWhere(q* QuerySpecs) error {
     return nil
 }
 
-func preParseOrderMethod(q* QuerySpecs) error {
-    if q.ATok().Id == EOS { return nil }
+func preParseOrderMethod(q* QuerySpecs) {
     if q.ATok().Id == KW_ORDHOW { q.SortWay = 2 }
-    return preParseAfterWhere(q)
 }

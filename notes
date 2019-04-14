@@ -21,3 +21,21 @@ figure out joins:
             -go to file pointer and get row
             -append columns from both files and save
 
+
+
+current BNF:
+<PreParseTokens> -> <Select> <From> <Where> <Order>
+<Select>     -> <top> <Selections>
+<top>        -> top INT | ε
+<Selections> -> <column> <Selections> | * <Selections> | <Special> <Selections> | ε
+<column>     -> column | quotedColumn
+<Special>    -> distinct <column> | <Function> | <Case> //last 2 not implemented yet, but fit here nicely
+<From>       -> from filename <alias>
+<alias>      -> as alias | ε
+<Where>      -> where <Conditions>
+<Conditions> -> <Compare> <More> | ( <Conditions> ) <More>
+<More>       -> logop <Conditions> | ε
+<Compare>    -> <column> <Rel>
+<Rel>        -> relop value | between value and value
+<Order>      -> order by <column> <OMethod> | ε
+<Omethod>    -> asc | ε

@@ -30,6 +30,7 @@ const (
     KW_OR  =      BT_WHR|LOGOP|KEYWORD|iota
     KW_SELECT =   KEYWORD|iota
     KW_FROM  =    KEYWORD|iota
+    KW_AS  =      KEYWORD|iota
     KW_WHERE =    BT_WHR|KEYWORD|iota
     KW_ORDER =    BT_AFTWR|KEYWORD|iota
     KW_BY =       BT_AFTWR|KEYWORD|iota
@@ -80,6 +81,7 @@ var enumMap = map[int]string {
     KW_OR  :        "KW_OR",
     KW_SELECT :     "KW_SELECT",
     KW_FROM  :      "KW_FROM",
+    KW_AS  :        "KW_AS",
     KW_WHERE :      "KW_WHERE",
     KW_ORDER :      "KW_ORDER",
     KW_BY :         "KW_BY",
@@ -123,6 +125,7 @@ var keywordMap = map[string]int {
     "or" :        KW_OR,
     "select" :    KW_SELECT,
     "from" :      KW_FROM,
+    "as" :        KW_AS,
     "where" :     KW_WHERE,
     "order" :     KW_ORDER,
     "by" :        KW_BY,
