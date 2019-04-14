@@ -62,7 +62,6 @@ const (
     T_FLOAT = iota
     T_DATE = iota
     T_STRING = iota
-
     COL_APPEND = iota
     COL_GETIDX = iota
 )
@@ -81,7 +80,7 @@ func getColumnIdx(colNames []string, column string) (int, error) {
             return i, nil
         }
     }
-    return 0, errors.New("getColumnIdx: column " + column + " not found")
+    return 0, errors.New("Column " + column + " not found")
 }
 func selectAll(q* QuerySpecs) {
     q.SelectAll = true
@@ -144,21 +143,6 @@ func inferTypes(q *QuerySpecs) error {
     println("got column data types")
     return  err
 }
-//return index of column at current token
-func preParseColumnIndex(q* QuerySpecs) (int,error) {
-    c := q.ATok().Val
-    if q.ATok().Id != WORD { return 0,errors.New("Expected column, got "+c) }
-    ii, err := Atoi(c)
-    if err == nil {
-        if ii > q.ColSpec.Width { return 0,errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
-        if ii < 1 { return 0,errors.New("Column number too small: "+c) }
-        return ii-1, nil
-    }
-    ii, err = getColumnIdx(q.ColSpec.Names, c)
-    if err == nil {
-        return ii, nil
-    } else { return 0,errors.New("Column name not found: "+c) }
-}
 
 //fill out source csv ColSpecs
 func evalFrom(q *QuerySpecs) error {
@@ -199,7 +183,7 @@ func preParseTokens(q* QuerySpecs) error {
     //where section
     err =  preParseWhere(q)
     if err != nil { return err }
-    Println("AW: ",q.ATok())
+
     //Order by
     err =  preParseOrder(q)
     return err
@@ -230,7 +214,7 @@ func preParseSelections(q* QuerySpecs) error {
             selectAll(q)
             q.ANext()
             return preParseSelections(q)
-        //specials
+        //non-column words in select section
         case KW_DISTINCT:
             err := preParseSpecial(q)
             if err != nil { return err }
@@ -255,7 +239,17 @@ func preParseColumn(q* QuerySpecs) error {
     switch q.ATok().Id {
         //parse selected column
         case WORD:
-            ii, err = preParseColumnIndex(q)
+            c := q.ATok().Val
+            ii, err = Atoi(c)
+            //if it's a number
+            if err == nil {
+                if ii > q.ColSpec.Width { return errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
+                if ii < 1 { return errors.New("Column number too small: "+c) }
+                ii -= 1
+            //if it's a name
+            } else {
+                ii, err = getColumnIdx(q.ColSpec.Names, c)
+            }
         //parse column from quotes
         case SP_SQUOTE: fallthrough
         case SP_DQUOTE:
@@ -292,7 +286,7 @@ func preParseSpecial(q* QuerySpecs) error {
             }
             return err
     }
-    return errors.New("Function not implemented:"+q.ATok().Val)
+    return errors.New("Unexpected token in 'select' section:"+q.ATok().Val)
 }
 
 func preParseFrom(q* QuerySpecs) error {
@@ -337,7 +331,7 @@ func preParseConditions(q*QuerySpecs) error {
             if err != nil { return err }
             return preparseMore(q)
     }
-    return errors.New("Unexpected token in conditional: "+q.ATok().Val)
+    return errors.New("Unexpected token in 'where' section: "+q.ATok().Val)
 }
 func preParseCompare(q* QuerySpecs) error {
     q.ParseCol = COL_GETIDX
@@ -370,12 +364,12 @@ func preParseRel(q* QuerySpecs) error {
             btok.Val = re.ReplaceAllString(Sprint(btok.Val), ".*")
             re = regexp.MustCompile("_")
             btok.Val = re.ReplaceAllString(Sprint(btok.Val), ".")
-            btok.Val = regexp.MustCompile("(?i)^"+btok.Val.(string)+"$")
+            btok.Val,err = regexp.Compile("(?i)^"+btok.Val.(string)+"$")
         }
         q.BTokArray = append(q.BTokArray, btok)
         return err
     }
-    return errors.New("Expected relop. Found: "+q.ATok().Val)
+    return errors.New("Expected relational operator. Found: "+q.ATok().Val)
 }
 func preparseMore(q* QuerySpecs) error {
     if (q.ATok().Id & LOGOP) == 0 { return nil }
@@ -386,14 +380,9 @@ func preparseMore(q* QuerySpecs) error {
 
 //turn between clause into 2 comparisons with parenthese
 func preParseBetween(q* QuerySpecs) error {
-    var columnVal, val1, val2, relop1, relop2 BToken
+    var  val1, val2, relop1, relop2 BToken
     var firstSmaller bool
     var err error
-
-    //get comparison column and type
-    //ii, err := preParseColumnIndex(q)
-    //if err != nil { return err }
-    columnVal = q.LastColumn
 
     //eat between token and get comparison values
     q.ANext()
@@ -422,11 +411,11 @@ func preParseBetween(q* QuerySpecs) error {
 
     //add tokens to B array
     q.BTokArray = append(q.BTokArray, BToken{SP_LPAREN, "(", 0})
-    q.BTokArray = append(q.BTokArray, columnVal)
+    q.BTokArray = append(q.BTokArray, q.LastColumn)
     q.BTokArray = append(q.BTokArray, relop1)
     q.BTokArray = append(q.BTokArray, val1)
     q.BTokArray = append(q.BTokArray, BToken{KW_AND, "and", 0})
-    q.BTokArray = append(q.BTokArray, columnVal)
+    q.BTokArray = append(q.BTokArray, q.LastColumn)
     q.BTokArray = append(q.BTokArray, relop2)
     q.BTokArray = append(q.BTokArray, val2)
     q.BTokArray = append(q.BTokArray, BToken{SP_RPAREN, ")", 0})

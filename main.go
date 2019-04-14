@@ -100,6 +100,7 @@ var browsersOpen = 0
 var slash string
 
 func main() {
+    println("version 0.11 - 4/14/2019")
     //get password and other flags
     flag.Parse()
     messager = make(chan string)
