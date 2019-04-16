@@ -120,7 +120,7 @@ class Main extends React.Component {
             sendSocket = {(request)=>this.sendSocket(request)}
             showQuery = {this.state.showQuery}
         />
-        {//<display.TableGrid2/>}
+        <display.TableGrid2/>
         </>
         )
     }
