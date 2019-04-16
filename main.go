@@ -1,6 +1,6 @@
 package main
 import (
-    _ "github.com/denisenkom/go-mssqldb"
+    //_ "github.com/denisenkom/go-mssqldb"
     "regexp"
     "runtime"
     "strings"

@@ -125,7 +125,7 @@ func inferTypes(q *QuerySpecs) error {
         if err != nil { break }
         for i,cell := range line {
             entry := s.TrimSpace(cell)
-            if entry == "NULL" || entry == "null" || entry == "NA" || entry == "" {
+            if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
               q.ColSpec.Types[i] = max(T_NULL, q.ColSpec.Types[i])
             } else if LeadingZeroString.MatchString(entry) {
               q.ColSpec.Types[i] = T_STRING
@@ -144,7 +144,7 @@ func inferTypes(q *QuerySpecs) error {
     return  err
 }
 
-//fill out source csv ColSpecs
+//open file and call type inferrer
 func evalFrom(q *QuerySpecs) error {
     //go straight to the from token or end
     if q.ATok().Id != KW_SELECT { return errors.New("Query must start with select. found "+q.ATok().Val) }

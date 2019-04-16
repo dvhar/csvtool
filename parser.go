@@ -89,7 +89,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         //see if user wants to cancel
         if stop == 1 {
             stop = 0
-            if q.Save { saver <- saveData{Type : CH_NEXT};  saver <- saveData{Type : CH_DONE} }
             messager <- "query cancelled"
             break
         }
@@ -228,18 +227,18 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
 
     //if neither comparison value or column are null
     if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] != nil {
-        switch relop.Val.(string) {
-            case "like":  match = compVal.Val.(*regexp.Regexp).MatchString(Sprint((*fromRow)[compCol.Val.(int)]))
-            case "<>": negate ^= 1
+        switch relop.Id {
+            case KW_LIKE:  match = compVal.Val.(*regexp.Regexp).MatchString(Sprint((*fromRow)[compCol.Val.(int)]))
+            case SP_NOEQ: negate ^= 1
                        fallthrough
-            case "=" :
+            case SP_EQ :
                 switch compVal.Dtype {
                     case T_DATE:   match = compVal.Val.(time.Time).Equal((*fromRow)[compCol.Val.(int)].(time.Time))
                     default:       match = compVal.Val == (*fromRow)[compCol.Val.(int)]
                 }
-            case "<=": negate ^= 1
+            case SP_LESSEQ: negate ^= 1
                        fallthrough
-            case ">" :
+            case SP_GREAT :
                 switch compVal.Dtype {
                     case T_NULL:   fallthrough
                     case T_STRING: match = (*fromRow)[compCol.Val.(int)].(string) > compVal.Val.(string)
@@ -247,9 +246,9 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
                     case T_FLOAT:  match = (*fromRow)[compCol.Val.(int)].(float64) > compVal.Val.(float64)
                     case T_DATE:   match = (*fromRow)[compCol.Val.(int)].(time.Time).After(compVal.Val.(time.Time))
                 }
-            case ">=" : negate ^= 1
+            case SP_GREATEQ : negate ^= 1
                        fallthrough
-            case "<":
+            case SP_LESS:
                 switch compVal.Dtype {
                     case T_NULL:   fallthrough
                     case T_STRING: match = (*fromRow)[compCol.Val.(int)].(string) < compVal.Val.(string)
@@ -261,16 +260,16 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
 
     //if comparison value is null
     } else if compVal.Val == nil {
-        switch relop.Val.(string) {
-            case "<>": negate ^= 1
+        switch relop.Id {
+            case SP_NOEQ: negate ^= 1
                        fallthrough
-            case "=" : match = (*fromRow)[compCol.Val.(int)] == nil
+            case SP_EQ : match = (*fromRow)[compCol.Val.(int)] == nil
             default  : return false, errors.New("Invalid operation with null: "+relop.Val.(string)+". Valid operators: = != <>")
         }
     //if only column is null
     } else if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] == nil  {
-        switch relop.Val.(string) {
-            case "<>": negate ^= 1
+        switch relop.Id {
+            case SP_NOEQ: negate ^= 1
                        fallthrough
             default: match = false
         }
