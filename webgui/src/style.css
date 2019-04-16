@@ -244,3 +244,13 @@ html {
   border-radius: 1em;
   padding: 1em;
   overflow-y: scroll; }
+
+.dynoDiv {
+  border: 1px solid black;
+  max-height: 20em;
+  overflow: auto;
+  display: inline-block; }
+
+.dynoTableCell {
+  border: 1px solid grey;
+  height: 1.5em; }

@@ -246,3 +246,76 @@ export class QueryRender extends React.Component {
         )
     }
 }
+
+//testing new dynamic loading table
+export class TableGrid2 extends React.Component {
+    constructor(props){
+        super(props);
+        this.state = {
+            table : Math.random(),
+            div : Math.random(),
+            pad1 : Math.random(),
+            pad2 : Math.random(),
+            contents : [],
+        }
+        this.lastAction = "";
+        this.p1 = 0;
+        this.p2 = 0;
+    }
+    addB(){
+        for (var i=0;i<10;i++)
+        this.state.contents.push(["cell1","cell2","cell3","cell4"]);
+        this.lastAction = "Bot";
+    }
+    addT(){
+        for (var i=0;i<10;i++)
+        this.state.contents.unshift(["cell1","cell2","cell3","cell4"]);
+        this.lastAction = "Top";
+    }
+    remB(){
+        for (var i=0;i<10;i++)
+        this.state.contents.pop();
+        this.lastAction = "Bot";
+    }
+    remT(){
+        for (var i=0;i<10;i++)
+        this.state.contents.shift();
+        this.lastAction = "Top";
+    }
+    render(){
+        return(<>
+        <button onClick={()=>this.addT()}>add</button><br/>
+        <button onClick={()=>this.addB()}>add</button><br/>
+        <button onClick={()=>this.remT()}>rem</button><br/>
+        <button onClick={()=>this.remB()}>rem</button><br/>
+        <div className="dynoDiv" id={this.state.div}>
+        <div id={this.state.pad1}/>
+        <table className="dynoTable" id={this.state.table}>
+            {this.state.contents.map(row=>{ return(
+                <tr className="dynoTableRow">
+                {row.map(col=><td className="dynoTableCell">{col}</td>)}
+                </tr>
+            )})}
+        </table>
+        <div id={this.state.pad2}/>
+        </div>
+        </>);
+    }
+    componentDidUpdate(){
+        var table = document.getElementById(this.state.table);
+        var div = document.getElementById(this.state.div);
+        var pad1 = document.getElementById(this.state.pad1);
+        var pad2 = document.getElementById(this.state.pad2);
+        var tabh = table.offsetHeight;
+        this.h = max(this.h, tabh);
+
+        if (this.lastAction == "Top"){
+            this.p1 = this.h-tabh-this.p2;
+            pad1.style.height = `${this.p1}px`;
+        }
+        if (this.lastAction == "Bot"){
+            this.p2 = this.h-tabh-this.p1;
+            pad2.style.height = `${this.p2}px`;
+        }
+    }
+}

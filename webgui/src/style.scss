@@ -293,3 +293,17 @@ html {
     padding: 1em;
     overflow-y: scroll;
 }
+
+//dynamic table
+.dynoDiv {
+    border: 1px solid black;
+    max-height: 20em;
+    overflow: auto;
+    display: inline-block;
+}
+.dynoTable {
+}
+.dynoTableCell {
+    border: 1px solid grey;
+    height: 1.5em;
+}
