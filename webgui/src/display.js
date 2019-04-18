@@ -237,7 +237,7 @@ export class QueryRender extends React.Component {
                     </div>
                 </div>
             </div>
-            <TableGrid
+            <TableGrid2
                 table = {getWhere(this.props.table,this.props.rows.col,this.props.rows.val)}
                 hideColumns = {this.props.hideColumns}
                 toggleColumn = {(i)=>this.toggleColumn(i)}
@@ -399,14 +399,14 @@ export class TableGrid2 extends React.Component {
         var that = this;
         div.addEventListener('scroll',function(){
             //console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
-            if (div.scrollTop <= that.p1 + divh && that.p1 > 0 && table.offsetHeight > div.offsetHeight*4){
-                console.log("before go up");
-                console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
+            if (div.scrollTop <= that.p1 + divh && that.p1 > 0 && table.offsetHeight > divh*4){
+                //console.log("before go up");
+                //console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
                 that.goUp();
             }
-            else if (div.scrollTop + div.offsetHeight >= that.p1 + table.offsetHeight - divh && that.p2 > 0 && table.offsetHeight > div.offsetHeight*4){
-                console.log("before go down");
-                console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
+            else if (div.scrollTop + divh >= that.p1 + table.offsetHeight - divh && that.p2 > 0 && table.offsetHeight > divh*4){
+                //console.log("before go down");
+                //console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
                 that.goDown();
             }
         });

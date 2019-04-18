@@ -12,6 +12,8 @@ import (
   "regexp"
   "errors"
   "sort"
+  "io"
+  "bytes"
 )
 
 
@@ -49,35 +51,44 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
 
-    Printf("%+v", q.BTokArray)
-
-    //prepare input and output
-    totalMem = memory.TotalMemory()
-    fp,err := os.Open(q.Fname)
-    if err != nil { Println(err); return SingleQueryResult{}, err }
-    cread := csv.NewReader(fp)
+    //prepare output
     res:= SingleQueryResult{
         Colnames : q.ColSpec.NewNames,
         Numcols: q.ColSpec.NewWidth,
         Types: q.ColSpec.NewTypes,
         Pos: q.ColSpec.NewPos,
     }
+
+    //prepare some other things
+    totalMem = memory.TotalMemory()
     var toRow []interface{}
     var fromRow []interface{}
     var limit int
     distinctCheck := make(map[interface{}]bool)
     if q.QuantityLimit == 0 { limit = 1<<62 } else { limit = q.QuantityLimit }
-
-    //run the query
     active = true
     defer func(){
         active = false
         if q.Save { saver <- saveData{Type : CH_NEXT} }
     }()
+
+    //prepare random access reader - not yet needed
+    fp,err := os.Open(q.Fname)
+    linePositions := make([]int64,0)
+    var lineBuffer bytes.Buffer
+    var pos int64
+    tee := io.TeeReader(fp, &lineBuffer)
+    cread := csv.NewReader(tee)
     cread.Read()
+    lineBytes,_ := lineBuffer.ReadBytes('\n')
+    pos += int64(len(lineBytes))
+    linePositions = append(linePositions, pos)
+
+
+    //run query
     rowsChecked := 0
     stop = 0
-    for j:=0;j<limit; {
+    for ;res.Numrows<limit; {
 
         //watch out for memory ceiling
         runtime.ReadMemStats(&m)
@@ -98,6 +109,10 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         if err != nil {break}
         fromRow = make([]interface{}, q.ColSpec.Width)
 
+        //calculate line position
+        lineBytes,_ = lineBuffer.ReadBytes('\n')
+        pos += int64(len(lineBytes))
+
         //read each cell from line
         for i,cell := range line {
             cell = s.TrimSpace(cell)
@@ -116,13 +131,16 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         //recursive descent parser finds matches and retrieves results
         match, err := evalQuery(q, &res, &fromRow, &toRow, distinctCheck)
         if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
-        if match { j++; res.Numrows++ }
+        if match {
+            res.Numrows++
+            linePositions = append(linePositions, pos)
+        }
         q.BReset()
 
         //periodic updates
         rowsChecked++
         if rowsChecked % 10000 == 0 {
-            messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(j)+" matches so far"
+            messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far"
         }
     }
     if err != nil { Println(err); return SingleQueryResult{}, err }
