@@ -261,40 +261,18 @@ export class TableGrid2 extends React.Component {
         }
         for (var i=0;i<100;i++)
             this.state.allcontents.push(["cell1","cell2","cell3","cell4"]);
-        this.lastAction = "";
         this.p1 = 0;
         this.p2 = 0;
-        this.scrollPosition = 0;
         this.testing = true;
     }
     addB(){
-        this.scrollPosition = document.getElementById(this.state.div).scrollTop;
         for (var i=0;i<10;i++)
         this.state.contents.push(["cell1","cell2","cell3","cell4",this.p1]);
-        this.lastAction = "Bot";
-        this.forceUpdate();
-    }
-    addT(){
-        this.scrollPosition = document.getElementById(this.state.div).scrollTop;
-        for (var i=0;i<10;i++)
-        this.state.contents.unshift(["cell1","cell2","cell3","cell4",this.p2]);
-        this.lastAction = "Top";
         this.forceUpdate();
     }
     remB(){
-        console.log('rembot');
-        this.scrollPosition = document.getElementById(this.state.div).scrollTop;
         for (var i=0;i<10;i++)
         this.state.contents.pop();
-        this.lastAction = "Bot";
-        this.forceUpdate();
-    }
-    remT(){
-        console.log('remtop');
-        this.scrollPosition = document.getElementById(this.state.div).scrollTop;
-        for (var i=0;i<10;i++)
-        this.state.contents.shift();
-        this.lastAction = "Top";
         this.forceUpdate();
     }
     goDown(){
@@ -302,8 +280,6 @@ export class TableGrid2 extends React.Component {
         //get doms
         var div = document.getElementById(this.state.div);
         var table = document.getElementById(this.state.table);
-        //save scroll position
-        this.scrollPosition = div.scrollTop;
         //push
         for (var i=0;i<10;i++)
             this.state.contents.push(["cell1","cell2","cell3","cell4"]);
@@ -324,8 +300,6 @@ export class TableGrid2 extends React.Component {
         //get doms
         var div = document.getElementById(this.state.div);
         var table = document.getElementById(this.state.table);
-        //save scroll position
-        this.scrollPosition = div.scrollTop;
         //push
         for (var i=0;i<10;i++)
             this.state.contents.unshift(["cell1","cell2","cell3","cell4"]);
@@ -346,9 +320,7 @@ export class TableGrid2 extends React.Component {
         return(<>
         <button onClick={()=>this.goDown()}>godown</button>
         <button onClick={()=>this.goUp()}>goup</button><br/>
-        <button onClick={()=>this.addT()}>add</button><br/>
         <button onClick={()=>this.addB()}>add</button><br/>
-        <button onClick={()=>this.remT()}>rem</button><br/>
         <button onClick={()=>this.remB()}>rem</button><br/>
         <div className="dynoDiv" id={this.state.div}>
         <table className="dynoTable" id={this.state.table}>
@@ -362,18 +334,22 @@ export class TableGrid2 extends React.Component {
         </>);
     }
 
+    componentDidMount(){
+        var table = document.getElementById(this.state.table);
+        this.p2 = 10000;
+        table.style.marginBottom = `${this.p2}px`;
+    }
     componentDidUpdate(){
 
         var div = document.getElementById(this.state.div);
         var table = document.getElementById(this.state.table);
-        div.scrollTop = this.scrollPosition;
         var that = this;
 
         div.addEventListener('scroll',function(){
             //console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
-            if (div.scrollTop <= that.p1 && that.p1 >= 1)
+            if (div.scrollTop <= that.p1 && that.p1 >= 1 && table.offsetHeight > div.offsetHeight*2)
                 that.goUp();
-            else if (div.scrollTop + div.offsetHeight >= that.p1 + table.offsetHeight && that.p2 >= 1)
+            else if (div.scrollTop + div.offsetHeight >= that.p1 + table.offsetHeight && that.p2 >= 1 && table.offsetHeight > div.offsetHeight*2)
                 that.goDown();
         });
 
