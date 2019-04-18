@@ -256,8 +256,11 @@ export class TableGrid2 extends React.Component {
             div : Math.random(),
             pad1 : Math.random(),
             pad2 : Math.random(),
+            allcontents : [],
             contents : [],
         }
+        for (var i=0;i<100;i++)
+            this.state.allcontents.push(["cell1","cell2","cell3","cell4"]);
         this.lastAction = "";
         this.p1 = 0;
         this.p2 = 0;
@@ -267,14 +270,14 @@ export class TableGrid2 extends React.Component {
     addB(){
         this.scrollPosition = document.getElementById(this.state.div).scrollTop;
         for (var i=0;i<10;i++)
-        this.state.contents.push(["cell1","cell2","cell3","cell4"]);
+        this.state.contents.push(["cell1","cell2","cell3","cell4",this.p1]);
         this.lastAction = "Bot";
         this.forceUpdate();
     }
     addT(){
         this.scrollPosition = document.getElementById(this.state.div).scrollTop;
         for (var i=0;i<10;i++)
-        this.state.contents.unshift(["cell1","cell2","cell3","cell4"]);
+        this.state.contents.unshift(["cell1","cell2","cell3","cell4",this.p2]);
         this.lastAction = "Top";
         this.forceUpdate();
     }
@@ -294,9 +297,55 @@ export class TableGrid2 extends React.Component {
         this.lastAction = "Top";
         this.forceUpdate();
     }
+    goDown(){
+        if (this.state.contents.length < 10) return;
+        //get doms
+        var div = document.getElementById(this.state.div);
+        var table = document.getElementById(this.state.table);
+        //save scroll position
+        this.scrollPosition = div.scrollTop;
+        //push
+        for (var i=0;i<10;i++)
+            this.state.contents.push(["cell1","cell2","cell3","cell4"]);
+        //pop
+        var rheight = document.getElementById(this.state.table).firstElementChild.offsetHeight*10;
+        for (var i=0;i<10;i++)
+            this.state.contents.shift();
+        //resize margins
+        this.p1 += rheight;
+        this.p2 = Math.max(this.p2-rheight,0);
+        table.style.marginTop = `${this.p1}px`;
+        table.style.marginBottom = `${this.p2}px`;
+        this.forceUpdate();
+        console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
+    }
+    goUp(){
+        if (this.state.contents.length < 10) return;
+        //get doms
+        var div = document.getElementById(this.state.div);
+        var table = document.getElementById(this.state.table);
+        //save scroll position
+        this.scrollPosition = div.scrollTop;
+        //push
+        for (var i=0;i<10;i++)
+            this.state.contents.unshift(["cell1","cell2","cell3","cell4"]);
+        //pop
+        var rheight = document.getElementById(this.state.table).firstElementChild.offsetHeight*10;
+        for (var i=0;i<10;i++)
+            this.state.contents.pop();
+        //resize margins
+        this.p1 = Math.max(this.p1-rheight,0);
+        this.p2 += rheight;
+        table.style.marginTop = `${this.p1}px`;
+        table.style.marginBottom = `${this.p2}px`;
+        this.forceUpdate();
+        console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
+    }
     render(){
         if (!this.testing) return <></>;
         return(<>
+        <button onClick={()=>this.goDown()}>godown</button>
+        <button onClick={()=>this.goUp()}>goup</button><br/>
         <button onClick={()=>this.addT()}>add</button><br/>
         <button onClick={()=>this.addB()}>add</button><br/>
         <button onClick={()=>this.remT()}>rem</button><br/>
@@ -314,27 +363,19 @@ export class TableGrid2 extends React.Component {
     }
 
     componentDidUpdate(){
+
         var div = document.getElementById(this.state.div);
         var table = document.getElementById(this.state.table);
-        var tabh = table.offsetHeight;
-        this.h = max(this.h, tabh);
-        if (this.lastAction == "Top"){
-            this.p1 = this.h-tabh-this.p2;
-            table.style.marginTop = `${this.p1}px`;
-        }
-        if (this.lastAction == "Bot"){
-            this.p2 = this.h-tabh-this.p1;
-            table.style.marginBottom = `${this.p2}px`;
-        }
         div.scrollTop = this.scrollPosition;
-        var that=this;
+        var that = this;
+
         div.addEventListener('scroll',function(){
-            if (div.scrollTop > that.p1 + div.offsetHeight)
-                that.remT();
-            if (div.scrollTop <= that.p1 && that.p1 > 0)
-                that.addT();
-            if (tabh-div.scrollTop <= that.p2 && that.p2 > 0)
-                that.addB();
+            //console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
+            if (div.scrollTop <= that.p1 && that.p1 >= 1)
+                that.goUp();
+            else if (div.scrollTop + div.offsetHeight >= that.p1 + table.offsetHeight && that.p2 >= 1)
+                that.goDown();
         });
+
     }
 }

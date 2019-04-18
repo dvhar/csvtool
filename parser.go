@@ -49,7 +49,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
 
-    //Printf("%+v", q.BTokArray)
+    Printf("%+v", q.BTokArray)
 
     //prepare input and output
     totalMem = memory.TotalMemory()
@@ -97,6 +97,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         line, err := cread.Read()
         if err != nil {break}
         fromRow = make([]interface{}, q.ColSpec.Width)
+
         //read each cell from line
         for i,cell := range line {
             cell = s.TrimSpace(cell)
@@ -160,12 +161,14 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     if countSelected != q.ColSpec.NewWidth { return false, errors.New("returned "+Itoa(countSelected)+" columns. should be "+Itoa(q.ColSpec.NewWidth)) }
     return true, err
 }
+
 //see if there is a where token
 func evalWhere(q *QuerySpecs, fromRow *[]interface{}) (bool, error) {
     for ; q.BTok().Id != KW_WHERE && q.BTok().Id != EOS; { q.BNext() }
     if q.BTok().Id == KW_WHERE { q.BNext(); return evalMultiComparison(q,fromRow) }
     return true, nil
 }
+
 //if there is a where token, evaluate match
 func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
     match := false
@@ -210,6 +213,7 @@ func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
     }
     return match, err
 }
+
 //run each individual comparison
 func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     match := false
@@ -279,6 +283,7 @@ func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
     return match, nil
 
 }
+
 //add selected columns to results
 func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, count int) int {
     tok := q.BTok()
@@ -300,6 +305,7 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
     q.BNext()
     return evalSelectCol(q, res, fromRow, selected, count+1)
 }
+
 //see if row has distinct value if looking for one. make sure this is the last check before retrieving row
 func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
     if q.DistinctIdx < 0 { return true, nil }
@@ -313,6 +319,7 @@ func evalDistinct(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{},
     }
     return true,nil
 }
+
 //sort results
 func evalOrderBy(q *QuerySpecs, res*SingleQueryResult) error {
     if q.SortWay == 0 { return nil }

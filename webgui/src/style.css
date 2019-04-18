@@ -251,6 +251,9 @@ html {
   overflow: auto;
   display: inline-block; }
 
+.dynoTable {
+  border-collapse: collapse; }
+
 .dynoTableCell {
   border: 1px solid grey;
   height: 1.5em; }

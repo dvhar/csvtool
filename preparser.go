@@ -306,6 +306,7 @@ func preParseWhere(q*QuerySpecs) error {
     q.ANext()
     return preParseConditions(q)
 }
+
 func preParseConditions(q*QuerySpecs) error {
     //negater before conditions
     if q.ATok().Id == SP_NEGATE {
@@ -333,6 +334,7 @@ func preParseConditions(q*QuerySpecs) error {
     }
     return errors.New("Unexpected token in 'where' section: "+q.ATok().Val)
 }
+
 func preParseCompare(q* QuerySpecs) error {
     q.ParseCol = COL_GETIDX
     err := preParseColumn(q)
@@ -341,6 +343,7 @@ func preParseCompare(q* QuerySpecs) error {
     q.LastColumn = BToken{BT_WCOL, ii, q.ColSpec.Types[ii]}
     return preParseRel(q)
 }
+
 func preParseRel(q* QuerySpecs) error {
     //negater before relop
     if q.ATok().Id == SP_NEGATE {
@@ -371,6 +374,7 @@ func preParseRel(q* QuerySpecs) error {
     }
     return errors.New("Expected relational operator. Found: "+q.ATok().Val)
 }
+
 func preparseMore(q* QuerySpecs) error {
     if (q.ATok().Id & LOGOP) == 0 { return nil }
     q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
@@ -472,7 +476,6 @@ func preParseOrder(q* QuerySpecs) error {
             q.NeedAllRows = true
             q.SortCol = q.ParseCol
             q.SortWay = 1
-            q.ANext()
             preParseOrderMethod(q)
         } else { return err }
     }
