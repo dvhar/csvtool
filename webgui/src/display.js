@@ -252,106 +252,163 @@ export class TableGrid2 extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            table : Math.random(),
-            div : Math.random(),
-            pad1 : Math.random(),
-            pad2 : Math.random(),
-            allcontents : [],
-            contents : [],
+            tableBodyId : Math.random(),
+            tableBodyDivId : Math.random(),
+            tableHeadId : Math.random(),
+            tableHeadDivId : Math.random(),
         }
-        for (var i=0;i<100;i++)
-            this.state.allcontents.push(["cell1","cell2","cell3","cell4"]);
         this.p1 = 0;
         this.p2 = 0;
-        this.testing = true;
+        this.dummy = this.props.table.Vals[0];
+        this.dummy2 = this.props.table.Vals[1];
     }
-    addB(){
-        for (var i=0;i<10;i++)
-        this.state.contents.push(["cell1","cell2","cell3","cell4",this.p1]);
-        this.forceUpdate();
-    }
-    remB(){
-        for (var i=0;i<10;i++)
-        this.state.contents.pop();
-        this.forceUpdate();
-    }
+
     goDown(){
-        if (this.state.contents.length < 10) return;
+        if (this.props.table.Vals.length < 10) return;
         //get doms
-        var div = document.getElementById(this.state.div);
-        var table = document.getElementById(this.state.table);
+        var div = document.getElementById(this.state.tableBodyDivId);
+        var table = document.getElementById(this.state.tableBodyId);
         //push
         for (var i=0;i<10;i++)
-            this.state.contents.push(["cell1","cell2","cell3","cell4"]);
+            this.props.table.Vals.push(this.dummy);
         //pop
-        var rheight = document.getElementById(this.state.table).firstElementChild.offsetHeight*10;
+        var rheight = document.getElementById(this.state.tableBodyId).firstElementChild.firstElementChild.offsetHeight*10;
         for (var i=0;i<10;i++)
-            this.state.contents.shift();
+            this.props.table.Vals.shift();
         //resize margins
         this.p1 += rheight;
         this.p2 = Math.max(this.p2-rheight,0);
         table.style.marginTop = `${this.p1}px`;
         table.style.marginBottom = `${this.p2}px`;
         this.forceUpdate();
-        console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
+        //console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
     }
+
     goUp(){
-        if (this.state.contents.length < 10) return;
+        if (this.props.table.Vals.length < 10) return;
         //get doms
-        var div = document.getElementById(this.state.div);
-        var table = document.getElementById(this.state.table);
+        var div = document.getElementById(this.state.tableBodyDivId);
+        var table = document.getElementById(this.state.tableBodyId);
         //push
         for (var i=0;i<10;i++)
-            this.state.contents.unshift(["cell1","cell2","cell3","cell4"]);
+            this.props.table.Vals.unshift(this.dummy2);
         //pop
-        var rheight = document.getElementById(this.state.table).firstElementChild.offsetHeight*10;
+        var rheight = document.getElementById(this.state.tableBodyId).firstElementChild.firstElementChild.offsetHeight*10;
         for (var i=0;i<10;i++)
-            this.state.contents.pop();
+            this.props.table.Vals.pop();
         //resize margins
         this.p1 = Math.max(this.p1-rheight,0);
         this.p2 += rheight;
         table.style.marginTop = `${this.p1}px`;
         table.style.marginBottom = `${this.p2}px`;
         this.forceUpdate();
-        console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
+        //console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
     }
+
+    header(){
+        var names = this.props.table.Colnames.map((name,ii)=>{ return (
+            <th key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
+                {this.props.table.Colnames[ii]}
+            </th>
+        )});
+        var info = this.props.table.Types.map((name,ii)=>{ return (
+            <td key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
+                {`${this.props.table.Pos[ii]} `}
+                <span className="noselect">
+                - {t[this.props.table.Types[ii]]}
+                </span>
+            </td>
+        )});
+        return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
+    }
+
+    row(row,idx){
+        return( 
+            <tr key={idx} className="tableRow"> 
+                {row.map((name,idx)=>{ return( <td key={idx} className="tableCell"> {name} </td>) })}
+            </tr>
+        )
+    }
+
     render(){
-        if (!this.testing) return <></>;
+        if (this.props.table.Vals === null)
+            this.props.table.Vals = [];
         return(<>
-        <button onClick={()=>this.goDown()}>godown</button>
-        <button onClick={()=>this.goUp()}>goup</button><br/>
-        <button onClick={()=>this.addB()}>add</button><br/>
-        <button onClick={()=>this.remB()}>rem</button><br/>
-        <div className="dynoDiv" id={this.state.div}>
-        <table className="dynoTable" id={this.state.table}>
-            {this.state.contents.map(row=>{ return(
-                <tr className="dynoTableRow">
-                {row.map(col=><td className="dynoTableCell">{col}</td>)}
-                </tr>
-            )})}
-        </table>
-        </div>
+            <div className="tableDiv tableHeadDiv" id={this.state.tableHeadDivId}> 
+            <table className="tableHead">
+                <thead id={this.state.tableHeadId}>
+                {this.header()}
+                </thead>
+            </table>
+            </div>
+
+            <div className="tableDiv tableBodyDiv" id={this.state.tableBodyDivId}> 
+            <table className="tableBody" id={this.state.tableBodyId}>
+                <tbody>
+                {this.props.table.Vals.map((row,i)=>this.row(row,i))}
+                </tbody>
+            </table>
+            </div>
         </>);
     }
 
-    componentDidMount(){
-        var table = document.getElementById(this.state.table);
-        this.p2 = 10000;
-        table.style.marginBottom = `${this.p2}px`;
+    resize(){
+        var tableBodyDom    = document.getElementById(this.state.tableBodyId);
+        var tableBodyDivDom = document.getElementById(this.state.tableBodyDivId);
+        var tableHeadDom    = document.getElementById(this.state.tableHeadId);
+        var tableHeadDivDom = document.getElementById(this.state.tableHeadDivId);
+        var windoww = window.innerWidth;
+
+        //get header table and body table cells to line up
+        var tbody = tableBodyDom.childNodes[0];
+        if (tbody.childNodes.length > 0 && tbody.childNodes[0].childNodes.length > 0){
+            var trow = tbody.childNodes[0].childNodes;
+            var bcell, hcell;
+            var newWidth;
+            for (var i in trow){
+                bcell = trow[i];
+                hcell = tableHeadDom.childNodes[0].childNodes[i];
+                if (bcell.offsetWidth && hcell.offsetWidth){
+                    bcell.style.minWidth = hcell.style.minWidth = `0px`;
+                    newWidth = max(bcell.offsetWidth, hcell.offsetWidth);
+                        bcell.style.minWidth = hcell.style.minWidth = `${newWidth+1}px`;
+                }
+            }
+        }
+
+        //give header table and body the right size
+        tableHeadDivDom.style.margin = 'auto';
+        tableHeadDivDom.style.maxWidth =  tableBodyDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth+15,windoww*1.00)}px`;
+        if (tableBodyDom.offsetWidth > tableBodyDivDom.offsetWidth && tableBodyDom.offsetHeight > tableBodyDivDom.offsetHeight){
+            tableHeadDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth+15,windoww*1.00-30)}px`;
+            tableHeadDivDom.style.margin = 0;
+        } else if (tableBodyDom.offsetHeight <= tableBodyDivDom.offsetHeight)
+            tableHeadDivDom.style.maxWidth =  tableBodyDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth,windoww*1.00)}px`;
+        //make head and body scroll together
+        tableBodyDivDom.addEventListener('scroll',function(){ tableHeadDivDom.scrollLeft = tableBodyDivDom.scrollLeft; });
     }
-    componentDidUpdate(){
 
-        var div = document.getElementById(this.state.div);
-        var table = document.getElementById(this.state.table);
+    componentDidMount(){
+        this.resize();
+        this.p2 = 100000;
+        var table = document.getElementById(this.state.tableBodyId);
+        var div = document.getElementById(this.state.tableBodyDivId);
+        table.style.marginBottom = `${this.p2}px`;
+        var divh = div.offsetHeight;
+
         var that = this;
-
         div.addEventListener('scroll',function(){
             //console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
-            if (div.scrollTop <= that.p1 && that.p1 >= 1 && table.offsetHeight > div.offsetHeight*2)
+            if (div.scrollTop <= that.p1 + divh && that.p1 > 0 && table.offsetHeight > div.offsetHeight*4){
+                console.log("before go up");
+                console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
                 that.goUp();
-            else if (div.scrollTop + div.offsetHeight >= that.p1 + table.offsetHeight && that.p2 >= 1 && table.offsetHeight > div.offsetHeight*2)
+            }
+            else if (div.scrollTop + div.offsetHeight >= that.p1 + table.offsetHeight - divh && that.p2 > 0 && table.offsetHeight > div.offsetHeight*4){
+                console.log("before go down");
+                console.log('scroll:', div.scrollTop|0, 'p1:',that.p1, 'p2:',that.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
                 that.goDown();
+            }
         });
-
     }
 }
