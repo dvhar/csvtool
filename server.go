@@ -93,8 +93,8 @@ func (c* Client) reader(){
 func socketHandler() (func(http.ResponseWriter, *http.Request)) {
     return func(w http.ResponseWriter, r *http.Request) {
         upgrader := websocket.Upgrader{
-            ReadBufferSize:  2048,
-            WriteBufferSize: 2048,
+            ReadBufferSize:  4096,
+            WriteBufferSize: 4096,
         }
         sconn, err := upgrader.Upgrade(w, r, nil)
         if err != nil {
@@ -144,7 +144,6 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
         }
         if err != nil {
             retData.Status |= DAT_ERROR
-            retData.Message = Sprint(err)
         } else {
             retData.Status |= DAT_GOOD
             messager <- successMessage

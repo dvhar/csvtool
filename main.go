@@ -26,7 +26,6 @@ type SingleQueryResult struct {
     Pos []int
     Vals [][]interface{}
     Status int
-    Message string
     Query string
 }
 
@@ -57,7 +56,6 @@ const (
 type ReturnData struct {
     Entries []SingleQueryResult
     Status int
-    Message string
     OriginalQuery string
     Clipped bool
 }
@@ -86,8 +84,7 @@ type Qrequest struct {
     Query string
     Qamount int
     FileIO int
-    FilePath string
-    CsvFile string
+    SavePath string
 }
 
 var FPaths FilePaths
@@ -187,7 +184,7 @@ func runQueries(req *Qrequest) ([]SingleQueryResult, error) {
         saver <- saveData{
             Number : req.Qamount,
             Type : CH_SAVPREP,
-            Message : req.FilePath,
+            Message : req.SavePath,
         }
     }
     //run queries in a loop

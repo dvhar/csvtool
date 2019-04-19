@@ -57,7 +57,7 @@ class Main extends React.Component {
         var fullQuery = {
             Query: querySpecs.query || "", 
             FileIO: querySpecs.fileIO || 0, 
-            FilePath: querySpecs.filePath || "", 
+            SavePath: querySpecs.savePath || "", 
             };
         postRequest({path:"/query/",body:fullQuery}).then(dat=>{
             if ((dat.Status & bit.DAT_GOOD) && (!querySpecs.backtrack)){
@@ -83,9 +83,9 @@ class Main extends React.Component {
         },50);
     }
     changeFilePath(whichPath){
-        if (whichPath.type == "open")
+        if (whichPath.type === "open")
             this.state.openDirlist.Path = whichPath.path;
-        if (whichPath.type == "save")
+        if (whichPath.type === "save")
             this.state.saveDirlist.Path = whichPath.path;
         this.forceUpdate();
     }

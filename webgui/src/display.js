@@ -237,7 +237,7 @@ export class QueryRender extends React.Component {
                     </div>
                 </div>
             </div>
-            <TableGrid2
+            <TableGrid
                 table = {getWhere(this.props.table,this.props.rows.col,this.props.rows.val)}
                 hideColumns = {this.props.hideColumns}
                 toggleColumn = {(i)=>this.toggleColumn(i)}
@@ -266,14 +266,13 @@ export class TableGrid2 extends React.Component {
     goDown(){
         if (this.props.table.Vals.length < 10) return;
         //get doms
-        var div = document.getElementById(this.state.tableBodyDivId);
         var table = document.getElementById(this.state.tableBodyId);
         //push
-        for (var i=0;i<10;i++)
+        for (let i=0;i<10;i++)
             this.props.table.Vals.push(this.dummy);
         //pop
         var rheight = document.getElementById(this.state.tableBodyId).firstElementChild.firstElementChild.offsetHeight*10;
-        for (var i=0;i<10;i++)
+        for (let i=0;i<10;i++)
             this.props.table.Vals.shift();
         //resize margins
         this.p1 += rheight;
@@ -281,20 +280,18 @@ export class TableGrid2 extends React.Component {
         table.style.marginTop = `${this.p1}px`;
         table.style.marginBottom = `${this.p2}px`;
         this.forceUpdate();
-        //console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
     }
 
     goUp(){
         if (this.props.table.Vals.length < 10) return;
         //get doms
-        var div = document.getElementById(this.state.tableBodyDivId);
         var table = document.getElementById(this.state.tableBodyId);
         //push
-        for (var i=0;i<10;i++)
+        for (let i=0;i<10;i++)
             this.props.table.Vals.unshift(this.dummy2);
         //pop
         var rheight = document.getElementById(this.state.tableBodyId).firstElementChild.firstElementChild.offsetHeight*10;
-        for (var i=0;i<10;i++)
+        for (let i=0;i<10;i++)
             this.props.table.Vals.pop();
         //resize margins
         this.p1 = Math.max(this.p1-rheight,0);
@@ -302,17 +299,16 @@ export class TableGrid2 extends React.Component {
         table.style.marginTop = `${this.p1}px`;
         table.style.marginBottom = `${this.p2}px`;
         this.forceUpdate();
-        //console.log('scroll:', div.scrollTop|0, 'p1:',this.p1, 'p2:',this.p2, 'tabh:',table.offsetHeight,'divh',div.offsetHeight);
     }
 
     header(){
         var names = this.props.table.Colnames.map((name,ii)=>{ return (
-            <th key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
+            <th key={ii} className="tableCell">
                 {this.props.table.Colnames[ii]}
             </th>
         )});
         var info = this.props.table.Types.map((name,ii)=>{ return (
-            <td key={ii} className="tableCell" onClick={()=>this.sorter(ii)}>
+            <td key={ii} className="tableCell">
                 {`${this.props.table.Pos[ii]} `}
                 <span className="noselect">
                 - {t[this.props.table.Types[ii]]}
@@ -388,6 +384,7 @@ export class TableGrid2 extends React.Component {
         tableBodyDivDom.addEventListener('scroll',function(){ tableHeadDivDom.scrollLeft = tableBodyDivDom.scrollLeft; });
     }
 
+    componentDidUpdate(){ this.resize(); }
     componentDidMount(){
         this.resize();
         this.p2 = 100000;

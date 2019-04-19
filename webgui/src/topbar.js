@@ -1,5 +1,5 @@
 import React from 'react';
-import {postRequest,bit} from './utils.js';
+import {bit} from './utils.js';
 
 export class TopMenuBar extends React.Component {
     render(){
@@ -8,7 +8,6 @@ export class TopMenuBar extends React.Component {
             <div className="topBar">
             <TopDropdown
                 updateTopMessage = {this.props.updateTopMessage}
-                changeSavePath = {this.props.changeSavePath}
                 changeTopDrop = {this.props.changeTopDrop}
                 currentQuery = {this.props.s.queryHistory[this.props.s.historyPosition]}
                 submitQuery = {this.props.submitQuery}
@@ -138,7 +137,7 @@ class Browser extends React.Component {
             header.push( <><span>Save queries on page to their own csv file. A number will be added to file name if more than 1.</span>
                 <button className="saveButton" onClick={()=>{
                     var path = document.getElementById(this.state.currentDirId).value;
-                    this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|bit.F_CSV, filePath : path});
+                    this.props.submitQuery({query : this.props.currentQuery.query, fileIO : bit.F_SAVE|bit.F_CSV, savePath : path});
                 }}>save</button><br/></> );
 
         return (
