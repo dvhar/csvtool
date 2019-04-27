@@ -1,33 +1,4 @@
 
-
-/*
-// unused because chaching is done serverside
-var sha1 = require("sha1");
-export class dataFetcher {
-    constructor(){
-        this.cache = {};
-    }
-    makeQuery(request){
-        //var data = postRequest({body:{Query:"select thing from place"}})
-        console.log(request.body.Query);
-        var hash = sha1(request.body.Query);
-        if (this.cache[hash] === undefined){
-            return postRequest(request).then(res=>{
-                this.cache[hash] = JSON.parse(JSON.stringify({ query: request.body.Query, data: res }));
-                return res;
-            })
-        }
-        else {
-            //this part should return a promise like the other part
-            var data = this.cache[hash].data;
-            console.log(data);
-            return data;
-        }
-    }
-    
-}
-*/
-
 export function validJson(str) {
     try {
         JSON.parse(str);
