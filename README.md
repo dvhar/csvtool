@@ -4,4 +4,4 @@ A csv query engine with a web-browser gui and a custom but incomplete implementa
 
 Executable can be downloaded at davosaur.com/csv
 
-GPLv3 license
+GPLv3
