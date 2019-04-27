@@ -248,6 +248,7 @@ export class QueryRender extends React.Component {
 }
 
 //testing new dynamic loading table
+//early proof of concept - not usable yet
 export class TableGrid2 extends React.Component {
     constructor(props){
         super(props);

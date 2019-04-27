@@ -32,6 +32,7 @@ type QuerySpecs struct {
     Like bool
     End bool
     ParseCol int
+    showLimit int
     LastColumn BToken
 }
 func (q *QuerySpecs) ANext() *AToken {

@@ -1,6 +1,5 @@
 package main
 import (
-    //_ "github.com/denisenkom/go-mssqldb"
     "regexp"
     "runtime"
     "strings"
@@ -20,6 +19,7 @@ var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Da
 //one SingleQueryResult struct holds the results of one query
 type SingleQueryResult struct {
     Numrows int
+    ShowLimit int
     Numcols int
     Types []int
     Colnames []string
@@ -97,7 +97,7 @@ var browsersOpen = 0
 var slash string
 
 func main() {
-    println("version 0.11 - 4/14/2019")
+    println("version 0.12 - 4/19/2019")
     //get password and other flags
     flag.Parse()
     messager = make(chan string)

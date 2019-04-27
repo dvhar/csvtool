@@ -50,6 +50,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     err := preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
+    q.showLimit = 25000 / len(q.ColSpec.NewNames)
 
     //prepare output
     res:= SingleQueryResult{
@@ -57,6 +58,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         Numcols: q.ColSpec.NewWidth,
         Types: q.ColSpec.NewTypes,
         Pos: q.ColSpec.NewPos,
+        ShowLimit : q.showLimit,
     }
 
     //prepare some other things
@@ -163,7 +165,7 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
 
     //copy entire row if selecting all
     if q.SelectAll  {
-        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= 1000 ) {
+        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
             res.Vals = append(res.Vals, *fromRow)
             q.QuantityRetrieved++
         }
@@ -313,7 +315,7 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
         (*selected)[count] = (*fromRow)[tok.Val.(int)]
         if count == q.ColSpec.NewWidth - 1 {
             //all columns selected
-            if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= 1000 ) {
+            if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
                 res.Vals = append(res.Vals, *selected)
                 q.QuantityRetrieved++
             }

@@ -94,6 +94,8 @@ export class Help extends React.Component {
             <h3>Waiting for results to load</h3>
             <hr/>
             Browsers can take a while to load big results, even when limiting them to 1000 rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner.
+            <br/><br/>
+            version 0.12 - 4/19/2019
             </div>
         )
     }

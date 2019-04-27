@@ -1,8 +1,6 @@
 package main
 import (
-    _ "github.com/denisenkom/go-mssqldb"
     "github.com/GeertJohan/go.rice"
-    //"github.com/Jeffail/gabs"
     "encoding/json"
     "io/ioutil"
     "net/http"
@@ -11,8 +9,7 @@ import (
     . "fmt"
     "time"
     "os/exec"
-    //. "strconv"
-	//socketio "github.com/googollee/go-socket.io"
+    . "strconv"
     "github.com/gorilla/websocket"
 )
 
@@ -153,7 +150,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
         //update json with save message
         rowLimit(&retData)
-        if (retData.Status & DAT_GOOD)!=0 && retData.Clipped && req.FileIO == 0 { messager <- "Showing only top 1000" }
+        if (retData.Status & DAT_GOOD)!=0 && retData.Clipped && req.FileIO == 0 { messager <- "Showing only top "+Itoa(maxLimit) }
         full_json,_ = json.Marshal(retData)
         Fprint(w, string(full_json))
         full_json = []byte("")
@@ -163,10 +160,13 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 }
 
 //limit the amount of rows returned to the browser because browsers are slow
+var maxLimit int
 func rowLimit(retData *ReturnData) {
+    maxLimit = 0
     for i, query := range retData.Entries {
-        if query.Numrows > 1000 {
-            retData.Entries[i].Vals = query.Vals[:1000]
+        if query.Numrows > query.ShowLimit {
+            if query.ShowLimit > maxLimit { maxLimit = query.ShowLimit }
+            retData.Entries[i].Vals = query.Vals[:query.ShowLimit]
             retData.Clipped = true
             runtime.GC()
         }
