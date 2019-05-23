@@ -9,7 +9,6 @@ import (
   d "github.com/araddon/dateparse"
   . "strconv"
   "time"
-  "regexp"
   "errors"
   "sort"
   "io"
@@ -46,8 +45,9 @@ var active bool
 //run csv query
 func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
+    var err error
     //pre-parse tokens and do stuff that only needs to be done once
-    _,err := preParseTokens(q)
+    q.Tree,err = preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
     q.showLimit = 25000 / len(q.ColSpec.NewNames)
@@ -152,11 +152,23 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     return res, nil
 }
 
+//print parse tree for debuggging
+func treePrint(n *Node, i int){
+    if n==nil {return}
+    for j:=0;j<i;j++ { Print("  ") }
+    Println(enumMap[n.label+1000])
+    treePrint(n.node1,i+1)
+    treePrint(n.node2,i+1)
+    treePrint(n.node3,i+1)
+    treePrint(n.node4,i+1)
+}
+
 //recursive descent parser for evaluating each row
 func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
 
     //see if row matches condition
-    match, err := evalWhere(q, fromRow)
+    //treePrint(q.Tree.node3,0)
+    match, err := execWhere(q, fromRow)
     if err != nil || !match { return false, err }
 
     //see if row is distict if required
@@ -180,128 +192,6 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     countSelected := evalSelectCol(q, res, fromRow, selected, 0)
     if countSelected != q.ColSpec.NewWidth { return false, errors.New("returned "+Itoa(countSelected)+" columns. should be "+Itoa(q.ColSpec.NewWidth)) }
     return true, err
-}
-
-//see if there is a where token
-func evalWhere(q *QuerySpecs, fromRow *[]interface{}) (bool, error) {
-    for ; q.BTok().Id != KW_WHERE && q.BTok().Id != EOS; { q.BNext() }
-    if q.BTok().Id == KW_WHERE { q.BNext(); return evalMultiComparison(q,fromRow) }
-    return true, nil
-}
-
-//if there is a where token, evaluate match
-func evalMultiComparison(q *QuerySpecs, fromRow*[]interface{}) (bool, error) {
-    match := false
-    negate := false
-    var err error
-    tok := q.BTok()
-
-    //if found a negater
-    if tok.Id == SP_NEGATE {
-        negate = true
-        tok = q.BNext()
-    }
-
-    //if found a column
-    if tok.Id == BT_WCOL {
-        match, err = evalComparison(q, fromRow)
-        if err != nil { return false, err }
-        if negate { match = !match }
-    //if ( found instead of column
-    } else if tok.Id == SP_LPAREN {
-        q.BNext()
-        match, err = evalMultiComparison(q, fromRow)
-        if err != nil { return false, err }
-        if negate { match = !match }
-        //eat closing paren, return if this comparison is done
-        q.BNext()
-        if q.BPeek().Id == EOS || q.BPeek().Id == SP_RPAREN || (q.BPeek().Id & BT_AFTWR)!=0 {
-            return match, err
-        }
-    }
-
-    //if logical operator, perform logical operation with next comparision result
-    if (q.BPeek().Id & LOGOP)!=0  {
-        logop := q.BNext().Id
-        q.BNext()
-        nextExpr, err := evalMultiComparison(q, fromRow)
-        if err != nil { return false, err }
-        switch logop {
-            case KW_AND: match = match && nextExpr
-            case KW_OR:  match = match || nextExpr
-        }
-    }
-    return match, err
-}
-
-//run each individual comparison
-func evalComparison(q *QuerySpecs, fromRow *[]interface{}) (bool,error) {
-    match := false
-    negate := 0
-    compCol := q.BTok()
-    //flip result if 'not' or '!' in front of relop
-    if q.BPeek().Id == SP_NEGATE {
-        negate ^= 1
-        q.BNext()
-    }
-    relop := q.BNext()
-    compVal := q.BNext()
-    if (relop.Id & RELOP) == 0  { return false, errors.New("Bad relational operator. Valid ones are =, !=, <>, >, >=, <, <=") }
-    if compVal.Id != BT_WCOMP { return false, errors.New("Expected comparision value but got "+Sprint(compVal.Val)) }
-
-    //if neither comparison value or column are null
-    if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] != nil {
-        switch relop.Id {
-            case KW_LIKE:  match = compVal.Val.(*regexp.Regexp).MatchString(Sprint((*fromRow)[compCol.Val.(int)]))
-            case SP_NOEQ: negate ^= 1
-                       fallthrough
-            case SP_EQ :
-                switch compVal.Dtype {
-                    case T_DATE:   match = compVal.Val.(time.Time).Equal((*fromRow)[compCol.Val.(int)].(time.Time))
-                    default:       match = compVal.Val == (*fromRow)[compCol.Val.(int)]
-                }
-            case SP_LESSEQ: negate ^= 1
-                       fallthrough
-            case SP_GREAT :
-                switch compVal.Dtype {
-                    case T_NULL:   fallthrough
-                    case T_STRING: match = (*fromRow)[compCol.Val.(int)].(string) > compVal.Val.(string)
-                    case T_INT:    match = (*fromRow)[compCol.Val.(int)].(int) > compVal.Val.(int)
-                    case T_FLOAT:  match = (*fromRow)[compCol.Val.(int)].(float64) > compVal.Val.(float64)
-                    case T_DATE:   match = (*fromRow)[compCol.Val.(int)].(time.Time).After(compVal.Val.(time.Time))
-                }
-            case SP_GREATEQ : negate ^= 1
-                       fallthrough
-            case SP_LESS:
-                switch compVal.Dtype {
-                    case T_NULL:   fallthrough
-                    case T_STRING: match = (*fromRow)[compCol.Val.(int)].(string) < compVal.Val.(string)
-                    case T_INT:    match = (*fromRow)[compCol.Val.(int)].(int) < compVal.Val.(int)
-                    case T_FLOAT:  match = (*fromRow)[compCol.Val.(int)].(float64) < compVal.Val.(float64)
-                    case T_DATE:   match = (*fromRow)[compCol.Val.(int)].(time.Time).Before(compVal.Val.(time.Time))
-                }
-        }
-
-    //if comparison value is null
-    } else if compVal.Val == nil {
-        switch relop.Id {
-            case SP_NOEQ: negate ^= 1
-                       fallthrough
-            case SP_EQ : match = (*fromRow)[compCol.Val.(int)] == nil
-            default  : return false, errors.New("Invalid operation with null: "+relop.Val.(string)+". Valid operators: = != <>")
-        }
-    //if only column is null
-    } else if compVal.Val != nil && (*fromRow)[compCol.Val.(int)] == nil  {
-        switch relop.Id {
-            case SP_NOEQ: negate ^= 1
-                       fallthrough
-            default: match = false
-        }
-    }
-    //Println(relop,negate,match,compVal,(*fromRow)[compCol.Val.(int)])
-    if negate==1 { match = !match }
-    return match, nil
-
 }
 
 //add selected columns to results

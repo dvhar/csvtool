@@ -34,6 +34,8 @@ type QuerySpecs struct {
     ParseCol int
     showLimit int
     LastColumn BToken
+    Tree *Node
+    tempVal interface{}
 }
 func (q *QuerySpecs) ANext() *AToken {
     if q.AIdx < len(q.ATokArray)-1 { q.AIdx++ }
@@ -49,6 +51,7 @@ func (q QuerySpecs) APeek() *AToken {
 func (q QuerySpecs) ATok() *AToken { return &q.ATokArray[q.AIdx] }
 func (q *QuerySpecs) AReset() { q.AIdx = 0 }
 const (
+    //parse tree node types
     N_PPTOKENS = iota
     N_SELECT = iota
     N_TOP = iota
@@ -250,12 +253,13 @@ func preParseSelections(q* QuerySpecs) (*Node,error) {
         case SP_ALL:
             selectAll(q)
             q.ANext()
-            n.node1,err = preParseSelections(q)
+            _,err = preParseSelections(q)
             return n,err
         //non-column words in select section
         case KW_DISTINCT:
-            n.node1,err = preParseSpecial(q)
-            return n,err
+            _,err = preParseSpecial(q)
+            if err != nil { return n,err }
+            return preParseSelections(q)
         //column
         case WORD: fallthrough
         case SP_SQUOTE: fallthrough
@@ -271,6 +275,7 @@ func preParseSelections(q* QuerySpecs) (*Node,error) {
     return n,nil
 }
 
+//tok1 is column index
 func preParseColumn(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_COLUMN}
     var ii int
@@ -303,6 +308,7 @@ func preParseColumn(q* QuerySpecs) (*Node,error) {
     switch q.ParseCol {
         case COL_APPEND:
             q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, ii, q.ColSpec.Types[ii]})
+            n.tok1 = ii
             newCol(q, ii)
         case COL_GETIDX:
             q.ParseCol = ii
@@ -342,6 +348,7 @@ func preParseFrom(q* QuerySpecs) (*Node,error) {
     return n,nil
 }
 
+//node1 is conditions
 func preParseWhere(q*QuerySpecs) (*Node,error) {
     n := &Node{label:N_WHERE}
     var err error
@@ -352,31 +359,44 @@ func preParseWhere(q*QuerySpecs) (*Node,error) {
     return n,err
 }
 
+//tok1 is negate
+//node1 is condition or conditions
+//node2 is more conditions
 func preParseConditions(q*QuerySpecs) (*Node,error) {
     n := &Node{label:N_CONDITIONS}
     var err error
-    //negater before conditions
     if q.ATok().Id == SP_NEGATE {
         q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
         q.ANext()
+        n.tok1 = SP_NEGATE
     }
     switch q.ATok().Id {
         case SP_LPAREN:
             tok := q.ATok()
-            q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
+            q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0}) // (
             q.ANext();
             n.node1,err = preParseConditions(q)
             if err != nil { return n,err }
             tok = q.ATok()
             if tok.Id != SP_RPAREN { return n,errors.New("No closing parentheses. Found: "+tok.Val) }
-            q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
+            q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0}) // )
             q.ANext()
             n.node2,err = preparseMore(q)
             return n,err
         case WORD: fallthrough
         case SP_DQUOTE: fallthrough
         case SP_SQUOTE:
-            n.node1,err = preParseCompare(q)
+            //get column index before next step
+            q.ParseCol = COL_GETIDX
+            _,err = preParseColumn(q)
+            if err != nil { return n,err }
+            q.LastColumn = BToken{BT_WCOL, q.ParseCol, q.ColSpec.Types[q.ParseCol]}
+            //see if comparison is normal or between
+            if q.ATok().Id == KW_BETWEEN || q.APeek().Id == KW_BETWEEN {
+                n.node1, err = preParseBetween(q)
+            } else {
+                n.node1, err = preParseCompare(q)
+            }
             if err != nil { return n,err }
             n.node2,err = preparseMore(q)
             return n,err
@@ -384,30 +404,27 @@ func preParseConditions(q*QuerySpecs) (*Node,error) {
     return n,errors.New("Unexpected token in 'where' section: "+q.ATok().Val)
 }
 
+//tok1 is column to compare
+//node1 is relop with comparision
 func preParseCompare(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_COMPARE}
     var err error
-    q.ParseCol = COL_GETIDX
-    n.node1,err = preParseColumn(q)
-    if err != nil { return n,err }
-    ii := q.ParseCol
-    q.LastColumn = BToken{BT_WCOL, ii, q.ColSpec.Types[ii]}
-    n.node2,err = preParseRel(q)
+    n.tok1 = q.LastColumn
+    n.node1,err = preParseRel(q)
     return n,err
 }
 
+//tok1 is negate
+//tok2 is relop
+//tok3 is comparison value
 func preParseRel(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_REL}
-    var err error
+    //var err error
     //negater before relop
     if q.ATok().Id == SP_NEGATE {
         q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
         q.ANext()
-    }
-    //between
-    if q.ATok().Id == KW_BETWEEN {
-        n.node1,err = preParseBetween(q)
-        return n,err
+        n.tok1 = SP_NEGATE
     }
     //relop and value
     if (q.ATok().Id & RELOP) != 0 {
@@ -415,6 +432,7 @@ func preParseRel(q* QuerySpecs) (*Node,error) {
         tok := q.ATok()
         if tok.Id == KW_LIKE { q.Like = true; }
         q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
+        n.tok2 = BToken{tok.Id, tok.Val, 0}
         q.ANext()
         btok,err := tokFromQuotes(q)
         //if relop is 'like', compile a regex
@@ -427,29 +445,34 @@ func preParseRel(q* QuerySpecs) (*Node,error) {
             btok.Val,err = regexp.Compile("(?i)^"+btok.Val.(string)+"$")
         }
         q.BTokArray = append(q.BTokArray, btok)
+        n.tok3 = btok
         return n,err
     }
     return n,errors.New("Expected relational operator. Found: "+q.ATok().Val)
 }
 
+//tok1 is logical operator
+//node1 is next condition
 func preparseMore(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_MORE}
     var err error
     if (q.ATok().Id & LOGOP) == 0 { return n,nil }
     q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
+    n.tok1 = q.ATok().Id
     q.ANext()
     n.node1,err = preParseConditions(q)
     return n,err
 }
 
 //turn between clause into 2 comparisons with parenthese
+//return parse tree segment for between
 func preParseBetween(q* QuerySpecs) (*Node,error) {
-    n := &Node{label:N_BETWEEN}
+    n := &Node{label:N_CONDITIONS}
     var  val1, val2, relop1, relop2 BToken
     var firstSmaller bool
     var err error
-
-    //eat between token and get comparison values
+    //negation and get to value token
+    if q.ATok().Id == SP_NEGATE { n.tok1 = SP_NEGATE; q.ANext() }
     q.ANext()
     val1, err = tokFromQuotes(q)
     if err != nil { return n,err }
@@ -485,6 +508,18 @@ func preParseBetween(q* QuerySpecs) (*Node,error) {
     q.BTokArray = append(q.BTokArray, val2)
     q.BTokArray = append(q.BTokArray, BToken{SP_RPAREN, ")", 0})
 
+    //between parse tree is 2 comparisons
+    n.node1 = &Node{label: N_COMPARE, tok1: q.LastColumn,
+        node1: &Node{label: N_REL, tok2: relop1, tok3: val1},
+    }
+    n.node2 = &Node{label: N_MORE, tok1: KW_AND,
+        node1: &Node{label: N_CONDITIONS,
+            node1: &Node{label: N_COMPARE, tok1: q.LastColumn,
+                node1: &Node{label: N_REL, tok2: relop2, tok3: val2},
+            },
+            node2: &Node{label: N_MORE},
+        },
+    }
     return n,err
 }
 
