@@ -47,7 +47,7 @@ var active bool
 func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
     //pre-parse tokens and do stuff that only needs to be done once
-    err := preParseTokens(q)
+    _,err := preParseTokens(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
     q.showLimit = 25000 / len(q.ColSpec.NewNames)

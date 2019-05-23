@@ -48,6 +48,16 @@ func (q QuerySpecs) APeek() *AToken {
 }
 func (q QuerySpecs) ATok() *AToken { return &q.ATokArray[q.AIdx] }
 func (q *QuerySpecs) AReset() { q.AIdx = 0 }
+type Node struct {
+    tok1 interface{}
+    tok2 interface{}
+    tok3 interface{}
+    tok4 interface{}
+    node1 *Node
+    node2 *Node
+    node3 *Node
+    node4 *Node
+}
 type Columns struct {
     Names []string
     NewNames []string
@@ -164,77 +174,86 @@ func evalFrom(q *QuerySpecs) error {
 }
 
 //recursive descent pre-parser builds Token arrays and QuerySpecs
-func preParseTokens(q* QuerySpecs) error {
-
+func preParseTokens(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
     //first turn query string into A tokens
     err := tokenizeQspec(q)
-    if err != nil { return err }
+    if err != nil { return n,err }
 
     //then open file and get column info
     err = evalFrom(q)
-    if err != nil { return err }
+    if err != nil { return n,err }
 
     //select section
-    err =  preParseSelect(q)
-    if err != nil { return err }
+    n.node1,err =  preParseSelect(q)
+    if err != nil { return n,err }
 
     //skip from section because already evaluated
-    preParseFrom(q)
+    n.node2,err = preParseFrom(q)
+    if err != nil { return n,err }
 
     //where section
-    err =  preParseWhere(q)
-    if err != nil { return err }
+    n.node3,err =  preParseWhere(q)
+    if err != nil { return n,err }
 
     //Order by
-    err =  preParseOrder(q)
-    return err
+    n.node4,err =  preParseOrder(q)
+    return n,err
 }
 
-func preParseSelect(q* QuerySpecs) error {
-    if q.ATok().Id != KW_SELECT { return errors.New("Expected 'select' token. found "+q.ATok().Val) }
+func preParseSelect(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
+    if q.ATok().Id != KW_SELECT { return n,errors.New("Expected 'select' token. found "+q.ATok().Val) }
     q.ANext()
-    err := preParseTop(q)
-    if err != nil { return err }
-    return preParseSelections(q)
+    n.node1,err = preParseTop(q)
+    if err != nil { return n,err }
+    n.node2,err = preParseSelections(q)
+    return n,err
 }
 
-func preParseTop(q* QuerySpecs) error {
+func preParseTop(q* QuerySpecs) (*Node,error) {
     //terminal
+    n := &Node{}
     var err error
     if q.ATok().Id == KW_TOP {
         q.QuantityLimit, err = Atoi(q.APeek().Val)
-        if err != nil { return errors.New("Expected number after 'top'. found "+q.APeek().Val) }
+        if err != nil { return n,errors.New("Expected number after 'top'. found "+q.APeek().Val) }
         q.ANext(); q.ANext()
     }
-    return nil
+    return n,nil
 }
 
-func preParseSelections(q* QuerySpecs) error {
+func preParseSelections(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
     switch q.ATok().Id {
         case SP_ALL:
             selectAll(q)
             q.ANext()
-            return preParseSelections(q)
+            n.node1,err = preParseSelections(q)
+            return n,err
         //non-column words in select section
         case KW_DISTINCT:
-            err := preParseSpecial(q)
-            if err != nil { return err }
-            return preParseSelections(q)
+            n.node1,err = preParseSpecial(q)
+            return n,err
         //column
         case WORD: fallthrough
         case SP_SQUOTE: fallthrough
         case SP_DQUOTE:
             q.ParseCol = COL_APPEND
-            err := preParseColumn(q)
-            if err != nil { return err }
-            return preParseSelections(q)
+            n.node1,err = preParseColumn(q)
+            if err != nil { return n,err }
+            n.node2,err = preParseSelections(q)
+            return n,err
         case KW_FROM:
             if q.ColSpec.NewWidth == 0 { selectAll(q) }
     }
-    return nil
+    return n,nil
 }
 
-func preParseColumn(q* QuerySpecs) error {
+func preParseColumn(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
     var ii int
     var err error
     switch q.ATok().Id {
@@ -244,8 +263,8 @@ func preParseColumn(q* QuerySpecs) error {
             ii, err = Atoi(c)
             //if it's a number
             if err == nil {
-                if ii > q.ColSpec.Width { return errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
-                if ii < 1 { return errors.New("Column number too small: "+c) }
+                if ii > q.ColSpec.Width { return n,errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
+                if ii < 1 { return n,errors.New("Column number too small: "+c) }
                 ii -= 1
             //if it's a name
             } else {
@@ -257,10 +276,10 @@ func preParseColumn(q* QuerySpecs) error {
             quote := q.ATok().Id
             var S string
             for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
-            if q.ATok().Id == EOS { return errors.New("Quote was not terminated") }
+            if q.ATok().Id == EOS { return n,errors.New("Quote was not terminated") }
             ii, err = getColumnIdx(q.ColSpec.Names, S)
     }
-    if err != nil { return err }
+    if err != nil { return n,err }
     //see if appending to token array or just getting index
     switch q.ParseCol {
         case COL_APPEND:
@@ -270,45 +289,53 @@ func preParseColumn(q* QuerySpecs) error {
             q.ParseCol = ii
     }
     q.ANext()
-    return err
+    return n,err
 }
 
-func preParseSpecial(q* QuerySpecs) error {
+func preParseSpecial(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
     switch q.ATok().Id {
         case KW_DISTINCT:
             q.ANext()
             q.ParseCol = COL_GETIDX
-            err := preParseColumn(q)
-            if err != nil { return err }
+            n.node1,err = preParseColumn(q)
+            if err != nil { return n,err }
             q.DistinctIdx = q.ParseCol
             if !q.SelectAll {
                 q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, q.ParseCol, q.ColSpec.Types[q.ParseCol]})
                 newCol(q, q.ParseCol)
             }
-            return err
+            return n,err
     }
-    return errors.New("Unexpected token in 'select' section:"+q.ATok().Val)
+    return n,errors.New("Unexpected token in 'select' section:"+q.ATok().Val)
 }
 
-func preParseFrom(q* QuerySpecs) error {
-    if q.ATok().Id != KW_FROM { return errors.New("Expected 'from'. Found: "+q.ATok().Val) }
+func preParseFrom(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    if q.ATok().Id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.ATok().Val) }
     q.ANext()
     q.ANext()
     if q.ATok().Id == KW_AS {
         q.ANext()
         q.ANext()
     }
-    return nil
+    return n,nil
 }
 
-func preParseWhere(q*QuerySpecs) error {
-    if q.ATok().Id != KW_WHERE { return nil }
+func preParseWhere(q*QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
+    if q.ATok().Id != KW_WHERE { return n,nil }
     q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
     q.ANext()
-    return preParseConditions(q)
+    n.node1,err = preParseConditions(q)
+    return n,err
 }
 
-func preParseConditions(q*QuerySpecs) error {
+func preParseConditions(q*QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
     //negater before conditions
     if q.ATok().Id == SP_NEGATE {
         q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
@@ -319,40 +346,50 @@ func preParseConditions(q*QuerySpecs) error {
             tok := q.ATok()
             q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
             q.ANext();
-            err := preParseConditions(q)
-            if err != nil { return err }
+            n.node1,err = preParseConditions(q)
+            if err != nil { return n,err }
             tok = q.ATok()
-            if tok.Id != SP_RPAREN { return errors.New("No closing parentheses. Found: "+tok.Val) }
+            if tok.Id != SP_RPAREN { return n,errors.New("No closing parentheses. Found: "+tok.Val) }
             q.BTokArray = append(q.BTokArray, BToken{tok.Id, tok.Val, 0})
             q.ANext()
-            return preparseMore(q)
+            n.node2,err = preparseMore(q)
+            return n,err
         case WORD: fallthrough
         case SP_DQUOTE: fallthrough
         case SP_SQUOTE:
-            err := preParseCompare(q)
-            if err != nil { return err }
-            return preparseMore(q)
+            n.node1,err = preParseCompare(q)
+            if err != nil { return n,err }
+            n.node2,err = preparseMore(q)
+            return n,err
     }
-    return errors.New("Unexpected token in 'where' section: "+q.ATok().Val)
+    return n,errors.New("Unexpected token in 'where' section: "+q.ATok().Val)
 }
 
-func preParseCompare(q* QuerySpecs) error {
+func preParseCompare(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
     q.ParseCol = COL_GETIDX
-    err := preParseColumn(q)
-    if err != nil { return err }
+    n.node1,err = preParseColumn(q)
+    if err != nil { return n,err }
     ii := q.ParseCol
     q.LastColumn = BToken{BT_WCOL, ii, q.ColSpec.Types[ii]}
-    return preParseRel(q)
+    n.node2,err = preParseRel(q)
+    return n,err
 }
 
-func preParseRel(q* QuerySpecs) error {
+func preParseRel(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
     //negater before relop
     if q.ATok().Id == SP_NEGATE {
         q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
         q.ANext()
     }
     //between
-    if q.ATok().Id == KW_BETWEEN { return preParseBetween(q) }
+    if q.ATok().Id == KW_BETWEEN {
+        n.node1,err = preParseBetween(q)
+        return n,err
+    }
     //relop and value
     if (q.ATok().Id & RELOP) != 0 {
         q.BTokArray = append(q.BTokArray, q.LastColumn)
@@ -371,20 +408,24 @@ func preParseRel(q* QuerySpecs) error {
             btok.Val,err = regexp.Compile("(?i)^"+btok.Val.(string)+"$")
         }
         q.BTokArray = append(q.BTokArray, btok)
-        return err
+        return n,err
     }
-    return errors.New("Expected relational operator. Found: "+q.ATok().Val)
+    return n,errors.New("Expected relational operator. Found: "+q.ATok().Val)
 }
 
-func preparseMore(q* QuerySpecs) error {
-    if (q.ATok().Id & LOGOP) == 0 { return nil }
+func preparseMore(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
+    if (q.ATok().Id & LOGOP) == 0 { return n,nil }
     q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
     q.ANext()
-    return preParseConditions(q)
+    n.node1,err = preParseConditions(q)
+    return n,err
 }
 
 //turn between clause into 2 comparisons with parenthese
-func preParseBetween(q* QuerySpecs) error {
+func preParseBetween(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
     var  val1, val2, relop1, relop2 BToken
     var firstSmaller bool
     var err error
@@ -392,14 +433,14 @@ func preParseBetween(q* QuerySpecs) error {
     //eat between token and get comparison values
     q.ANext()
     val1, err = tokFromQuotes(q)
-    if err != nil { return err }
-    if q.ATok().Id != KW_AND { return errors.New("Expected 'and' in between clause, got "+q.ATok().Val) }
+    if err != nil { return n,err }
+    if q.ATok().Id != KW_AND { return n,errors.New("Expected 'and' in between clause, got "+q.ATok().Val) }
     q.ANext()
     val2, err = tokFromQuotes(q)
-    if err != nil { return err }
+    if err != nil { return n,err }
 
     //see which is smaller
-    if val1.Dtype == T_NULL || val2.Dtype == T_NULL { return errors.New("Cannot use 'null' with 'between'") }
+    if val1.Dtype == T_NULL || val2.Dtype == T_NULL { return n,errors.New("Cannot use 'null' with 'between'") }
     switch val1.Dtype {
         case T_INT:    firstSmaller = val1.Val.(int) < val2.Val.(int)
         case T_FLOAT:  firstSmaller = val1.Val.(float64) < val2.Val.(float64)
@@ -425,7 +466,7 @@ func preParseBetween(q* QuerySpecs) error {
     q.BTokArray = append(q.BTokArray, val2)
     q.BTokArray = append(q.BTokArray, BToken{SP_RPAREN, ")", 0})
 
-    return err
+    return n,err
 }
 
 //comparison values in where section
@@ -466,21 +507,23 @@ func tokFromQuotes(q* QuerySpecs) (BToken,error) {
 }
 
 //currently order is only thing after where
-func preParseOrder(q* QuerySpecs) error {
-    if q.ATok().Id == EOS { return nil }
+func preParseOrder(q* QuerySpecs) (*Node,error) {
+    n := &Node{}
+    var err error
+    if q.ATok().Id == EOS { return n,nil }
     if q.ATok().Id == KW_ORDER {
-        if q.ANext().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.ATok().Val) }
+        if q.ANext().Id != KW_BY { return n,errors.New("Expected 'by' after 'order'. Found "+q.ATok().Val) }
         q.ANext()
         q.ParseCol = COL_GETIDX
-        err := preParseColumn(q)
+        n.node1,err = preParseColumn(q)
         if err == nil {
             q.NeedAllRows = true
             q.SortCol = q.ParseCol
             q.SortWay = 1
             preParseOrderMethod(q)
-        } else { return err }
+        } else { return n,err }
     }
-    return nil
+    return n,nil
 }
 
 func preParseOrderMethod(q* QuerySpecs) {
