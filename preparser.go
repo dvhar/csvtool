@@ -48,7 +48,25 @@ func (q QuerySpecs) APeek() *AToken {
 }
 func (q QuerySpecs) ATok() *AToken { return &q.ATokArray[q.AIdx] }
 func (q *QuerySpecs) AReset() { q.AIdx = 0 }
+const (
+    N_PPTOKENS = iota
+    N_SELECT = iota
+    N_TOP = iota
+    N_SELECTIONS = iota
+    N_COLUMN = iota
+    N_SPECIAL = iota
+    N_FROM = iota
+    N_WHERE = iota
+    N_CONDITIONS = iota
+    N_BETWEEN = iota
+    N_MORE = iota
+    N_COMPARE = iota
+    N_REL = iota
+    N_ORDER = iota
+    N_ORDERM = iota
+)
 type Node struct {
+    label int
     tok1 interface{}
     tok2 interface{}
     tok3 interface{}
@@ -175,7 +193,8 @@ func evalFrom(q *QuerySpecs) error {
 
 //recursive descent pre-parser builds Token arrays and QuerySpecs
 func preParseTokens(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_PPTOKENS}
+    n.tok1 = q
     //first turn query string into A tokens
     err := tokenizeQspec(q)
     if err != nil { return n,err }
@@ -202,7 +221,7 @@ func preParseTokens(q* QuerySpecs) (*Node,error) {
 }
 
 func preParseSelect(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_SELECT}
     var err error
     if q.ATok().Id != KW_SELECT { return n,errors.New("Expected 'select' token. found "+q.ATok().Val) }
     q.ANext()
@@ -214,7 +233,7 @@ func preParseSelect(q* QuerySpecs) (*Node,error) {
 
 func preParseTop(q* QuerySpecs) (*Node,error) {
     //terminal
-    n := &Node{}
+    n := &Node{label:N_TOP}
     var err error
     if q.ATok().Id == KW_TOP {
         q.QuantityLimit, err = Atoi(q.APeek().Val)
@@ -225,7 +244,7 @@ func preParseTop(q* QuerySpecs) (*Node,error) {
 }
 
 func preParseSelections(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_SELECTIONS}
     var err error
     switch q.ATok().Id {
         case SP_ALL:
@@ -253,7 +272,7 @@ func preParseSelections(q* QuerySpecs) (*Node,error) {
 }
 
 func preParseColumn(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_COLUMN}
     var ii int
     var err error
     switch q.ATok().Id {
@@ -293,7 +312,7 @@ func preParseColumn(q* QuerySpecs) (*Node,error) {
 }
 
 func preParseSpecial(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_SPECIAL}
     var err error
     switch q.ATok().Id {
         case KW_DISTINCT:
@@ -312,7 +331,7 @@ func preParseSpecial(q* QuerySpecs) (*Node,error) {
 }
 
 func preParseFrom(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_FROM}
     if q.ATok().Id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.ATok().Val) }
     q.ANext()
     q.ANext()
@@ -324,7 +343,7 @@ func preParseFrom(q* QuerySpecs) (*Node,error) {
 }
 
 func preParseWhere(q*QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_WHERE}
     var err error
     if q.ATok().Id != KW_WHERE { return n,nil }
     q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
@@ -334,7 +353,7 @@ func preParseWhere(q*QuerySpecs) (*Node,error) {
 }
 
 func preParseConditions(q*QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_CONDITIONS}
     var err error
     //negater before conditions
     if q.ATok().Id == SP_NEGATE {
@@ -366,7 +385,7 @@ func preParseConditions(q*QuerySpecs) (*Node,error) {
 }
 
 func preParseCompare(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_COMPARE}
     var err error
     q.ParseCol = COL_GETIDX
     n.node1,err = preParseColumn(q)
@@ -378,7 +397,7 @@ func preParseCompare(q* QuerySpecs) (*Node,error) {
 }
 
 func preParseRel(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_REL}
     var err error
     //negater before relop
     if q.ATok().Id == SP_NEGATE {
@@ -414,7 +433,7 @@ func preParseRel(q* QuerySpecs) (*Node,error) {
 }
 
 func preparseMore(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_MORE}
     var err error
     if (q.ATok().Id & LOGOP) == 0 { return n,nil }
     q.BTokArray = append(q.BTokArray, BToken{q.ATok().Id, q.ATok().Val, 0})
@@ -425,7 +444,7 @@ func preparseMore(q* QuerySpecs) (*Node,error) {
 
 //turn between clause into 2 comparisons with parenthese
 func preParseBetween(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_BETWEEN}
     var  val1, val2, relop1, relop2 BToken
     var firstSmaller bool
     var err error
@@ -508,7 +527,7 @@ func tokFromQuotes(q* QuerySpecs) (BToken,error) {
 
 //currently order is only thing after where
 func preParseOrder(q* QuerySpecs) (*Node,error) {
-    n := &Node{}
+    n := &Node{label:N_ORDER}
     var err error
     if q.ATok().Id == EOS { return n,nil }
     if q.ATok().Id == KW_ORDER {
