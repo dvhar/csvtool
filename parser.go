@@ -130,7 +130,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
             }
         }
 
-        //recursive descent parser finds matches and retrieves results
+        //find matches and retrieve results
         match, err := evalQuery(q, &res, &fromRow, &toRow, distinctCheck)
         if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
         if match {
@@ -157,6 +157,8 @@ func treePrint(n *Node, i int){
     if n==nil {return}
     for j:=0;j<i;j++ { Print("  ") }
     Println(enumMap[n.label+1000])
+    for j:=0;j<i;j++ { Print("  ") }
+    Println(n.tok1)
     treePrint(n.node1,i+1)
     treePrint(n.node2,i+1)
     treePrint(n.node3,i+1)
@@ -167,7 +169,6 @@ func treePrint(n *Node, i int){
 func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
 
     //see if row matches condition
-    //treePrint(q.Tree.node3,0)
     match, err := execWhere(q, fromRow)
     if err != nil || !match { return false, err }
 
@@ -176,23 +177,37 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     if err != nil || !match { return false, err }
 
     //copy entire row if selecting all
+    treePrint(q.Tree.node1,0)
+    execSelect(q, res, fromRow, selected)
+    return true, err
+}
+
+func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
+    //select all if soing that
     if q.SelectAll  {
         if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
             res.Vals = append(res.Vals, *fromRow)
             q.QuantityRetrieved++
         }
         if q.Save { saver <- saveData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
-        return true, err
     }
-
-    //select columns if doing that
-    q.BReset()
-    for ;q.BTok().Id != BT_SCOL || q.BTok().Id == EOS; { q.BNext() }
-    if q.BTok().Id == EOS { return false, errors.New("No columns selected") }
-    countSelected := evalSelectCol(q, res, fromRow, selected, 0)
-    if countSelected != q.ColSpec.NewWidth { return false, errors.New("returned "+Itoa(countSelected)+" columns. should be "+Itoa(q.ColSpec.NewWidth)) }
-    return true, err
+    //otherwise retrieve the selected columns
+    execSelections(q,q.Tree.node1,res,fromRow,selected)
 }
+func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
+    if n.tok1 == nil {
+        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
+            res.Vals = append(res.Vals, *selected)
+            q.QuantityRetrieved++
+        }
+        if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
+        return
+    }
+    if n.label == N_SELECT { *selected = make([]interface{},0) }
+    if n.label == N_SELECTIONS { *selected = append(*selected, (*fromRow)[n.tok1.(BToken).Val.(int)]) }
+    execSelections(q,n.node1,res,fromRow,selected)
+}
+
 
 //add selected columns to results
 func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, count int) int {
@@ -210,6 +225,7 @@ func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{},
                 q.QuantityRetrieved++
             }
             if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
+        if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
         }
     }
     q.BNext()
