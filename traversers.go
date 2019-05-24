@@ -117,7 +117,9 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}) {
     //select all if doing that
     if q.SelectAll  {
         if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
-            res.Vals = append(res.Vals, *fromRow)
+            tempArr := make([]interface{}, len(*fromRow))
+            copy(tempArr, *fromRow)
+            res.Vals = append(res.Vals, tempArr)
             q.QuantityRetrieved++
         }
         if q.Save { saver <- saveData{Type : CH_ROW, Row : fromRow} ; <-savedLine }

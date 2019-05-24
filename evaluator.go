@@ -43,7 +43,7 @@ type LineReader struct {
 func (l*LineReader) SavePos(colNo int) {
     l.ValPositions = append(l.ValPositions, ValPos{l.PrevPos, l.FromRow[colNo]})
 }
-func (l*LineReader) InitReRead() {
+func (l*LineReader) PrepareReRead() {
     l.LineBytes = make([]byte, l.MaxLineSize)
     l.ByteReader = bytes.NewReader(l.LineBytes)
 }
@@ -55,6 +55,7 @@ func (l*LineReader) Init(q *QuerySpecs) {
     l.Cread = csv.NewReader(l.Tee)
     l.FromRow = make([]interface{}, q.ColSpec.Width)
     if q.QuantityLimit == 0 { l.Limit = 1<<62 } else { l.Limit = q.QuantityLimit }
+    l.Read(q)
 }
 func (l*LineReader) convertLine(inline *[]string, q *QuerySpecs) {
     for i,cell := range (*inline) {
@@ -81,8 +82,8 @@ func (l*LineReader) Read(q *QuerySpecs) ([]interface{},error) {
     l.convertLine(&line, q)
     return l.FromRow, err
 }
-func (l*LineReader) ReadAt(q *QuerySpecs, linePos int64) ([]interface{},error) {
-    l.Fp.ReadAt(l.LineBytes, linePos)
+func (l*LineReader) ReadAt(q *QuerySpecs, lineNo int) ([]interface{},error) {
+    l.Fp.ReadAt(l.LineBytes, l.ValPositions[lineNo].Pos)
     l.ByteReader.Seek(0,0)
     l.Cread = csv.NewReader(l.ByteReader)
     line, err := l.Cread.Read()
@@ -121,12 +122,12 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     var reader LineReader
     reader.Init(q)
 
-    //run normal query
+    //run query
     if q.SortWay == 0 {
         err = normalQuery(q, &res, &reader)
         if err != nil { Println(err); return SingleQueryResult{}, err }
     } else {
-        err = evalOrderBy(q, &res, &reader)
+        err = orderedQuery(q, &res, &reader)
     }
 
     if err != nil { Println(err); return SingleQueryResult{}, err }
@@ -145,22 +146,23 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
         runtime.ReadMemStats(&m)
         if m.Alloc > 2.0*totalMem/3.0 { q.MemFull = true; if !q.Save { break } }
         if stop == 1 { stop = 0; messager <- "query cancelled"; break }
+        //periodic updates
+        rowsChecked++
+        if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far" }
 
         //read line from csv file
         fromRow,err := reader.Read(q)
         if err != nil {break}
 
         //find matches and retrieve results
-        match, err := evalMatch(q, &fromRow, distinctCheck)
-        if err != nil{ Println("evalMatch error in csvQuery:",err); return err }
-        if match {
-            res.Numrows++;
-            execSelect(q, res, &fromRow)
-        }
+        match,_ := execWhere(q, &fromRow)
+        if !match { continue }
+        match,_ = evalDistinct(q, &fromRow, distinctCheck)
+        if !match { continue }
 
-        //periodic updates
-        rowsChecked++
-        if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far" }
+        res.Numrows++;
+        execSelect(q, res, &fromRow)
+
     }
     return err
 }
@@ -194,17 +196,21 @@ func evalDistinct(q *QuerySpecs, fromRow *[]interface{}, distinctCheck map[inter
 }
 
 //sort results
-func evalOrderBy(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
+func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
     stop = 0
     distinctCheck := make(map[interface{}]bool)
+    numRows := 0
+    rowsChecked := 0
+    var match bool
     //find line positions
     for {
         if stop == 1 { stop = 0; messager <- "query cancelled"; break }
+        rowsChecked++
+        if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked) }
         fromRow,err := reader.Read(q)
         if err != nil {break}
-        match, err := evalMatch(q, &fromRow, distinctCheck)
-        if err != nil{ return err }
-        if match { reader.SavePos(q.SortCol); res.Numrows++ }
+        match,_ = execWhere(q, &fromRow)
+        if match { reader.SavePos(q.SortCol); numRows++ }
     }
 
     //sort matching line positions
@@ -229,11 +235,17 @@ func evalOrderBy(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
     })
 
     //go back and retrieve lines in the right order
-    reader.InitReRead()
+    reader.PrepareReRead()
     for i := 0; i < len(reader.ValPositions); i++ {
-        fromRow,err := reader.ReadAt(q, reader.ValPositions[i].Pos)
-        execSelect(q, res, &fromRow)
+        fromRow,err := reader.ReadAt(q, i)
         if err != nil {return err}
+        match,_ = evalDistinct(q, &fromRow, distinctCheck)
+        if match {
+            execSelect(q, res, &fromRow)
+            res.Numrows++;
+            if res.Numrows >= reader.Limit { break }
+            if res.Numrows % 1000 == 0 { messager <- "Retrieving line "+Itoa(rowsChecked) }
+        }
     }
     return nil
 }
