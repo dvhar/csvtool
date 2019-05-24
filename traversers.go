@@ -111,3 +111,46 @@ func execRelop(c treeTok, n *Node, r *[]interface{}) (bool, error) {
     if negate == 1 { match = !match }
     return match, nil
 }
+
+//select node of tree root
+func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
+    //select all if doing that
+    if q.SelectAll  {
+        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
+            res.Vals = append(res.Vals, *fromRow)
+            q.QuantityRetrieved++
+        }
+        if q.Save { saver <- saveData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
+        return
+    //otherwise retrieve the selected columns
+    } else {
+        *selected = make([]interface{}, q.ColSpec.NewWidth)
+        execSelections(q,q.Tree.node1.node1,res,fromRow,selected,0)
+    }
+}
+//selections branch of select node
+func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, count int) {
+    if n.tok1 == nil {
+        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
+            res.Vals = append(res.Vals, *selected)
+            q.QuantityRetrieved++
+        }
+        if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
+        return
+    } else {
+        (*selected)[count] = (*fromRow)[n.tok1.(treeTok).Val.(int)]
+    }
+    execSelections(q,n.node1,res,fromRow,selected,count+1)
+}
+
+//print parse tree for debuggging
+func treePrint(n *Node, i int){
+    if n==nil {return}
+    for j:=0;j<i;j++ { Print("  ") }
+    Println(enumMap[n.label+1000])
+    treePrint(n.node1,i+1)
+    treePrint(n.node2,i+1)
+    treePrint(n.node3,i+1)
+    treePrint(n.node4,i+1)
+}
+

@@ -1,4 +1,4 @@
-//file provides the preParseTokens function
+//file provides the parseQuery function
 package main
 import (
   "regexp"
@@ -193,7 +193,7 @@ func evalFrom(q *QuerySpecs) error {
 }
 
 //recursive descent parser builds parse tree and QuerySpecs
-func preParseTokens(q* QuerySpecs) (*Node,error) {
+func parseQuery(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_PPTOKENS}
     n.tok1 = q
     //first turn query string into A tokens

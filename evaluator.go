@@ -20,12 +20,52 @@ var totalMem uint64
 var stop int
 var active bool
 
+type LineReader struct {
+    FromRow []interface{}
+    Limit int
+    Fp *os.File
+    LinePositions []int64
+    Pos int64
+    LineBuffer bytes.Buffer
+    Tee io.Reader
+    Cread *csv.Reader
+    LineBytes []byte
+}
+func (l*LineReader) Init(q *QuerySpecs) {
+    l.Fp,_ = os.Open(q.Fname)
+    l.LinePositions = make([]int64,0)
+    l.Tee = io.TeeReader(l.Fp, &l.LineBuffer)
+    l.Cread = csv.NewReader(l.Tee)
+    l.FromRow = make([]interface{}, q.ColSpec.Width)
+    if q.QuantityLimit == 0 { l.Limit = 1<<62 } else { l.Limit = q.QuantityLimit }
+}
+func (l*LineReader) Read(q *QuerySpecs) ([]interface{},error) {
+    line,err := l.Cread.Read()
+    l.LineBytes,_ = l.LineBuffer.ReadBytes('\n')
+    l.Pos += int64(len(l.LineBytes))
+    l.LinePositions = append(l.LinePositions, l.Pos)
+    for i,cell := range line {
+        cell = s.TrimSpace(cell)
+        if s.ToLower(cell) == "null" || cell == "" { l.FromRow[i] = nil
+        } else {
+            switch q.ColSpec.Types[i] {
+                case T_INT:    l.FromRow[i],_ = Atoi(cell)
+                case T_FLOAT:  l.FromRow[i],_ = ParseFloat(cell,64)
+                case T_DATE:   l.FromRow[i],_ = d.ParseAny(cell)
+                case T_NULL:   fallthrough
+                case T_STRING: l.FromRow[i] = cell
+            }
+        }
+    }
+    return l.FromRow,err
+}
+
 //run csv query
 func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
     var err error
-    //pre-parse tokens and do stuff that only needs to be done once
-    q.Tree,err = preParseTokens(q)
+    //parse and do stuff that only needs to be done once
+    q.Tree,err = parseQuery(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
     q.showLimit = 25000 / len(q.ColSpec.NewNames)
@@ -42,10 +82,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //prepare some other things
     totalMem = memory.TotalMemory()
     var toRow []interface{}
-    var fromRow []interface{}
-    var limit int
     distinctCheck := make(map[interface{}]bool)
-    if q.QuantityLimit == 0 { limit = 1<<62 } else { limit = q.QuantityLimit }
     active = true
     defer func(){
         active = false
@@ -53,67 +90,31 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     }()
 
     //prepare random access reader - not yet needed
-    fp,err := os.Open(q.Fname)
-    linePositions := make([]int64,0)
-    var lineBuffer bytes.Buffer
-    var pos int64
-    tee := io.TeeReader(fp, &lineBuffer)
-    cread := csv.NewReader(tee)
-    cread.Read()
-    lineBytes,_ := lineBuffer.ReadBytes('\n')
-    pos += int64(len(lineBytes))
-    linePositions = append(linePositions, pos)
-
+    var lread LineReader
+    lread.Init(q)
 
     //run query
     rowsChecked := 0
     stop = 0
-    for ;res.Numrows<limit; {
+    for ;res.Numrows<lread.Limit; {
 
         //watch out for memory ceiling
         runtime.ReadMemStats(&m)
-        if m.Alloc > totalMem/3 {
-            q.MemFull = true
-            if !q.Save { break }
-        }
+        if m.Alloc > totalMem/3 { q.MemFull = true; if !q.Save { break } }
 
         //see if user wants to cancel
-        if stop == 1 {
-            stop = 0
-            messager <- "query cancelled"
-            break
-        }
+        if stop == 1 { stop = 0; messager <- "query cancelled"; break }
 
         //read line from csv file and allocate array for it
-        line, err := cread.Read()
+        fromRow,err := lread.Read(q)
         if err != nil {break}
-        fromRow = make([]interface{}, q.ColSpec.Width)
-
-        //calculate line position
-        lineBytes,_ = lineBuffer.ReadBytes('\n')
-        pos += int64(len(lineBytes))
-
-        //read each cell from line
-        for i,cell := range line {
-            cell = s.TrimSpace(cell)
-            if s.ToLower(cell) == "null" || cell == "" { fromRow[i] = nil
-            } else {
-                switch q.ColSpec.Types[i] {
-                    case T_INT:    fromRow[i],_ = Atoi(cell)
-                    case T_FLOAT:  fromRow[i],_ = ParseFloat(cell,64)
-                    case T_DATE:   fromRow[i],_ = d.ParseAny(cell)
-                    case T_NULL:   fallthrough
-                    case T_STRING: fromRow[i] = cell
-                }
-            }
-        }
 
         //find matches and retrieve results
         match, err := evalQuery(q, &res, &fromRow, &toRow, distinctCheck)
         if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
         if match {
             res.Numrows++
-            linePositions = append(linePositions, pos)
+            lread.LinePositions = append(lread.LinePositions, lread.Pos)
         }
 
         //periodic updates
@@ -125,19 +126,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     if err != nil { Println(err); return SingleQueryResult{}, err }
     err = evalOrderBy(q, &res)
     if err != nil { Println(err); return SingleQueryResult{}, err }
-    messager <- "Finishing a query..."
     return res, nil
-}
-
-//print parse tree for debuggging
-func treePrint(n *Node, i int){
-    if n==nil {return}
-    for j:=0;j<i;j++ { Print("  ") }
-    Println(enumMap[n.label+1000])
-    treePrint(n.node1,i+1)
-    treePrint(n.node2,i+1)
-    treePrint(n.node3,i+1)
-    treePrint(n.node4,i+1)
 }
 
 //check and retrieve matches
@@ -154,37 +143,6 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     //retrieve columns
     execSelect(q,res,fromRow,selected)
     return true, err
-}
-
-//select node of tree root
-func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
-    //select all if doing that
-    if q.SelectAll  {
-        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
-            res.Vals = append(res.Vals, *fromRow)
-            q.QuantityRetrieved++
-        }
-        if q.Save { saver <- saveData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
-        return
-    //otherwise retrieve the selected columns
-    } else {
-        *selected = make([]interface{}, q.ColSpec.NewWidth)
-        execSelections(q,q.Tree.node1.node1,res,fromRow,selected,0)
-    }
-}
-//selections branch of select node
-func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, count int) {
-    if n.tok1 == nil {
-        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
-            res.Vals = append(res.Vals, *selected)
-            q.QuantityRetrieved++
-        }
-        if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
-        return
-    } else {
-        (*selected)[count] = (*fromRow)[n.tok1.(treeTok).Val.(int)]
-    }
-    execSelections(q,n.node1,res,fromRow,selected,count+1)
 }
 
 //see if row has distinct value if looking for one. make sure this is the last check before retrieving row

@@ -195,6 +195,7 @@ func runQueries(req *Qrequest) ([]SingleQueryResult, error) {
     for i := range queries {
         //run query
         result, err = runCsvQuery(queries[i], req)
+        messager <- "Finishing a query..."
         results = append(results, result)
         if err != nil {
             messager <- Sprint(err)
