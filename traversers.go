@@ -8,7 +8,7 @@ import (
 )
 
 //traverse where branch of parse tree
-func execWhere(q *QuerySpecs, fromRow *[]interface{}) (bool, error) {
+func evalWhere(q *QuerySpecs, fromRow *[]interface{}) (bool, error) {
     node := q.Tree.node3
     if node.node1 == nil { return true,nil }
     return wTraverse(q, node.node1, fromRow)
@@ -21,12 +21,13 @@ func wTraverse(q *QuerySpecs, n *Node, r *[]interface{}) (bool, error) {
     switch n.label {
         case N_CONDITIONS:
             match, err := wTraverse(q,n.node1,r)
+            if err != nil { return false, err }
             match2, err := wTraverse(q,n.node2,r)
-            switch q.tempVal.(int) {
-                case KW_AND:
-                    match = match && match2
-                case KW_OR:
-                    match = match || match2
+            if err != nil { return false, err }
+            if q.tempVal == KW_AND {
+                match = match && match2
+            } else if q.tempVal == KW_OR {
+                match = match || match2
             }
             if n.tok1 == SP_NEGATE { match = !match }
             return match, err
@@ -41,12 +42,13 @@ func wTraverse(q *QuerySpecs, n *Node, r *[]interface{}) (bool, error) {
             return match2, err
 
         default:
-            wTraverse(q,n.node1,r)
-            wTraverse(q,n.node2,r)
-            wTraverse(q,n.node3,r)
-            wTraverse(q,n.node4,r)
+            _,err := wTraverse(q,n.node1,r)
+            if err != nil { return false, err }
+            _,err = wTraverse(q,n.node2,r)
+            if err != nil { return false, err }
+            _,err = wTraverse(q,n.node3,r)
+            if err != nil { return false, err }
     }
-    println("returning false"+s.Itoa(n.label))
     return false,nil
 }
 
@@ -116,13 +118,13 @@ func execRelop(c treeTok, n *Node, r *[]interface{}) (bool, error) {
 func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}) {
     //select all if doing that
     if q.SelectAll  {
+        tempArr := make([]interface{}, len(*fromRow))
+        copy(tempArr, *fromRow)
         if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
-            tempArr := make([]interface{}, len(*fromRow))
-            copy(tempArr, *fromRow)
             res.Vals = append(res.Vals, tempArr)
             q.QuantityRetrieved++
         }
-        if q.Save { saver <- saveData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
+        if q.Save { saver <- saveData{Type : CH_ROW, Row : &tempArr} ; <-savedLine }
         return
     //otherwise retrieve the selected columns
     } else {
@@ -153,6 +155,5 @@ func treePrint(n *Node, i int){
     treePrint(n.node1,i+1)
     treePrint(n.node2,i+1)
     treePrint(n.node3,i+1)
-    treePrint(n.node4,i+1)
 }
 

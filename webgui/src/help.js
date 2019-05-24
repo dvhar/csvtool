@@ -73,7 +73,6 @@ export class Help extends React.Component {
                 </blockquote>
                 <h4>Sorting results</h4>
                 Use 'order by', followed by one column name or number, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified.
-                The results sent to the browser are sorted, but saving files does not preserve the order.
                 <br/><br/>
                 Examples:
                 <blockquote>
@@ -95,7 +94,10 @@ export class Help extends React.Component {
             <hr/>
             Browsers can take a while to load big results, even when limiting them to 1000 rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner.
             <br/><br/>
-            version 0.13 - 5/24/2019
+            <hr/>
+            version 0.20 - 5/24/2019
+            <hr/>
+            <br/><br/>
             </div>
         )
     }

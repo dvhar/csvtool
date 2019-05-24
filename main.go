@@ -75,9 +75,7 @@ const (
 )
 type FilePaths struct {
     SavePath string
-    RtSavePath string
     OpenPath string
-    CsvPath string
     Status int
 }
 //struct that matches incoming json requests
@@ -98,7 +96,7 @@ var browsersOpen = 0
 var slash string
 
 func main() {
-    println("version 0.13 - 5/24/2019")
+    println("version 0.20 - 5/24/2019")
     //get password and other flags
     flag.Parse()
     messager = make(chan string)

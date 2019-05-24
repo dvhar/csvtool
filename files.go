@@ -18,6 +18,7 @@ func realtimeCsvSaver() {
     numTotal := 0
     numRecieved := 0
     extension := regexp.MustCompile(`\.csv$`)
+    var savePath string
     var file *os.File
     var err error
     var writer *csv.Writer
@@ -26,10 +27,10 @@ func realtimeCsvSaver() {
     for c := range saver {
         switch c.Type {
             case CH_SAVPREP:
-                println("got saver prep")
                 err = pathChecker(c.Message)
                 if err == nil {
-                    FPaths.RtSavePath = FPaths.SavePath
+                    savePath = FPaths.SavePath
+                    Println("Saving to ",savePath)
                     numTotal = c.Number
                     numRecieved = 0
                     state = 1
@@ -43,9 +44,9 @@ func realtimeCsvSaver() {
                     println("processed saver header")
                     numRecieved++
                     if numTotal > 1 {
-                        FPaths.RtSavePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
+                        savePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
                     }
-                    file, err = os.OpenFile(FPaths.RtSavePath, os.O_CREATE|os.O_WRONLY, 0660)
+                    file, err = os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0660)
                     writer = csv.NewWriter(file)
                     err = writer.Write(c.Header)
                     output = make([]string, len(c.Header))

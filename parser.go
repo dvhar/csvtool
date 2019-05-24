@@ -71,11 +71,9 @@ type Node struct {
     tok1 interface{}
     tok2 interface{}
     tok3 interface{}
-    tok4 interface{}
     node1 *Node
     node2 *Node
     node3 *Node
-    node4 *Node
 }
 type Columns struct {
     Names []string
@@ -484,7 +482,7 @@ func preParseBetween(q* QuerySpecs) (*Node,error) {
         relop2 = treeTok{SP_GREATEQ, ">=", 0}
     }
 
-    //between parse tree is 2 comparisons
+    //parse tree for 2 comparisions
     n.node1 = &Node{label: N_COMPARE, tok1: q.LastColumn,
         node1: &Node{label: N_REL, tok2: relop1, tok3: val1},
     }
