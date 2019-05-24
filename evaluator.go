@@ -20,31 +20,31 @@ var totalMem uint64
 var stop int
 var active bool
 
+//line reader type and functions/methods
 type LineReader struct {
     FromRow []interface{}
     Limit int
     Fp *os.File
     LinePositions []int64
+    SavedValues []interface{}
     Pos int64
     LineBuffer bytes.Buffer
     Tee io.Reader
     Cread *csv.Reader
     LineBytes []byte
 }
+func (l*LineReader) SavePos() { l.LinePositions = append(l.LinePositions, l.Pos) }
 func (l*LineReader) Init(q *QuerySpecs) {
     l.Fp,_ = os.Open(q.Fname)
     l.LinePositions = make([]int64,0)
+    l.SavedValues = make([]interface{},0)
     l.Tee = io.TeeReader(l.Fp, &l.LineBuffer)
     l.Cread = csv.NewReader(l.Tee)
     l.FromRow = make([]interface{}, q.ColSpec.Width)
     if q.QuantityLimit == 0 { l.Limit = 1<<62 } else { l.Limit = q.QuantityLimit }
 }
-func (l*LineReader) Read(q *QuerySpecs) ([]interface{},error) {
-    line,err := l.Cread.Read()
-    l.LineBytes,_ = l.LineBuffer.ReadBytes('\n')
-    l.Pos += int64(len(l.LineBytes))
-    l.LinePositions = append(l.LinePositions, l.Pos)
-    for i,cell := range line {
+func (l*LineReader) convertLine(inline *[]string, q *QuerySpecs) {
+    for i,cell := range (*inline) {
         cell = s.TrimSpace(cell)
         if s.ToLower(cell) == "null" || cell == "" { l.FromRow[i] = nil
         } else {
@@ -57,7 +57,14 @@ func (l*LineReader) Read(q *QuerySpecs) ([]interface{},error) {
             }
         }
     }
-    return l.FromRow,err
+}
+func (l*LineReader) Read(q *QuerySpecs) ([]interface{},error) {
+    line, err := l.Cread.Read()
+    l.LineBytes, _ = l.LineBuffer.ReadBytes('\n')
+    l.Pos += int64(len(l.LineBytes))
+    l.LinePositions = append(l.LinePositions, l.Pos)
+    l.convertLine(&line, q)
+    return l.FromRow, err
 }
 
 //run csv query
@@ -68,7 +75,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     q.Tree,err = parseQuery(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
-    q.showLimit = 25000 / len(q.ColSpec.NewNames)
+    q.showLimit = 20000 / len(q.ColSpec.NewNames)
 
     //prepare output
     res:= SingleQueryResult{
@@ -81,7 +88,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
     //prepare some other things
     totalMem = memory.TotalMemory()
-    var toRow []interface{}
     distinctCheck := make(map[interface{}]bool)
     active = true
     defer func(){
@@ -89,39 +95,37 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         if q.Save { saver <- saveData{Type : CH_NEXT} }
     }()
 
-    //prepare random access reader - not yet needed
-    var lread LineReader
-    lread.Init(q)
+    //prepare random access reader
+    var reader LineReader
+    reader.Init(q)
 
     //run query
     rowsChecked := 0
     stop = 0
-    for ;res.Numrows<lread.Limit; {
+    for ;res.Numrows<reader.Limit; {
 
         //watch out for memory ceiling
         runtime.ReadMemStats(&m)
-        if m.Alloc > totalMem/3 { q.MemFull = true; if !q.Save { break } }
+        if m.Alloc > 2.0*totalMem/3.0 { q.MemFull = true; if !q.Save { break } }
 
         //see if user wants to cancel
         if stop == 1 { stop = 0; messager <- "query cancelled"; break }
 
         //read line from csv file and allocate array for it
-        fromRow,err := lread.Read(q)
+        fromRow,err := reader.Read(q)
         if err != nil {break}
 
         //find matches and retrieve results
-        match, err := evalQuery(q, &res, &fromRow, &toRow, distinctCheck)
-        if err != nil{ Println("evalQuery error in csvQuery:",err); return SingleQueryResult{}, err }
+        match, err := evalMatch(q, &res, &fromRow, distinctCheck)
+        if err != nil{ Println("evalMatch error in csvQuery:",err); return SingleQueryResult{}, err }
         if match {
-            res.Numrows++
-            lread.LinePositions = append(lread.LinePositions, lread.Pos)
+            res.Numrows++;
+            execSelect(q, &res, &fromRow)
         }
 
         //periodic updates
         rowsChecked++
-        if rowsChecked % 10000 == 0 {
-            messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far"
-        }
+        if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far" }
     }
     if err != nil { Println(err); return SingleQueryResult{}, err }
     err = evalOrderBy(q, &res)
@@ -130,7 +134,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 }
 
 //check and retrieve matches
-func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
+func evalMatch(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
 
     //see if row matches condition
     match, err := execWhere(q, fromRow)
@@ -140,8 +144,6 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     match, err = evalDistinct(q, res, fromRow, distinctCheck)
     if err != nil || !match { return false, err }
 
-    //retrieve columns
-    execSelect(q,res,fromRow,selected)
     return true, err
 }
 

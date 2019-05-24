@@ -113,7 +113,7 @@ func execRelop(c treeTok, n *Node, r *[]interface{}) (bool, error) {
 }
 
 //select node of tree root
-func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
+func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}) {
     //select all if doing that
     if q.SelectAll  {
         if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
@@ -124,8 +124,8 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, se
         return
     //otherwise retrieve the selected columns
     } else {
-        *selected = make([]interface{}, q.ColSpec.NewWidth)
-        execSelections(q,q.Tree.node1.node1,res,fromRow,selected,0)
+        selected := make([]interface{}, q.ColSpec.NewWidth)
+        execSelections(q,q.Tree.node1.node1,res,fromRow,&selected,0)
     }
 }
 //selections branch of select node
