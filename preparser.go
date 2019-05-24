@@ -231,6 +231,7 @@ func preParseSelect(q* QuerySpecs) (*Node,error) {
     q.ANext()
     err = preParseTop(q)
     if err != nil { return n,err }
+    countSelected = 0
     n.node1,err = preParseSelections(q)
     return n,err
 }
@@ -248,6 +249,7 @@ func preParseTop(q* QuerySpecs) error {
 
 //tok1 is selected column
 //node1 is next selection
+var countSelected int
 func preParseSelections(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_SELECTIONS}
     var err error
@@ -323,14 +325,16 @@ func preParseSpecial(q* QuerySpecs) (*Node,error) {
         case KW_DISTINCT:
             q.ANext()
             q.ParseCol = COL_GETIDX
-            _,err = preParseColumn(q)
+            n.tok1,err = preParseColumn(q)
             if err != nil { return n,err }
             q.DistinctIdx = q.ParseCol
             if !q.SelectAll {
                 q.BTokArray = append(q.BTokArray, BToken{BT_SCOL, q.ParseCol, q.ColSpec.Types[q.ParseCol]})
                 newCol(q, q.ParseCol)
             }
-            return preParseSelections(q)
+            n.node1,err = preParseSelections(q)
+            n.label = N_SELECTIONS
+            return n,err
     }
     return n,errors.New("Unexpected token in 'select' section:"+q.ATok().Val)
 }

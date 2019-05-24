@@ -15,28 +15,6 @@ import (
   "bytes"
 )
 
-
-func (q *QuerySpecs) BNext() BToken {
-    if q.BIdx < len(q.BTokArray)-1 {
-        q.BIdx++
-    } else { q.End = true }
-    if q.End { return BToken{EOS, 0, 0} }
-    return q.BTokArray[q.BIdx]
-}
-func (q QuerySpecs) BPeek() BToken {
-    if q.BIdx < len(q.BTokArray)-1 {
-        return q.BTokArray[q.BIdx+1]
-    } else {
-        return BToken{EOS, 0, 0}
-    }
-}
-func (q QuerySpecs) BTok() BToken {
-    if q.End || len(q.BTokArray)<1 { return BToken{EOS, 0, 0} }
-    return q.BTokArray[q.BIdx]
-}
-func (q *QuerySpecs) BReset() { q.BIdx = 0; q.End = false }
-
-
 var m runtime.MemStats
 var totalMem uint64
 var stop int
@@ -137,7 +115,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
             res.Numrows++
             linePositions = append(linePositions, pos)
         }
-        q.BReset()
 
         //periodic updates
         rowsChecked++
@@ -157,15 +134,13 @@ func treePrint(n *Node, i int){
     if n==nil {return}
     for j:=0;j<i;j++ { Print("  ") }
     Println(enumMap[n.label+1000])
-    for j:=0;j<i;j++ { Print("  ") }
-    Println(n.tok1)
     treePrint(n.node1,i+1)
     treePrint(n.node2,i+1)
     treePrint(n.node3,i+1)
     treePrint(n.node4,i+1)
 }
 
-//recursive descent parser for evaluating each row
+//check and retrieve matches
 func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, distinctCheck map[interface{}]bool) (bool,error) {
 
     //see if row matches condition
@@ -176,25 +151,29 @@ func evalQuery(q *QuerySpecs, res *SingleQueryResult, fromRow *[]interface{}, se
     match, err = evalDistinct(q, res, fromRow, distinctCheck)
     if err != nil || !match { return false, err }
 
-    //copy entire row if selecting all
-    treePrint(q.Tree.node1,0)
-    execSelect(q, res, fromRow, selected)
+    //retrieve columns
+    execSelect(q,res,fromRow,selected)
     return true, err
 }
 
+//select node of tree root
 func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
-    //select all if soing that
+    //select all if doing that
     if q.SelectAll  {
         if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
             res.Vals = append(res.Vals, *fromRow)
             q.QuantityRetrieved++
         }
         if q.Save { saver <- saveData{Type : CH_ROW, Row : fromRow} ; <-savedLine }
-    }
+        return
     //otherwise retrieve the selected columns
-    execSelections(q,q.Tree.node1,res,fromRow,selected)
+    } else {
+        *selected = make([]interface{}, q.ColSpec.NewWidth)
+        execSelections(q,q.Tree.node1.node1,res,fromRow,selected,0)
+    }
 }
-func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
+//selections branch of select node
+func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, count int) {
     if n.tok1 == nil {
         if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
             res.Vals = append(res.Vals, *selected)
@@ -202,34 +181,10 @@ func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]in
         }
         if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
         return
+    } else {
+        (*selected)[count] = (*fromRow)[n.tok1.(BToken).Val.(int)]
     }
-    if n.label == N_SELECT { *selected = make([]interface{},0) }
-    if n.label == N_SELECTIONS { *selected = append(*selected, (*fromRow)[n.tok1.(BToken).Val.(int)]) }
-    execSelections(q,n.node1,res,fromRow,selected)
-}
-
-
-//add selected columns to results
-func evalSelectCol(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, count int) int {
-    tok := q.BTok()
-    if tok.Id != BT_SCOL { return count }
-
-    //add col to selected array
-    if count < q.ColSpec.NewWidth {
-        if count == 0 { *selected = make([]interface{}, q.ColSpec.NewWidth) }
-        (*selected)[count] = (*fromRow)[tok.Val.(int)]
-        if count == q.ColSpec.NewWidth - 1 {
-            //all columns selected
-            if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
-                res.Vals = append(res.Vals, *selected)
-                q.QuantityRetrieved++
-            }
-            if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
-        if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
-        }
-    }
-    q.BNext()
-    return evalSelectCol(q, res, fromRow, selected, count+1)
+    execSelections(q,n.node1,res,fromRow,selected,count+1)
 }
 
 //see if row has distinct value if looking for one. make sure this is the last check before retrieving row

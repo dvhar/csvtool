@@ -58,6 +58,7 @@ type ReturnData struct {
     Status int
     OriginalQuery string
     Clipped bool
+    Message string
 }
 
 //file io struct and codes
@@ -196,7 +197,7 @@ func runQueries(req *Qrequest) ([]SingleQueryResult, error) {
         result, err = runCsvQuery(queries[i], req)
         results = append(results, result)
         if err != nil {
-            messager <-  Sprint(err)
+            messager <- Sprint(err)
             return results, errors.New("Query "+Itoa(i+1)+" Error: "+Sprint(err))
         }
     }
