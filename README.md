@@ -8,4 +8,4 @@ Here's a demo of some useful features in a pretty useless query:
 
 <img src="demo.png" align="middle"/>
 
-GPLv3
+MIT license
