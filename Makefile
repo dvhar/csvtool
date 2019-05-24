@@ -1,4 +1,4 @@
-DEPS = files.go scanner.go parser.go preparser.go main.go server.go where.go
+DEPS = files.go scanner.go parser.go evaluator.go main.go server.go where.go
 
 
 all: sql.lnx rice-box.go
@@ -19,6 +19,3 @@ sql.lnx: $(DEPS) rice-box.go
 
 clean:
 	rm sql.mac sql.exe sql.lnx rice-box.go
-
-test:
-	go run files.go main.go server.go parser.go preparser.go scanner.go

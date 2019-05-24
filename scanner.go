@@ -62,7 +62,7 @@ const (
     STATE_DSPECIAL =  2
     STATE_MBSPECIAL = 3
     STATE_WORD =      4
-    //BTokens - generated from first tokens in the parser
+    //treeToks - generated from first tokens in the parser
     BT_SCOL =      BT_SEL|iota
     BT_WCOL =      BT_WHR|iota
     BT_WCOMP =     BT_WHR|iota

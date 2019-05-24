@@ -32,7 +32,7 @@ func wTraverse(q *QuerySpecs, n *Node, r *[]interface{}) (bool, error) {
             return match, err
 
         case N_COMPARE:
-            return execRelop(n.tok1.(BToken), n.node1, r)
+            return execRelop(n.tok1.(treeTok), n.node1, r)
 
         case N_MORE:
             if n.tok1 == nil { q.tempVal = 0; return true,nil }
@@ -51,11 +51,11 @@ func wTraverse(q *QuerySpecs, n *Node, r *[]interface{}) (bool, error) {
 }
 
 //each comparison
-func execRelop(c BToken, n *Node, r *[]interface{}) (bool, error) {
+func execRelop(c treeTok, n *Node, r *[]interface{}) (bool, error) {
     match := false
     colVal := (*r)[c.Val.(int)]
-    relop := n.tok2.(BToken)
-    compVal := n.tok3.(BToken)
+    relop := n.tok2.(treeTok)
+    compVal := n.tok3.(treeTok)
     negate := 0
     if n.tok1 == SP_NEGATE { negate ^= 1 }
 
