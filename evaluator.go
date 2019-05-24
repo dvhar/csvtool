@@ -107,7 +107,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
         ShowLimit : q.showLimit,
     }
 
-
     //prepare reader and run query
     var reader LineReader
     reader.Init(q)
@@ -122,15 +121,11 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
 //retrieve results on first pass
 func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
-    var err error
     rowsChecked := 0
     stop = 0
     distinctCheck := make(map[interface{}]bool)
     for ;res.Numrows<reader.Limit; {
         if stop == 1 { stop = 0; messager <- "query cancelled"; break }
-        //periodic updates
-        rowsChecked++
-        if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far" }
 
         //read line from csv file
         fromRow,err := reader.Read(q)
@@ -139,17 +134,18 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
         //find matches and retrieve results
         match,err := evalWhere(q, &fromRow)
         if err != nil {return err}
-        if !match || !evalDistinct(q, &fromRow, distinctCheck) { continue }
+        if match && evalDistinct(q, &fromRow, distinctCheck) { execSelect(q, res, &fromRow) }
 
+        //periodic updates
         res.Numrows++;
-        execSelect(q, res, &fromRow)
-
+        rowsChecked++
+        if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far" }
     }
-    return err
+    return nil
 }
 
 
-//see if row has distinct value if looking for one. make sure this is the last check before retrieving row
+//see if row has distinct value if looking for one
 func evalDistinct(q *QuerySpecs, fromRow *[]interface{}, distinctCheck map[interface{}]bool) bool {
     if q.DistinctIdx < 0 { return true }
     compVal := (*fromRow)[q.DistinctIdx]
@@ -163,13 +159,13 @@ func evalDistinct(q *QuerySpecs, fromRow *[]interface{}, distinctCheck map[inter
     return true
 }
 
-//sort results
+//run ordered query
 func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
     stop = 0
     distinctCheck := make(map[interface{}]bool)
     rowsChecked := 0
     var match bool
-    //find line positions
+    //initial scan to find line positions
     for {
         if stop == 1 { break }
         rowsChecked++
@@ -182,7 +178,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
     }
 
     //sort matching line positions
-    messager <- "Sorting Results..."
+    messager <- "Sorting Rows..."
     colType := q.ColSpec.Types[q.SortCol]
     sort.Slice(reader.ValPositions, func(i, j int) bool {
         if reader.ValPositions[i].Val == nil && reader.ValPositions[j].Val == nil { return false
@@ -208,7 +204,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
     for i := 0; i < len(reader.ValPositions); i++ {
         if stop == 1 { stop = 0; messager <- "query cancelled"; break }
         fromRow,err := reader.ReadAt(q, i)
-        if err != nil {return err}
+        if err != nil { break }
         if evalDistinct(q, &fromRow, distinctCheck) {
             execSelect(q, res, &fromRow)
             res.Numrows++;
