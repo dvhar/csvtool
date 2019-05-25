@@ -150,9 +150,27 @@ func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]in
 func treePrint(n *Node, i int){
     if n==nil {return}
     for j:=0;j<i;j++ { Print("  ") }
-    Println(enumMap[n.label+1000])
+    Println(treeMap[n.label])
     treePrint(n.node1,i+1)
     treePrint(n.node2,i+1)
     treePrint(n.node3,i+1)
 }
 
+//tree node labels for debugging
+var treeMap = map[int]string {
+    N_PPTOKENS:   "N_PPTOKENS",
+    N_SELECT:     "N_SELECT",
+    N_TOP:        "N_TOP",
+    N_SELECTIONS: "N_SELECTIONS",
+    N_COLUMN:     "N_COLUMN",
+    N_SPECIAL:    "N_SPECIAL",
+    N_FROM:       "N_FROM",
+    N_WHERE:      "N_WHERE",
+    N_CONDITIONS: "N_CONDITIONS",
+    N_BETWEEN:    "N_BETWEEN",
+    N_MORE:       "N_MORE",
+    N_COMPARE:    "N_COMPARE",
+    N_REL:        "N_REL",
+    N_ORDER:      "N_ORDER",
+    N_ORDERM:     "N_ORDERM",
+}

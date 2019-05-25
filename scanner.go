@@ -115,21 +115,6 @@ var enumMap = map[int]string {
     BT_SCOL :       "BT_SCOL",
     BT_WCOL :       "BT_WCOL",
     BT_WCOMP :      "BT_WCOMP",
-    N_PPTOKENS+1000:"N_PPTOKENS",
-    N_SELECT+1000 : "N_SELECT",
-    N_TOP+1000 :    "N_TOP",
-    N_SELECTIONS+1000:"N_SELECTIONS",
-    N_COLUMN+1000 : "N_COLUMN",
-    N_SPECIAL+1000 :"N_SPECIAL",
-    N_FROM+1000 :   "N_FROM",
-    N_WHERE+1000 :  "N_WHERE",
-    N_CONDITIONS+1000:"N_CONDITIONS",
-    N_BETWEEN+1000 : "N_BETWEEN",
-    N_MORE+1000 :    "N_MORE",
-    N_COMPARE+1000 : "N_COMPARE",
-    N_REL+1000 :     "N_REL",
-    N_ORDER+1000 :   "N_ORDER",
-    N_ORDERM+1000 :  "N_ORDERM",
 }
 //characters of special tokens
 var specials = []int{ '*','=','!','<','>','\'','"','(',')',',' }
@@ -332,9 +317,8 @@ func (s* StringLookahead) peek() int {
     return int(s.Str[s.idx])
 }
 
-//replecement for old version
-func tokenizeQspec(q *QuerySpecs) error {
-    //put input into datatype with peek and getc methods
+//turn query text into tokens
+func scanTokens(q *QuerySpecs) error {
     input := &StringLookahead{Str:q.Qstring}
     for {
         t := scanner(input)
@@ -342,7 +326,6 @@ func tokenizeQspec(q *QuerySpecs) error {
         if t.Id == ERROR { return errors.New("scanner error: "+t.Val) }
         if t.Id == EOS { break }
     }
-    //Println(q.ATokArray)
     return nil
 }
 
