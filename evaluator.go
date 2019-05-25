@@ -134,10 +134,12 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
         //find matches and retrieve results
         match,err := evalWhere(q, &fromRow)
         if err != nil {return err}
-        if match && evalDistinct(q, &fromRow, distinctCheck) { execSelect(q, res, &fromRow) }
+        if match && evalDistinct(q, &fromRow, distinctCheck) {
+            execSelect(q, res, &fromRow)
+            res.Numrows++;
+        }
 
         //periodic updates
-        res.Numrows++;
         rowsChecked++
         if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far" }
     }
