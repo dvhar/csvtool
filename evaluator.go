@@ -17,73 +17,75 @@ import (
 var stop int
 var active bool
 
-//line reader type and functions/methods
+//Random access csv reader
 type LineReader struct {
-    FromRow []interface{}
+    Results []interface{}
+    Types []int
+    ValPositions []ValPos
+    LineBytes []byte
     Limit int
     MaxLineSize int
-    Fp *os.File
-    ValPositions []ValPos
     Pos int64
     PrevPos int64
     LineBuffer bytes.Buffer
     Tee io.Reader
-    Cread *csv.Reader
+    CsvReader *csv.Reader
     ByteReader *bytes.Reader
-    LineBytes []byte
+    Fp *os.File
 }
 type ValPos struct {
     Pos int64
     Val interface{}
 }
 func (l*LineReader) SavePos(colNo int) {
-    l.ValPositions = append(l.ValPositions, ValPos{l.PrevPos, l.FromRow[colNo]})
+    l.ValPositions = append(l.ValPositions, ValPos{l.PrevPos, l.Results[colNo]})
 }
 func (l*LineReader) PrepareReRead() {
     l.LineBytes = make([]byte, l.MaxLineSize)
     l.ByteReader = bytes.NewReader(l.LineBytes)
 }
 func (l*LineReader) Init(q *QuerySpecs) {
+    l.Types = q.ColSpec.Types
     l.Fp,_ = os.Open(q.Fname)
     l.ValPositions = make([]ValPos,0)
     l.Tee = io.TeeReader(l.Fp, &l.LineBuffer)
-    l.Cread = csv.NewReader(l.Tee)
-    l.FromRow = make([]interface{}, q.ColSpec.Width)
+    l.CsvReader = csv.NewReader(l.Tee)
+    l.Results = make([]interface{}, q.ColSpec.Width)
     if q.QuantityLimit == 0 { l.Limit = 1<<62 } else { l.Limit = q.QuantityLimit }
-    l.Read(q)
+    l.Read()
 }
-func (l*LineReader) convertLine(inline *[]string, q *QuerySpecs) {
+func (l*LineReader) convertLine(inline *[]string) {
     for i,cell := range (*inline) {
         cell = s.TrimSpace(cell)
-        if s.ToLower(cell) == "null" || cell == "" { l.FromRow[i] = nil
+        if s.ToLower(cell) == "null" || cell == "" { l.Results[i] = nil
         } else {
-            switch q.ColSpec.Types[i] {
-                case T_INT:    l.FromRow[i],_ = Atoi(cell)
-                case T_FLOAT:  l.FromRow[i],_ = ParseFloat(cell,64)
-                case T_DATE:   l.FromRow[i],_ = d.ParseAny(cell)
+            switch l.Types[i] {
+                case T_INT:    l.Results[i],_ = Atoi(cell)
+                case T_FLOAT:  l.Results[i],_ = ParseFloat(cell,64)
+                case T_DATE:   l.Results[i],_ = d.ParseAny(cell)
                 case T_NULL:   fallthrough
-                case T_STRING: l.FromRow[i] = cell
+                case T_STRING: l.Results[i] = cell
             }
         }
     }
 }
-func (l*LineReader) Read(q *QuerySpecs) ([]interface{},error) {
-    line, err := l.Cread.Read()
+func (l*LineReader) Read() ([]interface{},error) {
+    line, err := l.CsvReader.Read()
     l.LineBytes, _ = l.LineBuffer.ReadBytes('\n')
     size := len(l.LineBytes)
     if l.MaxLineSize < size { l.MaxLineSize = size }
     l.PrevPos = l.Pos
     l.Pos += int64(size)
-    l.convertLine(&line, q)
-    return l.FromRow, err
+    l.convertLine(&line)
+    return l.Results, err
 }
-func (l*LineReader) ReadAt(q *QuerySpecs, lineNo int) ([]interface{},error) {
+func (l*LineReader) ReadAt(lineNo int) ([]interface{},error) {
     l.Fp.ReadAt(l.LineBytes, l.ValPositions[lineNo].Pos)
     l.ByteReader.Seek(0,0)
-    l.Cread = csv.NewReader(l.ByteReader)
-    line, err := l.Cread.Read()
-    l.convertLine(&line, q)
-    return l.FromRow, err
+    l.CsvReader = csv.NewReader(l.ByteReader)
+    line, err := l.CsvReader.Read()
+    l.convertLine(&line)
+    return l.Results, err
 }
 
 //run csv query
@@ -96,7 +98,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
     q.showLimit = 20000 / len(q.ColSpec.NewNames)
     active = true
-    defer func(){ active = false; if q.Save { saver <- saveData{Type : CH_NEXT} } }()
 
     //prepare output
     res:= SingleQueryResult{
@@ -110,6 +111,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
     //prepare reader and run query
     var reader LineReader
     reader.Init(q)
+    defer func(){ active=false; if q.Save {saver <- saveData{Type:CH_NEXT}}; reader.Fp.Close() }()
     if q.SortWay == 0 {
         err = normalQuery(q, &res, &reader)
     } else {
@@ -128,7 +130,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
         if stop == 1 { stop = 0; messager <- "query cancelled"; break }
 
         //read line from csv file
-        fromRow,err := reader.Read(q)
+        fromRow,err := reader.Read()
         if err != nil {break}
 
         //find matches and retrieve results
@@ -172,7 +174,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
         if stop == 1 { break }
         rowsChecked++
         if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked) }
-        fromRow,err := reader.Read(q)
+        fromRow,err := reader.Read()
         if err != nil {break}
         match,err = evalWhere(q, &fromRow)
         if err != nil {return err}
@@ -203,9 +205,9 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 
     //go back and retrieve lines in the right order
     reader.PrepareReRead()
-    for i := 0; i < len(reader.ValPositions); i++ {
+    for i := range reader.ValPositions {
         if stop == 1 { stop = 0; messager <- "query cancelled"; break }
-        fromRow,err := reader.ReadAt(q, i)
+        fromRow,err := reader.ReadAt(i)
         if err != nil { break }
         if evalDistinct(q, &fromRow, distinctCheck) {
             execSelect(q, res, &fromRow)
