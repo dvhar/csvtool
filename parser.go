@@ -243,6 +243,7 @@ func parseTop(q* QuerySpecs) error {
 }
 
 //tok1 is selected column
+//tok2 is destination column index
 //node1 is next selection
 var countSelected int
 func parseSelections(q* QuerySpecs) (*Node,error) {
@@ -262,6 +263,8 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
         case SP_DQUOTE:
             q.ParseCol = COL_APPEND
             n.tok1,err = parseColumn(q)
+            n.tok2 = countSelected
+            countSelected++
             if err != nil { return n,err }
             n.node1,err = parseSelections(q)
             return n,err
@@ -307,7 +310,7 @@ func parseColumn(q* QuerySpecs) (treeTok,error) {
             q.ParseCol = ii
     }
     q.ANext()
-    return treeTok{BT_SCOL, ii, q.ColSpec.Types[ii]},err
+    return treeTok{0, ii, q.ColSpec.Types[ii]},err
 }
 
 //tok1 is selected column if distinct
@@ -320,6 +323,8 @@ func parseSpecial(q* QuerySpecs) (*Node,error) {
             q.ANext()
             q.ParseCol = COL_GETIDX
             n.tok1,err = parseColumn(q)
+            n.tok2 = countSelected
+            countSelected++
             if err != nil { return n,err }
             q.DistinctIdx = q.ParseCol
             if !q.SelectAll {
@@ -381,7 +386,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
             q.ParseCol = COL_GETIDX
             _,err = parseColumn(q)
             if err != nil { return n,err }
-            q.LastColumn = treeTok{BT_WCOL, q.ParseCol, q.ColSpec.Types[q.ParseCol]}
+            q.LastColumn = treeTok{0, q.ParseCol, q.ColSpec.Types[q.ParseCol]}
             //see if comparison is normal or between
             if q.ATok().Id == KW_BETWEEN || q.APeek().Id == KW_BETWEEN {
                 n.node1, err = parseBetween(q)
@@ -503,7 +508,7 @@ func tokFromQuotes(q* QuerySpecs) (treeTok,error) {
     var err error
     //add to array if just a word
     if q.ATok().Id == WORD {
-        tok = treeTok{BT_WCOMP, q.ATok().Val, q.LastColumn.Dtype}
+        tok = treeTok{0, q.ATok().Val, q.LastColumn.Dtype}
         good = true
     }
     //construct string from values between quotes
@@ -512,7 +517,7 @@ func tokFromQuotes(q* QuerySpecs) (treeTok,error) {
         var S string
         for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
         if q.ATok().Id == EOS { return tok, errors.New("Quote was not terminated") }
-        tok = treeTok{BT_WCOMP, S, q.LastColumn.Dtype}
+        tok = treeTok{0, S, q.LastColumn.Dtype}
         good = true
     }
     //give interface the right type

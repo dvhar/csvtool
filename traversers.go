@@ -128,11 +128,11 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}) {
     //otherwise retrieve the selected columns
     } else {
         selected := make([]interface{}, q.ColSpec.NewWidth)
-        execSelections(q,q.Tree.node1.node1,res,fromRow,&selected,0)
+        execSelections(q,q.Tree.node1.node1,res,fromRow,&selected)
     }
 }
 //selections branch of select node
-func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}, count int) {
+func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
     if n.tok1 == nil {
         if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
             res.Vals = append(res.Vals, *selected)
@@ -141,9 +141,9 @@ func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]in
         if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
         return
     } else {
-        (*selected)[count] = (*fromRow)[n.tok1.(treeTok).Val.(int)]
+        (*selected)[n.tok2.(int)] = (*fromRow)[n.tok1.(treeTok).Val.(int)]
     }
-    execSelections(q,n.node1,res,fromRow,selected,count+1)
+    execSelections(q,n.node1,res,fromRow,selected)
 }
 
 //print parse tree for debuggging

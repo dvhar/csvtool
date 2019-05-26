@@ -16,26 +16,21 @@ const (
     KEYBIT =      1<<20
     LOGOP =       1<<24
     RELOP =       1<<25
-    //parse helpers
-    BT_SEL =      1<<28
-    BT_WHR =      1<<29
-    BT_AFTWR =    1<<30
-    BT_AGG =      1<<19
     //final tokens
     WORD =        FINAL|1<<27
     NUMBER =      FINAL|iota
     KEYWORD =     FINAL|KEYBIT
     //keywords
-    KW_AND =      BT_WHR|LOGOP|KEYWORD|iota
-    KW_OR  =      BT_WHR|LOGOP|KEYWORD|iota
+    KW_AND =      LOGOP|KEYWORD|iota
+    KW_OR  =      LOGOP|KEYWORD|iota
     KW_SELECT =   KEYWORD|iota
     KW_FROM  =    KEYWORD|iota
     KW_AS  =      KEYWORD|iota
-    KW_WHERE =    BT_WHR|KEYWORD|iota
-    KW_ORDER =    BT_AFTWR|KEYWORD|iota
-    KW_BY =       BT_AFTWR|KEYWORD|iota
-    KW_TOP =      BT_SEL|KEYWORD|iota
-    KW_DISTINCT = BT_AGG|KEYWORD|iota
+    KW_WHERE =    KEYWORD|iota
+    KW_ORDER =    KEYWORD|iota
+    KW_BY =       KEYWORD|iota
+    KW_TOP =      KEYWORD|iota
+    KW_DISTINCT = KEYWORD|iota
     KW_ORDHOW =   KEYWORD|iota
     KW_BETWEEN =  KEYWORD|iota
     KW_LIKE =     RELOP|KEYWORD|iota
@@ -43,29 +38,25 @@ const (
     SPECIALBIT =  1<<21
     SPECIAL =      FINAL|SPECIALBIT
     //special tokens
-    SP_EQ =        BT_WHR|RELOP|SPECIAL|iota
-    SP_NOEQ =      BT_WHR|RELOP|SPECIAL|iota
-    SP_LESS =      BT_WHR|RELOP|SPECIAL|iota
-    SP_LESSEQ =    BT_WHR|RELOP|SPECIAL|iota
-    SP_GREAT =     BT_WHR|RELOP|SPECIAL|iota
-    SP_GREATEQ =   BT_WHR|RELOP|SPECIAL|iota
-    SP_NEGATE =    BT_WHR|SPECIAL|iota
+    SP_EQ =        RELOP|SPECIAL|iota
+    SP_NOEQ =      RELOP|SPECIAL|iota
+    SP_LESS =      RELOP|SPECIAL|iota
+    SP_LESSEQ =    RELOP|SPECIAL|iota
+    SP_GREAT =     RELOP|SPECIAL|iota
+    SP_GREATEQ =   RELOP|SPECIAL|iota
+    SP_NEGATE =    SPECIAL|iota
     SP_SQUOTE =    SPECIAL|iota
     SP_DQUOTE =    SPECIAL|iota
     SP_COMMA =     SPECIAL|iota
-    SP_LPAREN =    BT_WHR|SPECIAL|iota
-    SP_RPAREN =    BT_WHR|SPECIAL|iota
-    SP_ALL =       BT_SEL|SPECIAL|iota
+    SP_LPAREN =    SPECIAL|iota
+    SP_RPAREN =    SPECIAL|iota
+    SP_ALL =       SPECIAL|iota
     //non-final states
     STATE_INITAL =    0
     STATE_SSPECIAL =  1
     STATE_DSPECIAL =  2
     STATE_MBSPECIAL = 3
     STATE_WORD =      4
-    //treeToks - generated from first tokens in the parser
-    BT_SCOL =      BT_SEL|iota
-    BT_WCOL =      BT_WHR|iota
-    BT_WCOMP =     BT_WHR|iota
 )
 var enumMap = map[int]string {
     EOS :           "EOS",
@@ -108,13 +99,6 @@ var enumMap = map[int]string {
     STATE_DSPECIAL :"STATE_DSPECIAL",
     STATE_MBSPECIAL:"STATE_MBSPECIAL",
     STATE_WORD :    "STATE_WORD",
-    BT_SEL :        "BT_SEL",
-    BT_WHR :        "BT_WHR",
-    BT_AFTWR :      "BT_AFTWR",
-    BT_AGG :        "BT_AGG",
-    BT_SCOL :       "BT_SCOL",
-    BT_WCOL :       "BT_WCOL",
-    BT_WCOMP :      "BT_WCOMP",
 }
 //characters of special tokens
 var specials = []int{ '*','=','!','<','>','\'','"','(',')',',' }
@@ -301,19 +285,14 @@ func scanner(s* StringLookahead) AToken {
 type StringLookahead struct {
     Str string
     idx int
-    end bool
 }
 func (s* StringLookahead) getc() int {
-    if s.idx < len(s.Str) {
-        s.idx++
-        if s.idx == len(s.Str) { s.end = true }
-    } else {
-        return EOS
-    }
+    if s.idx >= len(s.Str) { return EOS }
+    s.idx++
     return int(s.Str[s.idx-1])
 }
 func (s* StringLookahead) peek() int {
-    if s.end || s.idx >= len(s.Str) { return EOS }
+    if s.idx >= len(s.Str) { return EOS }
     return int(s.Str[s.idx])
 }
 
