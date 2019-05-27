@@ -13,41 +13,39 @@ import (
 )
 
 type QuerySpecs struct {
-    ColSpec Columns
-    Fname string
-    Qstring string
-    ATokArray []AToken
-    AIdx int
-    QuantityLimit int
-    QuantityRetrieved int
-    NeedAllRows bool
-    DistinctIdx int
-    SelectAll bool
-    SortCol int
-    SortWay int
-    Save bool
-    MemFull bool
-    Like bool
-    End bool
-    ParseCol int
+    colSpec Columns
+    fname string
+    queryString string
+    tokArray []Token
+    tokIdx int
+    quantityLimit int
+    quantityRetrieved int
+    distinctIdx int
+    selectAll bool
+    sortCol int
+    sortWay int
+    save bool
+    like bool
+    parseCol int
     showLimit int
-    LastColumn treeTok
-    Tree *Node
+    lastColumn treeTok
+    tree *Node
     tempVal interface{}
 }
-func (q *QuerySpecs) ANext() *AToken {
-    if q.AIdx < len(q.ATokArray)-1 { q.AIdx++ }
-    return &q.ATokArray[q.AIdx]
+func (q *QuerySpecs) NextTok() *Token {
+    if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
+    return &q.tokArray[q.tokIdx]
 }
-func (q QuerySpecs) APeek() *AToken {
-    if q.AIdx < len(q.ATokArray)-1 {
-        return &q.ATokArray[q.AIdx+1]
+func (q QuerySpecs) PeekTok() *Token {
+    if q.tokIdx < len(q.tokArray)-1 {
+        return &q.tokArray[q.tokIdx+1]
     } else {
-        return &q.ATokArray[q.AIdx]
+        println("end of tokens")
+        return &q.tokArray[q.tokIdx]
     }
 }
-func (q QuerySpecs) ATok() *AToken { return &q.ATokArray[q.AIdx] }
-func (q *QuerySpecs) AReset() { q.AIdx = 0 }
+func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
+func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
 const (
     //parse tree node types
     N_PPTOKENS = iota
@@ -90,7 +88,7 @@ const (
     T_FLOAT = iota
     T_DATE = iota
     T_STRING = iota
-    COL_APPEND = iota
+    COL_ADD = iota
     COL_GETIDX = iota
 )
 type treeTok struct {
@@ -111,19 +109,19 @@ func getColumnIdx(colNames []string, column string) (int, error) {
     return 0, errors.New("Column " + column + " not found")
 }
 func selectAll(q* QuerySpecs) {
-    q.SelectAll = true
-    q.ColSpec.NewNames = q.ColSpec.Names
-    q.ColSpec.NewTypes = q.ColSpec.Types
-    q.ColSpec.NewWidth = q.ColSpec.Width
-    q.ColSpec.NewPos = make([]int,q.ColSpec.Width)
-    for i,_ := range q.ColSpec.NewNames { q.ColSpec.NewPos[i] = i+1 }
+    q.selectAll = true
+    q.colSpec.NewNames = q.colSpec.Names
+    q.colSpec.NewTypes = q.colSpec.Types
+    q.colSpec.NewWidth = q.colSpec.Width
+    q.colSpec.NewPos = make([]int,q.colSpec.Width)
+    for i,_ := range q.colSpec.NewNames { q.colSpec.NewPos[i] = i+1 }
 }
 func newCol(q* QuerySpecs,ii int) {
-    if !q.SelectAll {
-        q.ColSpec.NewNames = append(q.ColSpec.NewNames, q.ColSpec.Names[ii])
-        q.ColSpec.NewTypes = append(q.ColSpec.NewTypes, q.ColSpec.Types[ii])
-        q.ColSpec.NewPos = append(q.ColSpec.NewPos, ii+1)
-        q.ColSpec.NewWidth++
+    if !q.selectAll {
+        q.colSpec.NewNames = append(q.colSpec.NewNames, q.colSpec.Names[ii])
+        q.colSpec.NewTypes = append(q.colSpec.NewTypes, q.colSpec.Types[ii])
+        q.colSpec.NewPos = append(q.colSpec.NewPos, ii+1)
+        q.colSpec.NewWidth++
     }
 }
 
@@ -131,7 +129,7 @@ func newCol(q* QuerySpecs,ii int) {
 func inferTypes(q *QuerySpecs) error {
 
     //open file
-    fp,err := os.Open(q.Fname)
+    fp,err := os.Open(q.fname)
     if err != nil { return errors.New("problem opening input file") }
     defer func(){ fp.Seek(0,0); fp.Close() }()
 
@@ -140,9 +138,9 @@ func inferTypes(q *QuerySpecs) error {
     if err != nil { return errors.New("problem reading input file") }
     //get col names and initialize blank types
     for i,entry := range line {
-        q.ColSpec.Names = append(q.ColSpec.Names, entry)
-        q.ColSpec.Types = append(q.ColSpec.Types, 0)
-        q.ColSpec.Width = i+1
+        q.colSpec.Names = append(q.colSpec.Names, entry)
+        q.colSpec.Types = append(q.colSpec.Types, 0)
+        q.colSpec.Width = i+1
     }
     //regex catches string that would otherwise get typed as int
     LeadingZeroString := regexp.MustCompile(`^0\d+$`)
@@ -154,17 +152,17 @@ func inferTypes(q *QuerySpecs) error {
         for i,cell := range line {
             entry := s.TrimSpace(cell)
             if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
-              q.ColSpec.Types[i] = max(T_NULL, q.ColSpec.Types[i])
+              q.colSpec.Types[i] = max(T_NULL, q.colSpec.Types[i])
             } else if LeadingZeroString.MatchString(entry) {
-              q.ColSpec.Types[i] = T_STRING
+              q.colSpec.Types[i] = T_STRING
             } else if _, err := Atoi(entry); err == nil {
-              q.ColSpec.Types[i] = max(T_INT, q.ColSpec.Types[i])
+              q.colSpec.Types[i] = max(T_INT, q.colSpec.Types[i])
             } else if _, err := ParseFloat(entry,64); err == nil {
-              q.ColSpec.Types[i] = max(T_FLOAT, q.ColSpec.Types[i])
+              q.colSpec.Types[i] = max(T_FLOAT, q.colSpec.Types[i])
             } else if _,err := d.ParseAny(entry); err == nil{
-              q.ColSpec.Types[i] = max(T_DATE, q.ColSpec.Types[i])
+              q.colSpec.Types[i] = max(T_DATE, q.colSpec.Types[i])
             } else {
-              q.ColSpec.Types[i] = T_STRING
+              q.colSpec.Types[i] = T_STRING
             }
         }
     }
@@ -175,16 +173,16 @@ func inferTypes(q *QuerySpecs) error {
 //open file and call type inferrer
 func evalFrom(q *QuerySpecs) error {
     //go straight to the from token or end
-    if q.ATok().Id != KW_SELECT { return errors.New("Query must start with select. found "+q.ATok().Val) }
-    for ; q.ATok().Id != KW_FROM && q.ATok().Id != EOS ; {q.ANext()}
-    if q.ATok().Id == EOS && q.Fname == "" { return errors.New("Could not find a valid 'from file' part of query") }
-    if q.ATok().Id == EOS && q.Fname != "" { return inferTypes(q) }
-    if q.ATok().Id == KW_FROM && q.APeek().Id != WORD {
-        return errors.New("Unexpected token after 'from': "+q.APeek().Val) }
-    if q.ATok().Id == KW_FROM && q.APeek().Id == WORD {
-        q.Fname = q.APeek().Val
+    if q.Tok().Id != KW_SELECT { return errors.New("Query must start with select. found "+q.Tok().Val) }
+    for ; q.Tok().Id != KW_FROM && q.Tok().Id != EOS ; {q.NextTok()}
+    if q.Tok().Id == EOS && q.fname == "" { return errors.New("Could not find a valid 'from file' part of query") }
+    if q.Tok().Id == EOS && q.fname != "" { return inferTypes(q) }
+    if q.Tok().Id == KW_FROM && q.PeekTok().Id != WORD {
+        return errors.New("Unexpected token after 'from': "+q.PeekTok().Val) }
+    if q.Tok().Id == KW_FROM && q.PeekTok().Id == WORD {
+        q.fname = q.PeekTok().Val
         err := inferTypes(q)
-        q.AReset()
+        q.Reset()
         return err
     }
     return errors.New("Unknown problem parsing 'from file' part of query")
@@ -222,8 +220,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 func parseSelect(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_SELECT}
     var err error
-    if q.ATok().Id != KW_SELECT { return n,errors.New("Expected 'select' token. found "+q.ATok().Val) }
-    q.ANext()
+    if q.Tok().Id != KW_SELECT { return n,errors.New("Expected 'select' token. found "+q.Tok().Val) }
+    q.NextTok()
     err = parseTop(q)
     if err != nil { return n,err }
     countSelected = 0
@@ -234,10 +232,10 @@ func parseSelect(q* QuerySpecs) (*Node,error) {
 func parseTop(q* QuerySpecs) error {
     //terminal
     var err error
-    if q.ATok().Id == KW_TOP {
-        q.QuantityLimit, err = Atoi(q.APeek().Val)
-        if err != nil { return errors.New("Expected number after 'top'. found "+q.APeek().Val) }
-        q.ANext(); q.ANext()
+    if q.Tok().Id == KW_TOP {
+        q.quantityLimit, err = Atoi(q.PeekTok().Val)
+        if err != nil { return errors.New("Expected number after 'top'. found "+q.PeekTok().Val) }
+        q.NextTok(); q.NextTok()
     }
     return nil
 }
@@ -249,10 +247,10 @@ var countSelected int
 func parseSelections(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_SELECTIONS}
     var err error
-    switch q.ATok().Id {
+    switch q.Tok().Id {
         case SP_ALL:
             selectAll(q)
-            q.ANext()
+            q.NextTok()
             return parseSelections(q)
         //non-column words in select section
         case KW_DISTINCT:
@@ -261,15 +259,15 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
         case WORD: fallthrough
         case SP_SQUOTE: fallthrough
         case SP_DQUOTE:
-            q.ParseCol = COL_APPEND
+            q.parseCol = COL_ADD
             n.tok1,err = parseColumn(q)
+            if err != nil { return n,err }
             n.tok2 = countSelected
             countSelected++
-            if err != nil { return n,err }
             n.node1,err = parseSelections(q)
             return n,err
         case KW_FROM:
-            if q.ColSpec.NewWidth == 0 { selectAll(q) }
+            if q.colSpec.NewWidth == 0 { selectAll(q) }
     }
     return n,nil
 }
@@ -278,39 +276,35 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 func parseColumn(q* QuerySpecs) (treeTok,error) {
     var ii int
     var err error
-    switch q.ATok().Id {
+    switch q.Tok().Id {
         //parse selected column
         case WORD:
-            c := q.ATok().Val
+            c := q.Tok().Val
             ii, err = Atoi(c)
             //if it's a number
             if err == nil {
-                if ii > q.ColSpec.Width { return treeTok{},errors.New("Column number too big: "+c+". Max is "+Itoa(q.ColSpec.Width)) }
+                if ii > q.colSpec.Width { return treeTok{},errors.New("Column number too big: "+c+". Max is "+Itoa(q.colSpec.Width)) }
                 if ii < 1 { return treeTok{},errors.New("Column number too small: "+c) }
                 ii -= 1
             //if it's a name
             } else {
-                ii, err = getColumnIdx(q.ColSpec.Names, c)
+                ii, err = getColumnIdx(q.colSpec.Names, c)
             }
         //parse column from quotes
         case SP_SQUOTE: fallthrough
         case SP_DQUOTE:
-            quote := q.ATok().Id
+            quote := q.Tok().Id
             var S string
-            for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
-            if q.ATok().Id == EOS { return treeTok{},errors.New("Quote was not terminated") }
-            ii, err = getColumnIdx(q.ColSpec.Names, S)
+            for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
+            if q.Tok().Id == EOS { return treeTok{},errors.New("Quote was not terminated") }
+            ii, err = getColumnIdx(q.colSpec.Names, S)
     }
     if err != nil { return treeTok{},err }
-    //see if appending to token array or just getting index
-    switch q.ParseCol {
-        case COL_APPEND:
-            newCol(q, ii)
-        case COL_GETIDX:
-            q.ParseCol = ii
-    }
-    q.ANext()
-    return treeTok{0, ii, q.ColSpec.Types[ii]},err
+    //see if adding column to colSpec
+    if q.parseCol == COL_ADD { newCol(q, ii) }
+    q.parseCol = ii
+    q.NextTok()
+    return treeTok{0, ii, q.colSpec.Types[ii]},err
 }
 
 //tok1 is selected column if distinct
@@ -318,32 +312,30 @@ func parseColumn(q* QuerySpecs) (treeTok,error) {
 func parseSpecial(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_SPECIAL}
     var err error
-    switch q.ATok().Id {
+    switch q.Tok().Id {
         case KW_DISTINCT:
-            q.ANext()
-            q.ParseCol = COL_GETIDX
+            q.NextTok()
+            q.parseCol = COL_GETIDX
             n.tok1,err = parseColumn(q)
+            if err != nil { return n,err }
             n.tok2 = countSelected
             countSelected++
-            if err != nil { return n,err }
-            q.DistinctIdx = q.ParseCol
-            if !q.SelectAll {
-                newCol(q, q.ParseCol)
-            }
+            q.distinctIdx = q.parseCol
+            if !q.selectAll { newCol(q, q.parseCol) }
             n.node1,err = parseSelections(q)
             n.label = N_SELECTIONS
             return n,err
     }
-    return n,errors.New("Unexpected token in 'select' section:"+q.ATok().Val)
+    return n,errors.New("Unexpected token in 'select' section:"+q.Tok().Val)
 }
 
 func parseFrom(q* QuerySpecs) error {
-    if q.ATok().Id != KW_FROM { return errors.New("Expected 'from'. Found: "+q.ATok().Val) }
-    q.ANext()
-    q.ANext()
-    if q.ATok().Id == KW_AS {
-        q.ANext()
-        q.ANext()
+    if q.Tok().Id != KW_FROM { return errors.New("Expected 'from'. Found: "+q.Tok().Val) }
+    q.NextTok()
+    q.NextTok()
+    if q.Tok().Id == KW_AS {
+        q.NextTok()
+        q.NextTok()
     }
     return nil
 }
@@ -352,8 +344,8 @@ func parseFrom(q* QuerySpecs) error {
 func parseWhere(q*QuerySpecs) (*Node,error) {
     n := &Node{label:N_WHERE}
     var err error
-    if q.ATok().Id != KW_WHERE { return n,nil }
-    q.ANext()
+    if q.Tok().Id != KW_WHERE { return n,nil }
+    q.NextTok()
     n.node1,err = parseConditions(q)
     return n,err
 }
@@ -364,31 +356,31 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 func parseConditions(q*QuerySpecs) (*Node,error) {
     n := &Node{label:N_CONDITIONS}
     var err error
-    if q.ATok().Id == SP_NEGATE {
-        q.ANext()
+    if q.Tok().Id == SP_NEGATE {
+        q.NextTok()
         n.tok1 = SP_NEGATE
     }
-    switch q.ATok().Id {
+    switch q.Tok().Id {
         case SP_LPAREN:
-            tok := q.ATok()
-            q.ANext();
+            tok := q.Tok()
+            q.NextTok();
             n.node1,err = parseConditions(q)
             if err != nil { return n,err }
-            tok = q.ATok()
+            tok = q.Tok()
             if tok.Id != SP_RPAREN { return n,errors.New("No closing parentheses. Found: "+tok.Val) }
-            q.ANext()
+            q.NextTok()
             n.node2,err = preparseMore(q)
             return n,err
         case WORD: fallthrough
         case SP_DQUOTE: fallthrough
         case SP_SQUOTE:
             //get column index before next step
-            q.ParseCol = COL_GETIDX
+            q.parseCol = COL_GETIDX
             _,err = parseColumn(q)
             if err != nil { return n,err }
-            q.LastColumn = treeTok{0, q.ParseCol, q.ColSpec.Types[q.ParseCol]}
+            q.lastColumn = treeTok{0, q.parseCol, q.colSpec.Types[q.parseCol]}
             //see if comparison is normal or between
-            if q.ATok().Id == KW_BETWEEN || q.APeek().Id == KW_BETWEEN {
+            if q.Tok().Id == KW_BETWEEN || q.PeekTok().Id == KW_BETWEEN {
                 n.node1, err = parseBetween(q)
             } else {
                 n.node1, err = parseCompare(q)
@@ -397,7 +389,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
             n.node2,err = preparseMore(q)
             return n,err
     }
-    return n,errors.New("Unexpected token in 'where' section: "+q.ATok().Val)
+    return n,errors.New("Unexpected token in 'where' section: "+q.Tok().Val)
 }
 
 //tok1 is column to compare
@@ -405,7 +397,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
 func parseCompare(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_COMPARE}
     var err error
-    n.tok1 = q.LastColumn
+    n.tok1 = q.lastColumn
     n.node1,err = parseRel(q)
     return n,err
 }
@@ -416,20 +408,20 @@ func parseCompare(q* QuerySpecs) (*Node,error) {
 func parseRel(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_REL}
     //negater before relop
-    if q.ATok().Id == SP_NEGATE {
-        q.ANext()
+    if q.Tok().Id == SP_NEGATE {
+        q.NextTok()
         n.tok1 = SP_NEGATE
     }
     //relop and value
-    if (q.ATok().Id & RELOP) != 0 {
-        tok := q.ATok()
-        if tok.Id == KW_LIKE { q.Like = true; }
+    if (q.Tok().Id & RELOP) != 0 {
+        tok := q.Tok()
+        if tok.Id == KW_LIKE { q.like = true; }
         n.tok2 = treeTok{tok.Id, tok.Val, 0}
-        q.ANext()
+        q.NextTok()
         btok,err := tokFromQuotes(q)
         //if relop is 'like', compile a regex
-        if q.Like {
-            q.Like = false
+        if q.like {
+            q.like = false
             re := regexp.MustCompile("%")
             btok.Val = re.ReplaceAllString(Sprint(btok.Val), ".*")
             re = regexp.MustCompile("_")
@@ -439,7 +431,7 @@ func parseRel(q* QuerySpecs) (*Node,error) {
         n.tok3 = btok
         return n,err
     }
-    return n,errors.New("Expected relational operator. Found: "+q.ATok().Val)
+    return n,errors.New("Expected relational operator. Found: "+q.Tok().Val)
 }
 
 //tok1 is logical operator
@@ -447,9 +439,9 @@ func parseRel(q* QuerySpecs) (*Node,error) {
 func preparseMore(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_MORE}
     var err error
-    if (q.ATok().Id & LOGOP) == 0 { return n,nil }
-    n.tok1 = q.ATok().Id
-    q.ANext()
+    if (q.Tok().Id & LOGOP) == 0 { return n,nil }
+    n.tok1 = q.Tok().Id
+    q.NextTok()
     n.node1,err = parseConditions(q)
     return n,err
 }
@@ -461,12 +453,12 @@ func parseBetween(q* QuerySpecs) (*Node,error) {
     var firstSmaller bool
     var err error
     //negation and get to value token
-    if q.ATok().Id == SP_NEGATE { n.tok1 = SP_NEGATE; q.ANext() }
-    q.ANext()
+    if q.Tok().Id == SP_NEGATE { n.tok1 = SP_NEGATE; q.NextTok() }
+    q.NextTok()
     val1, err = tokFromQuotes(q)
     if err != nil { return n,err }
-    if q.ATok().Id != KW_AND { return n,errors.New("Expected 'and' in between clause, got "+q.ATok().Val) }
-    q.ANext()
+    if q.Tok().Id != KW_AND { return n,errors.New("Expected 'and' in between clause, got "+q.Tok().Val) }
+    q.NextTok()
     val2, err = tokFromQuotes(q)
     if err != nil { return n,err }
 
@@ -487,12 +479,12 @@ func parseBetween(q* QuerySpecs) (*Node,error) {
     }
 
     //parse tree for 2 comparisions
-    n.node1 = &Node{label: N_COMPARE, tok1: q.LastColumn,
+    n.node1 = &Node{label: N_COMPARE, tok1: q.lastColumn,
         node1: &Node{label: N_REL, tok2: relop1, tok3: val1},
     }
     n.node2 = &Node{label: N_MORE, tok1: KW_AND,
         node1: &Node{label: N_CONDITIONS,
-            node1: &Node{label: N_COMPARE, tok1: q.LastColumn,
+            node1: &Node{label: N_COMPARE, tok1: q.lastColumn,
                 node1: &Node{label: N_REL, tok2: relop2, tok3: val2},
             },
             node2: &Node{label: N_MORE},
@@ -507,23 +499,23 @@ func tokFromQuotes(q* QuerySpecs) (treeTok,error) {
     var tok treeTok
     var err error
     //add to array if just a word
-    if q.ATok().Id == WORD {
-        tok = treeTok{0, q.ATok().Val, q.LastColumn.Dtype}
+    if q.Tok().Id == WORD {
+        tok = treeTok{0, q.Tok().Val, q.lastColumn.Dtype}
         good = true
     }
     //construct string from values between quotes
-    if q.ATok().Id == SP_SQUOTE || q.ATok().Id == SP_DQUOTE {
-        quote := q.ATok().Id
+    if q.Tok().Id == SP_SQUOTE || q.Tok().Id == SP_DQUOTE {
+        quote := q.Tok().Id
         var S string
-        for ; q.ANext().Id != quote && q.ATok().Id != EOS; { S += q.ATok().Val }
-        if q.ATok().Id == EOS { return tok, errors.New("Quote was not terminated") }
-        tok = treeTok{0, S, q.LastColumn.Dtype}
+        for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
+        if q.Tok().Id == EOS { return tok, errors.New("Quote was not terminated") }
+        tok = treeTok{0, S, q.lastColumn.Dtype}
         good = true
     }
     //give interface the right type
     if good {
         //keep wcomp a string if using regex
-        if q.Like { q.ANext(); return tok, err }
+        if q.like { q.NextTok(); return tok, err }
         if s.ToLower(tok.Val.(string)) == "null" { tok.Dtype = T_NULL }
         switch tok.Dtype {
             case T_INT:    tok.Val,err = Atoi(tok.Val.(string))
@@ -532,31 +524,26 @@ func tokFromQuotes(q* QuerySpecs) (treeTok,error) {
             case T_NULL:   tok.Val = nil
             case T_STRING: tok.Val = tok.Val.(string)
         }
-        q.ANext()
+        q.NextTok()
         return tok, err
     }
-    return tok, errors.New("Expected a comparision value but got "+q.ATok().Val)
+    return tok, errors.New("Expected a comparision value but got "+q.Tok().Val)
 }
 
 //currently order is only thing after where
 func parseOrder(q* QuerySpecs) error {
     var err error
-    if q.ATok().Id == EOS { return nil }
-    if q.ATok().Id == KW_ORDER {
-        if q.ANext().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.ATok().Val) }
-        q.ANext()
-        q.ParseCol = COL_GETIDX
+    if q.Tok().Id == EOS { return nil }
+    if q.Tok().Id == KW_ORDER {
+        if q.NextTok().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.Tok().Val) }
+        q.NextTok()
+        q.parseCol = COL_GETIDX
         _,err = parseColumn(q)
         if err == nil {
-            q.NeedAllRows = true
-            q.SortCol = q.ParseCol
-            q.SortWay = 1
-            parseOrderMethod(q)
+            q.sortCol = q.parseCol
+            q.sortWay = 1
+            if q.Tok().Id == KW_ORDHOW { q.sortWay = 2 }
         } else { return err }
     }
     return nil
-}
-
-func parseOrderMethod(q* QuerySpecs) {
-    if q.ATok().Id == KW_ORDHOW { q.SortWay = 2 }
 }

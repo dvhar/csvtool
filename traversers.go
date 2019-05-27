@@ -8,7 +8,7 @@ import (
 
 //traverse where branch of parse tree
 func evalWhere(q *QuerySpecs, fromRow *[]interface{}) (bool, error) {
-    node := q.Tree.node3
+    node := q.tree.node3
     if node.node1 == nil { return true,nil }
     return wTraverse(q, node.node1, fromRow)
 }
@@ -116,29 +116,29 @@ func execRelop(c treeTok, n *Node, r *[]interface{}) (bool, error) {
 //select node of tree root
 func execSelect(q *QuerySpecs, res*SingleQueryResult, fromRow *[]interface{}) {
     //select all if doing that
-    if q.SelectAll  {
+    if q.selectAll  {
         tempArr := make([]interface{}, len(*fromRow))
         copy(tempArr, *fromRow)
-        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
+        if q.quantityRetrieved <= q.showLimit {
             res.Vals = append(res.Vals, tempArr)
-            q.QuantityRetrieved++
+            q.quantityRetrieved++
         }
-        if q.Save { saver <- saveData{Type : CH_ROW, Row : &tempArr} ; <-savedLine }
+        if q.save { saver <- saveData{Type : CH_ROW, Row : &tempArr} ; <-savedLine }
         return
     //otherwise retrieve the selected columns
     } else {
-        selected := make([]interface{}, q.ColSpec.NewWidth)
-        execSelections(q,q.Tree.node1.node1,res,fromRow,&selected)
+        selected := make([]interface{}, q.colSpec.NewWidth)
+        execSelections(q,q.tree.node1.node1,res,fromRow,&selected)
     }
 }
 //selections branch of select node
 func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]interface{}, selected *[]interface{}) {
     if n.tok1 == nil {
-        if !q.MemFull && ( q.NeedAllRows || q.QuantityRetrieved <= q.showLimit ) {
+        if q.quantityRetrieved <= q.showLimit {
             res.Vals = append(res.Vals, *selected)
-            q.QuantityRetrieved++
+            q.quantityRetrieved++
         }
-        if q.Save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
+        if q.save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
         return
     } else {
         (*selected)[n.tok2.(int)] = (*fromRow)[n.tok1.(treeTok).Val.(int)]

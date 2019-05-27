@@ -45,13 +45,13 @@ func (l*LineReader) PrepareReRead() {
     l.ByteReader = bytes.NewReader(l.LineBytes)
 }
 func (l*LineReader) Init(q *QuerySpecs) {
-    l.Types = q.ColSpec.Types
-    l.Fp,_ = os.Open(q.Fname)
+    l.Types = q.colSpec.Types
+    l.Fp,_ = os.Open(q.fname)
     l.ValPositions = make([]ValPos,0)
     l.Tee = io.TeeReader(l.Fp, &l.LineBuffer)
     l.CsvReader = csv.NewReader(l.Tee)
-    l.Results = make([]interface{}, q.ColSpec.Width)
-    if q.QuantityLimit == 0 { l.Limit = 1<<62 } else { l.Limit = q.QuantityLimit }
+    l.Results = make([]interface{}, q.colSpec.Width)
+    if q.quantityLimit == 0 { l.Limit = 1<<62 } else { l.Limit = q.quantityLimit }
     l.Read()
 }
 func (l*LineReader) convertLine(inline *[]string) {
@@ -93,26 +93,26 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
     //parse and do stuff that only needs to be done once
     var err error
-    q.Tree,err = parseQuery(q)
+    q.tree,err = parseQuery(q)
     if err != nil { Println(err); return SingleQueryResult{}, err }
-    if q.Save { saver <- saveData{Type : CH_HEADER, Header : q.ColSpec.NewNames}; <-savedLine }
-    q.showLimit = 20000 / len(q.ColSpec.NewNames)
+    if q.save { saver <- saveData{Type : CH_HEADER, Header : q.colSpec.NewNames}; <-savedLine }
+    q.showLimit = 20000 / len(q.colSpec.NewNames)
     active = true
 
     //prepare output
     res:= SingleQueryResult{
-        Colnames : q.ColSpec.NewNames,
-        Numcols: q.ColSpec.NewWidth,
-        Types: q.ColSpec.NewTypes,
-        Pos: q.ColSpec.NewPos,
+        Colnames : q.colSpec.NewNames,
+        Numcols: q.colSpec.NewWidth,
+        Types: q.colSpec.NewTypes,
+        Pos: q.colSpec.NewPos,
         ShowLimit : q.showLimit,
     }
 
     //prepare reader and run query
     var reader LineReader
     reader.Init(q)
-    defer func(){ active=false; if q.Save {saver <- saveData{Type:CH_NEXT}}; reader.Fp.Close() }()
-    if q.SortWay == 0 {
+    defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.Fp.Close() }()
+    if q.sortWay == 0 {
         err = normalQuery(q, &res, &reader)
     } else {
         err = orderedQuery(q, &res, &reader)
@@ -151,8 +151,8 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 
 //see if row has distinct value if looking for one
 func evalDistinct(q *QuerySpecs, fromRow *[]interface{}, distinctCheck map[interface{}]bool) bool {
-    if q.DistinctIdx < 0 { return true }
-    compVal := (*fromRow)[q.DistinctIdx]
+    if q.distinctIdx < 0 { return true }
+    compVal := (*fromRow)[q.distinctIdx]
     //ok means not distinct
     _,ok := distinctCheck[compVal]
     if ok {
@@ -178,12 +178,12 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
         if err != nil {break}
         match,err = evalWhere(q, &fromRow)
         if err != nil {return err}
-        if match { reader.SavePos(q.SortCol) }
+        if match { reader.SavePos(q.sortCol) }
     }
 
     //sort matching line positions
     messager <- "Sorting Rows..."
-    colType := q.ColSpec.Types[q.SortCol]
+    colType := q.colSpec.Types[q.sortCol]
     sort.Slice(reader.ValPositions, func(i, j int) bool {
         if reader.ValPositions[i].Val == nil && reader.ValPositions[j].Val == nil { return false
         } else if reader.ValPositions[i].Val == nil { return false
@@ -197,7 +197,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
                 case T_FLOAT:  ret = reader.ValPositions[i].Val.(float64)       > reader.ValPositions[j].Val.(float64)
                 case T_DATE:   ret = reader.ValPositions[i].Val.(time.Time).After(reader.ValPositions[j].Val.(time.Time))
             }
-            if q.SortWay == 2 { return !ret }
+            if q.sortWay == 2 { return !ret }
             return ret
         }
         return false

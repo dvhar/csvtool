@@ -158,13 +158,13 @@ func main() {
 
 //wrapper for csvQuery
 func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
-    qSpec := QuerySpecs{
-        Qstring : query,
-        DistinctIdx : -1,
+    q := QuerySpecs{
+        queryString : query,
+        distinctIdx : -1,
     }
-    if (req.FileIO & F_CSV) != 0 { qSpec.Save = true }
+    if (req.FileIO & F_CSV) != 0 { q.save = true }
     println("attempting csv query from gui program")
-    res, err := csvQuery(&qSpec)
+    res, err := csvQuery(&q)
     res.Query = query;
     return res, err
 }

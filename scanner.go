@@ -206,7 +206,7 @@ func initable(){
 }
 
 
-type AToken struct {
+type Token struct {
     Id int
     Val string
     Line int
@@ -215,7 +215,7 @@ type AToken struct {
 var lineNo = 1
 var colNo = 1
 var waitForQuote int
-func scanner(s* StringLookahead) AToken {
+func scanner(s* StringLookahead) Token {
     initable()
     state := STATE_INITAL
     var nextState, nextchar int
@@ -225,9 +225,9 @@ func scanner(s* StringLookahead) AToken {
         nextState = table[state][s.peek()]
         if (nextState & ERROR) != 0 {
         //end of string
-            if state == 255 { return AToken { Id: 255, Val: "END", Line: lineNo } }
+            if state == 255 { return Token { Id: 255, Val: "END", Line: lineNo } }
             Printf("error peek: %d state: %d nextstates: %d nextchar: %c\n",s.peek(),state, nextState, nextchar)
-            return AToken{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
+            return Token{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
         }
 
         if (nextState & FINAL) != 0 {
@@ -235,10 +235,10 @@ func scanner(s* StringLookahead) AToken {
             if nextState == WORD {
                 if kw,ok := keywordMap[strings.ToLower(S)];ok && waitForQuote == 0 {
                     //return keyword token
-                    return AToken { Id: kw, Val: S, Line: lineNo }
+                    return Token { Id: kw, Val: S, Line: lineNo }
                 } else {
                     //return word token
-                    return AToken { Id: nextState, Val: S, Line: lineNo }
+                    return Token { Id: nextState, Val: S, Line: lineNo }
                 }
             //see if special type or something else
             } else if nextState == SPECIAL {
@@ -250,14 +250,14 @@ func scanner(s* StringLookahead) AToken {
                         waitForQuote = 0
                     }
                     //return special token
-                    return AToken { Id: sp, Val: S, Line: lineNo }
+                    return Token { Id: sp, Val: S, Line: lineNo }
                 } else {
                     println("error: unknown special. peek: "+Itoa(s.peek())+" state: "+Itoa(state)+" ns: "+Itoa(nextState));
                     println(enumMap[nextState])
-                    return AToken{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
+                    return Token{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
                 }
             } else {
-                return AToken { Id: nextState, Val: S, Line: lineNo }
+                return Token { Id: nextState, Val: S, Line: lineNo }
             }
 
         } else {
@@ -272,11 +272,11 @@ func scanner(s* StringLookahead) AToken {
             }
             if nextchar == '\n' { lineNo++; colNo=0 }
             if nextchar == EOS {
-                return AToken { Id: EOS, Val: "END", Line: lineNo }
+                return Token { Id: EOS, Val: "END", Line: lineNo }
             }
         }
     }
-    return AToken { Id: EOS, Val: "END", Line: lineNo }
+    return Token { Id: EOS, Val: "END", Line: lineNo }
 
 
 }
@@ -298,10 +298,10 @@ func (s* StringLookahead) peek() int {
 
 //turn query text into tokens
 func scanTokens(q *QuerySpecs) error {
-    input := &StringLookahead{Str:q.Qstring}
+    input := &StringLookahead{Str:q.queryString}
     for {
         t := scanner(input)
-        q.ATokArray = append(q.ATokArray, t)
+        q.tokArray = append(q.tokArray, t)
         if t.Id == ERROR { return errors.New("scanner error: "+t.Val) }
         if t.Id == EOS { break }
     }
