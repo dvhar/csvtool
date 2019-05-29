@@ -113,14 +113,17 @@ class Main extends React.Component {
             show = {this.state.showHelp}
             toggleHelp = {()=>{this.setState({showHelp:this.state.showHelp^1})}}
         />
-        <command.QuerySelect
+
+        <div className="querySelect"> 
+        <command.QueryBox
             s = {this.state}
             showLoadedQuery = {(results)=>this.showLoadedQuery(results)}
             submitQuery = {(query)=>this.submitQuery(query)}
             sendSocket = {(request)=>this.sendSocket(request)}
-            showQuery = {this.state.showQuery}
         />
+        {this.state.showQuery}
         {/*<display.TableGrid2/>*/}
+        </div>
         </>
         )
     }

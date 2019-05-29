@@ -64,15 +64,9 @@ html {
 .hiddenColumn {
     color: red;
 }
-.dropmenu {
-    z-index: 10;
-    display: inline-block;
-    min-width: 12em;
-}
 .dropButton {
     display: block;
     text-align: center;
-    width: 15em;
     margin: auto;
 }
 .queryFileBox {
@@ -81,6 +75,9 @@ html {
     margin-bottom: 0.3em;
 }
 .queryMenuDiv {
+    z-index: 10;
+    display: inline-block;
+    min-width: 12em;
     padding: .2em .2em;
     //@include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
     @include sgradient($ttop,$ttp,$bbt,$bbot);
@@ -89,23 +86,39 @@ html {
     margin: auto;
 }
 .queryMenuButton {
+    width: 15em;
     padding: .2em .5em;
     background-color: $button1;
     border-radius: 4px;
 }
 .queryTextEntry {
-    width: calc(90vw);
+    width: calc(95vw);
+}
+.queryTextContainer {
+    padding: 0.2em;
+}
+.queryRunButton {
+    background: linear-gradient(to bottom, #ffffff 0%,#f1f1f1 50%,#e1e1e1 51%,#f6f6f6 100%);
+    padding: 0.2em 1em;
+    font-size: medium;
+}
+.queryRunButton:hover {
+    background: linear-gradient(to bottom, #e0f3fa 0%,#d8f0fc 50%,#b8e2f6 51%,#b6dffd 100%);
 }
 
 .tableModDiv {
+    z-index: 10;
+    display: inline-block;
+    min-width: 12em;
     background-color: $button1;
     padding: .2em .2em;
-    @include sgradient($ttop,$ttp,$bbt,$bbot);
+    @include sgradient(#194e7a, #114675, #114675, #7db9e8);
 }
 .tableModDrop {
-    @include sgradient($ttop,$ttp,$bbt,$bbot);
+    @include sgradient(#194e7a, #114675, #114675, #7db9e8);
 }
 .tableModButton {
+    width: 15em;
     padding: .2em .5em;
     background-color: $button1;
     border-radius: 4px;
@@ -165,7 +178,7 @@ html {
 //top bar
 .topBar {
     background: $topbarbg;
-    background: linear-gradient(to bottom, #f0b7a1 0%,#8c3310 50%,#752201 51%,#bf6e4e 100%);
+    background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
     min-height: 2em;
     padding: 0.2em;
     display: flex;
@@ -176,9 +189,13 @@ html {
 }
 .topMessage {
     color: $historyArrows;
+    padding: 0.3em 1em 0em;
 }
 .topButton {
-    margin-right: 1em;
+    background: linear-gradient(to bottom, #ffffff 0%,#f1f1f1 50%,#e1e1e1 51%,#f6f6f6 100%);
+}
+.topButton:hover {
+    background: linear-gradient(to bottom, #e0f3fa 0%,#d8f0fc 50%,#b8e2f6 51%,#b6dffd 100%);
 }
 
 //login section
@@ -205,7 +222,7 @@ html {
 //save section
 .fileSelectShow {
     padding: 0.3em;
-    background: $loginbg;
+    background: linear-gradient(to top, #fefcea 0%,#fff5ac 100%);
     top: 2.2em;
     position: absolute;
     border: 1px solid black;
@@ -246,7 +263,6 @@ html {
     color: darkGreen;
 }
 .browseCurrent {
-    background: #f9f5ff;
     width: -webkit-fill-available;
     width: -moz-available;
 }
