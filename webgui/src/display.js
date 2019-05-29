@@ -105,7 +105,7 @@ class TableSelectRows extends React.Component {
     }
 }
 
-//display html table with query result. currenly only previews first 1000 rows
+//display html table with single query result
 class TableGrid extends React.Component {
     constructor(props){
         super(props);
@@ -218,7 +218,7 @@ export class QueryRender extends React.Component {
         return ( 
         <div className="viewContainer">
             <div className="tableModifiers">
-                <div className="tableQuery"> {this.props.table.Query} </div>
+                <div className="tableQuery"><div> {this.props.table.Query} </div>
                 <TableSelectRows 
                     title = {"Show with column value\u25bc"}
                     dropAction = {(column,value)=>{this.props.rows.col=column;this.props.rows.val=value;this.forceUpdate();}}
@@ -235,6 +235,7 @@ export class QueryRender extends React.Component {
                     <div className="dropButton tableModButton">
                         <span>Rows: {this.props.table.Numrows}</span>
                     </div>
+                </div>
                 </div>
             </div>
             <TableGrid

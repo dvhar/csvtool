@@ -112,10 +112,10 @@ html {
     min-width: 12em;
     background-color: $button1;
     padding: .2em .2em;
-    @include sgradient(#194e7a, #114675, #114675, #7db9e8);
+    background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
 }
 .tableModDrop {
-    @include sgradient(#194e7a, #114675, #114675, #7db9e8);
+    background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
 }
 .tableModButton {
     width: 15em;
@@ -159,9 +159,9 @@ html {
 .tableQuery {
     margin: auto;
     display: table;
-    background-color: bisque;
-    border-radius: 1em;
-    padding: 0.3em;
+    background: linear-gradient(to top, #fefcea 0%,#fff5ac 100%);
+    border-radius: 0.4em;
+    padding: 0.3em 1em 0em 1em;
 }
 //bigger query section
 .querySelect {
