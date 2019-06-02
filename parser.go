@@ -193,6 +193,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_PPTOKENS}
     n.tok1 = q
     //first turn query string into A tokens
+    lineNo = 1
     err := scanTokens(q)
     if err != nil { return n,err }
 
