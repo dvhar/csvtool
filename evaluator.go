@@ -1,10 +1,8 @@
 package main
 import (
   . "fmt"
-  //"github.com/pbnjay/memory"
   "encoding/csv"
   "os"
-  //"runtime"
   s "strings"
   d "github.com/araddon/dateparse"
   . "strconv"
@@ -44,13 +42,13 @@ func (l*LineReader) PrepareReRead() {
     l.LineBytes = make([]byte, l.MaxLineSize)
     l.ByteReader = bytes.NewReader(l.LineBytes)
 }
-func (l*LineReader) Init(q *QuerySpecs) {
-    l.Types = q.colSpec.Types
-    l.Fp,_ = os.Open(q.fname)
+func (l*LineReader) Init(q *QuerySpecs, f string) {
+    l.Types = q.files[f].types
+    l.Fp,_ = os.Open(q.files[f].fname)
     l.ValPositions = make([]ValPos,0)
     l.Tee = io.TeeReader(l.Fp, &l.LineBuffer)
     l.CsvReader = csv.NewReader(l.Tee)
-    l.Results = make([]interface{}, q.colSpec.Width)
+    l.Results = make([]interface{}, q.files[f].width)
     if q.quantityLimit == 0 { l.Limit = 1<<62 } else { l.Limit = q.quantityLimit }
     l.Read()
 }
@@ -110,7 +108,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
     //prepare reader and run query
     var reader LineReader
-    reader.Init(q)
+    reader.Init(q, "file1")
     defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.Fp.Close() }()
     if q.sortWay == 0 {
         err = normalQuery(q, &res, &reader)
@@ -183,7 +181,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 
     //sort matching line positions
     messager <- "Sorting Rows..."
-    colType := q.colSpec.Types[q.sortCol]
+    colType := q.files["file1"].types[q.sortCol]
     sort.Slice(reader.ValPositions, func(i, j int) bool {
         if reader.ValPositions[i].Val == nil && reader.ValPositions[j].Val == nil { return false
         } else if reader.ValPositions[i].Val == nil { return false

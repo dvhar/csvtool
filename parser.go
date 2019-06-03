@@ -30,6 +30,7 @@ type QuerySpecs struct {
     showLimit int
     lastColumn treeTok
     tree *Node
+	files map[string]*FileData
     tempVal interface{}
 }
 func (q *QuerySpecs) NextTok() *Token {
@@ -64,6 +65,12 @@ const (
     N_ORDER = iota
     N_ORDERM = iota
 )
+type FileData struct {
+	fname string
+    names []string
+    types []int
+    width int
+}
 type Node struct {
     label int
     tok1 interface{}
@@ -110,26 +117,26 @@ func getColumnIdx(colNames []string, column string) (int, error) {
 }
 func selectAll(q* QuerySpecs) {
     q.selectAll = true
-    q.colSpec.NewNames = q.colSpec.Names
-    q.colSpec.NewTypes = q.colSpec.Types
-    q.colSpec.NewWidth = q.colSpec.Width
-    q.colSpec.NewPos = make([]int,q.colSpec.Width)
+    q.colSpec.NewNames = q.files["file1"].names
+    q.colSpec.NewTypes = q.files["file1"].types
+    q.colSpec.NewWidth = q.files["file1"].width
+    q.colSpec.NewPos = make([]int,q.files["file1"].width)
     for i,_ := range q.colSpec.NewNames { q.colSpec.NewPos[i] = i+1 }
 }
 func newCol(q* QuerySpecs,ii int) {
     if !q.selectAll {
-        q.colSpec.NewNames = append(q.colSpec.NewNames, q.colSpec.Names[ii])
-        q.colSpec.NewTypes = append(q.colSpec.NewTypes, q.colSpec.Types[ii])
+        q.colSpec.NewNames = append(q.colSpec.NewNames, q.files["file1"].names[ii])
+        q.colSpec.NewTypes = append(q.colSpec.NewTypes, q.files["file1"].types[ii])
         q.colSpec.NewPos = append(q.colSpec.NewPos, ii+1)
         q.colSpec.NewWidth++
     }
 }
 
-//get column types from first 10000 rows
-func inferTypes(q *QuerySpecs) error {
+
+func inferTypes(q *QuerySpecs, k string) error {
 
     //open file
-    fp,err := os.Open(q.fname)
+    fp,err := os.Open(q.files[k].fname)
     if err != nil { return errors.New("problem opening input file") }
     defer func(){ fp.Seek(0,0); fp.Close() }()
 
@@ -138,9 +145,9 @@ func inferTypes(q *QuerySpecs) error {
     if err != nil { return errors.New("problem reading input file") }
     //get col names and initialize blank types
     for i,entry := range line {
-        q.colSpec.Names = append(q.colSpec.Names, entry)
-        q.colSpec.Types = append(q.colSpec.Types, 0)
-        q.colSpec.Width = i+1
+        q.files[k].names = append(q.files[k].names, entry)
+        q.files[k].types = append(q.files[k].types, 0)
+        q.files[k].width = i+1
     }
     //regex catches string that would otherwise get typed as int
     LeadingZeroString := regexp.MustCompile(`^0\d+$`)
@@ -152,40 +159,41 @@ func inferTypes(q *QuerySpecs) error {
         for i,cell := range line {
             entry := s.TrimSpace(cell)
             if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
-              q.colSpec.Types[i] = max(T_NULL, q.colSpec.Types[i])
+              q.files[k].types[i] = max(T_NULL, q.files[k].types[i])
             } else if LeadingZeroString.MatchString(entry) {
-              q.colSpec.Types[i] = T_STRING
+              q.files[k].types[i] = T_STRING
             } else if _, err := Atoi(entry); err == nil {
-              q.colSpec.Types[i] = max(T_INT, q.colSpec.Types[i])
+              q.files[k].types[i] = max(T_INT, q.files[k].types[i])
             } else if _, err := ParseFloat(entry,64); err == nil {
-              q.colSpec.Types[i] = max(T_FLOAT, q.colSpec.Types[i])
+              q.files[k].types[i] = max(T_FLOAT, q.files[k].types[i])
             } else if _,err := d.ParseAny(entry); err == nil{
-              q.colSpec.Types[i] = max(T_DATE, q.colSpec.Types[i])
+              q.files[k].types[i] = max(T_DATE, q.files[k].types[i])
             } else {
-              q.colSpec.Types[i] = T_STRING
+              q.files[k].types[i] = T_STRING
             }
         }
     }
-    println("got column data types")
     return  err
 }
-
-//open file and call type inferrer
-func evalFrom(q *QuerySpecs) error {
-    //go straight to the from token or end
-    if q.Tok().Id != KW_SELECT { return errors.New("Query must start with select. found "+q.Tok().Val) }
-    for ; q.Tok().Id != KW_FROM && q.Tok().Id != EOS ; {q.NextTok()}
-    if q.Tok().Id == EOS && q.fname == "" { return errors.New("Could not find a valid 'from file' part of query") }
-    if q.Tok().Id == EOS && q.fname != "" { return inferTypes(q) }
-    if q.Tok().Id == KW_FROM && q.PeekTok().Id != WORD {
-        return errors.New("Unexpected token after 'from': "+q.PeekTok().Val) }
-    if q.Tok().Id == KW_FROM && q.PeekTok().Id == WORD {
-        q.fname = q.PeekTok().Val
-        err := inferTypes(q)
-        q.Reset()
-        return err
-    }
-    return errors.New("Unknown problem parsing 'from file' part of query")
+//file files and open them
+func openFiles(q *QuerySpecs) error {
+    q.files = make(map[string]*FileData)
+    fileNum := 1
+    for ; q.Tok().Id != EOS ; {
+        _,err := os.Stat(q.Tok().Val)
+        //found a file path
+        if err == nil {
+			file := &FileData{fname : q.Tok().Val}
+            key := "file" + Sprint(fileNum)
+            fileNum++
+            q.files[key] = file
+            if q.NextTok().Id == KW_AS && q.NextTok().Id == WORD { q.files[q.Tok().Val] = file }
+            if inferTypes(q, key) != nil {return err}
+        }
+		q.NextTok()
+	}
+    q.Reset()
+    return nil
 }
 
 //recursive descent parser builds parse tree and QuerySpecs
@@ -197,23 +205,19 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
     err := scanTokens(q)
     if err != nil { return n,err }
 
-    //then open file and get column info
-    err = evalFrom(q)
+    //then open files and get column info
+    err = openFiles(q)
     if err != nil { return n,err }
 
-    //select section
+	//the create parse tree
     n.node1,err =  parseSelect(q)
     if err != nil { return n,err }
-
-    //skip from section for now because already evaluated
-    parseFrom(q)
-
-    //where section
+    n.node2, err = parseFrom(q)
+    if err != nil { return n,err }
     n.node3,err =  parseWhere(q)
     if err != nil { return n,err }
-
-    //Order by
     err =  parseOrder(q)
+    if err != nil { return n,err }
 
     if q.Tok().Id != EOS { err = errors.New("Expected end of query, got "+q.Tok().Val) }
     return n,err
@@ -223,7 +227,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 func parseSelect(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_SELECT}
     var err error
-    if q.Tok().Id != KW_SELECT { return n,errors.New("Expected 'select' token. found "+q.Tok().Val) }
+    if q.Tok().Id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().Val) }
     q.NextTok()
     err = parseTop(q)
     if err != nil { return n,err }
@@ -237,7 +241,7 @@ func parseTop(q* QuerySpecs) error {
     var err error
     if q.Tok().Id == KW_TOP {
         q.quantityLimit, err = Atoi(q.PeekTok().Val)
-        if err != nil { return errors.New("Expected number after 'top'. found "+q.PeekTok().Val) }
+        if err != nil { return errors.New("Expected number after 'top'. Found "+q.PeekTok().Val) }
         q.NextTok(); q.NextTok()
     }
     return nil
@@ -286,12 +290,12 @@ func parseColumn(q* QuerySpecs) (treeTok,error) {
             ii, err = Atoi(c)
             //if it's a number
             if err == nil {
-                if ii > q.colSpec.Width { return treeTok{},errors.New("Column number too big: "+c+". Max is "+Itoa(q.colSpec.Width)) }
+                if ii > q.files["file1"].width { return treeTok{},errors.New("Column number too big: "+c+". Max is "+Itoa(q.files["file1"].width)) }
                 if ii < 1 { return treeTok{},errors.New("Column number too small: "+c) }
                 ii -= 1
             //if it's a name
             } else {
-                ii, err = getColumnIdx(q.colSpec.Names, c)
+                ii, err = getColumnIdx(q.files["file1"].names, c)
             }
         //parse column from quotes
         case SP_SQUOTE: fallthrough
@@ -300,14 +304,14 @@ func parseColumn(q* QuerySpecs) (treeTok,error) {
             var S string
             for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
             if q.Tok().Id == EOS { return treeTok{},errors.New("Quote was not terminated") }
-            ii, err = getColumnIdx(q.colSpec.Names, S)
+            ii, err = getColumnIdx(q.files["file1"].names, S)
     }
     if err != nil { return treeTok{},err }
     //see if adding column to colSpec
     if q.parseCol == COL_ADD { newCol(q, ii) }
     q.parseCol = ii
     q.NextTok()
-    return treeTok{0, ii, q.colSpec.Types[ii]},err
+    return treeTok{0, ii, q.files["file1"].types[ii]},err
 }
 
 //tok1 is selected column if distinct
@@ -332,15 +336,18 @@ func parseSpecial(q* QuerySpecs) (*Node,error) {
     return n,errors.New("Unexpected token in 'select' section:"+q.Tok().Val)
 }
 
-func parseFrom(q* QuerySpecs) error {
-    if q.Tok().Id != KW_FROM { return errors.New("Expected 'from'. Found: "+q.Tok().Val) }
+//tok1 is file path
+//tok2 is alias
+func parseFrom(q* QuerySpecs) (*Node,error) {
+    n := &Node{label:N_FROM}
+    if q.Tok().Id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().Val) }
     q.NextTok()
-    q.NextTok()
+    n.tok1 = q.NextTok()
     if q.Tok().Id == KW_AS {
         q.NextTok()
-        q.NextTok()
+        n.tok2 = q.NextTok()
     }
-    return nil
+    return n, nil
 }
 
 //node1 is conditions
@@ -381,7 +388,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
             q.parseCol = COL_GETIDX
             _,err = parseColumn(q)
             if err != nil { return n,err }
-            q.lastColumn = treeTok{0, q.parseCol, q.colSpec.Types[q.parseCol]}
+            q.lastColumn = treeTok{0, q.parseCol, q.files["file1"].types[q.parseCol]}
             //see if comparison is normal or between
             if q.Tok().Id == KW_BETWEEN || q.PeekTok().Id == KW_BETWEEN {
                 n.node1, err = parseBetween(q)
