@@ -70,6 +70,7 @@ class TopDropdown extends React.Component {
                           /> ),
             browseShow : ( <Browser
                                dirlist = {this.props.openDirlist}
+                               updateTopMessage = {this.props.updateTopMessage}
                                send = {this.props.sendSocket}
                                changePath = {this.props.changeOpenPath}
                                type = {"open"}
@@ -80,20 +81,17 @@ class TopDropdown extends React.Component {
     }
 }
 
-//attempt at copying file path to clipboard - not working yet
+//each csv file line in file browser
 class FileSelector extends React.Component {
-    constructor(props){
-        super(props);
-        this.state = { rowId : Math.random(), }
-    }
     render() {
         return (
         <>
-            <input type="hidden" value={this.props.path} id={this.state.rowId}/>
-            <span className="dropContent browseFile browseEntry" onClick={()=>{
-                var item = document.getElementById(this.state.rowId);    
-                item.select();
-                document.execCommand("copy");
+            <span className="dropContent browseFile browseEntry" onDoubleClick={()=>{
+                if (this.props.type == 'open') {
+                    var qtext = document.getElementById("textBoxId");
+                    qtext.value += ' '+this.props.path;
+                    this.props.updateTopMessage("Added file to query");
+                }
             }} 
             >{this.props.path}</span>
         </>
@@ -122,7 +120,11 @@ class Browser extends React.Component {
     }
     filelist(){
         if (this.props.dirlist.Files) return (
-        this.props.dirlist.Files.map(path => <FileSelector path={path} />)
+        this.props.dirlist.Files.map(path => <FileSelector 
+            path={path}
+            type={this.props.type}
+            updateTopMessage = {this.props.updateTopMessage}
+        />)
         );
     }
     handleChange(e){

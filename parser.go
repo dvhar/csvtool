@@ -214,6 +214,10 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 
     //Order by
     err =  parseOrder(q)
+
+    if q.Tok().Id != EOS {
+        err = errors.New("Expected end of query, got "+q.Tok().Val)
+    }
     return n,err
 }
 
@@ -543,7 +547,7 @@ func parseOrder(q* QuerySpecs) error {
         if err == nil {
             q.sortCol = q.parseCol
             q.sortWay = 1
-            if q.Tok().Id == KW_ORDHOW { q.sortWay = 2 }
+            if q.Tok().Id == KW_ORDHOW { q.sortWay = 2; q.NextTok() }
         } else { return err }
     }
     return nil

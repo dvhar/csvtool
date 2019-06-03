@@ -9,7 +9,7 @@ export class Help extends React.Component {
             <hr/>
             Query data from csv files, display it, and save it to new csv files. It can handle huge csv files without eating  up all you computer's resources.
             <br/>
-            The program will show you the first 1000 results in the browser, with 2 options for viewing certain rows or columns. You can click on a column header to sort the top 1000 results by that column.
+            The program will show you the first several hundred results in the browser, with 2 options for viewing certain rows or columns. You can click on a column header to sort the displayed results by that column.
             <h3>How to save files</h3>
             <hr/>
             After running a query, hit the save button. Navigate to where you want to save, type in the file name, and hit the save button to the right. All the queries on the page will run again, but this time they will be saved to csv files. If there are multiple queries on the page, you still only need to specify one file and a number will be added to the filename for each one.
@@ -18,7 +18,7 @@ export class Help extends React.Component {
             This program uses a custom version of SQL based on TSQL. Some features like Joins and subqueries are not currently implemented.
             <blockquote>
                 <h4>Specifying a file</h4>
-                Use the 'from' keyword followed by the full path of the file. Click 'Browse Files' to find files, and copy/paste it into the query. You can query different files at the same time by separating queries with a semicolon.
+                Use the 'from' keyword followed by the full path of the file. Click 'Browse Files' to find files, and double click one to add it to the query. You can query different files at the same time by separating queries with a semicolon.
                 <h4>Selecting some columns</h4>
                 Columns can be specified by name or number. If some columns have the same name, the later ones must be specified by number. Commas are optional, so you can easily copy and paste column names or numbers from a table header into a new query.
                 <br/><br/>
@@ -92,10 +92,10 @@ export class Help extends React.Component {
             To exit the program, just leave the browser page. The program exits if it goes 5 seconds without being viewed in a browser.
             <h3>Waiting for results to load</h3>
             <hr/>
-            Browsers can take a while to load big results, even when limiting them to 1000 rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner.
+            Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner.
             <br/><br/>
             <hr/>
-            version 0.20 - 5/24/2019
+            version 0.26 - 6/2/2019
             <hr/>
             <br/><br/>
             </div>
