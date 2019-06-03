@@ -174,5 +174,4 @@ var treeMap = map[int]string {
 	N_COMPARE:    "N_COMPARE",
 	N_REL:        "N_REL",
 	N_ORDER:      "N_ORDER",
-	N_ORDERM:     "N_ORDERM",
 }
