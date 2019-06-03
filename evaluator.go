@@ -181,7 +181,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 
     //sort matching line positions
     messager <- "Sorting Rows..."
-    colType := q.files["file1"].types[q.sortCol]
+    colType := reader.types[q.sortCol]
     sort.Slice(reader.valPositions, func(i, j int) bool {
         if reader.valPositions[i].Val == nil && reader.valPositions[j].Val == nil { return false
         } else if reader.valPositions[i].Val == nil { return false

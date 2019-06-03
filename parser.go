@@ -14,7 +14,6 @@ import (
 
 type QuerySpecs struct {
     colSpec Columns
-    fname string
     queryString string
     tokArray []Token
     tokIdx int
@@ -38,18 +37,14 @@ func (q *QuerySpecs) NextTok() *Token {
     return &q.tokArray[q.tokIdx]
 }
 func (q QuerySpecs) PeekTok() *Token {
-    if q.tokIdx < len(q.tokArray)-1 {
-        return &q.tokArray[q.tokIdx+1]
-    } else {
-        println("end of tokens")
-        return &q.tokArray[q.tokIdx]
-    }
+    if q.tokIdx < len(q.tokArray)-1 { return &q.tokArray[q.tokIdx+1] }
+	return &q.tokArray[q.tokIdx]
 }
 func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
 func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
 const (
     //parse tree node types
-    N_PPTOKENS = iota
+    N_QUERY = iota
     N_SELECT = iota
     N_TOP = iota
     N_SELECTIONS = iota
@@ -63,7 +58,6 @@ const (
     N_COMPARE = iota
     N_REL = iota
     N_ORDER = iota
-    N_ORDERM = iota
 )
 type FileData struct {
 	fname string
@@ -81,13 +75,10 @@ type Node struct {
     node3 *Node
 }
 type Columns struct {
-    Names []string
     NewNames []string
-    Types []int
     NewTypes []int
-    Width int
-    NewWidth int
     NewPos []int
+    NewWidth int
 }
 const (
     T_NULL = iota
@@ -109,9 +100,7 @@ func max(a int, b int) int {
 }
 func getColumnIdx(colNames []string, column string) (int, error) {
     for i,col := range colNames {
-        if s.ToLower(col) == s.ToLower(column) {
-            return i, nil
-        }
+        if s.ToLower(col) == s.ToLower(column) { return i, nil }
     }
     return 0, errors.New("Column " + column + " not found")
 }
@@ -132,14 +121,11 @@ func newCol(q* QuerySpecs,ii int) {
     }
 }
 
-
 func inferTypes(q *QuerySpecs, k string) error {
-
     //open file
     fp,err := os.Open(q.files[k].fname)
     if err != nil { return errors.New("problem opening input file") }
     defer func(){ fp.Seek(0,0); fp.Close() }()
-
     cread := csv.NewReader(fp)
     line, err := cread.Read()
     if err != nil { return errors.New("problem reading input file") }
@@ -175,7 +161,7 @@ func inferTypes(q *QuerySpecs, k string) error {
     }
     return  err
 }
-//file files and open them
+//find files and open them
 func openFiles(q *QuerySpecs) error {
     q.files = make(map[string]*FileData)
     fileNum := 1
@@ -198,18 +184,13 @@ func openFiles(q *QuerySpecs) error {
 
 //recursive descent parser builds parse tree and QuerySpecs
 func parseQuery(q* QuerySpecs) (*Node,error) {
-    n := &Node{label:N_PPTOKENS}
+    n := &Node{label:N_QUERY}
     n.tok1 = q
-    //first turn query string into A tokens
     lineNo = 1
     err := scanTokens(q)
     if err != nil { return n,err }
-
-    //then open files and get column info
     err = openFiles(q)
     if err != nil { return n,err }
-
-	//the create parse tree
     n.node1,err =  parseSelect(q)
     if err != nil { return n,err }
     n.node2, err = parseFrom(q)
@@ -218,7 +199,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
     if err != nil { return n,err }
     err =  parseOrder(q)
     if err != nil { return n,err }
-
     if q.Tok().Id != EOS { err = errors.New("Expected end of query, got "+q.Tok().Val) }
     return n,err
 }
@@ -236,8 +216,8 @@ func parseSelect(q* QuerySpecs) (*Node,error) {
     return n,err
 }
 
+//row limit
 func parseTop(q* QuerySpecs) error {
-    //terminal
     var err error
     if q.Tok().Id == KW_TOP {
         q.quantityLimit, err = Atoi(q.PeekTok().Val)
@@ -267,7 +247,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
         case SP_SQUOTE: fallthrough
         case SP_DQUOTE:
             q.parseCol = COL_ADD
-            n.tok1,err = parseColumn(q)
+            n.tok1,err = columnParser(q)
             if err != nil { return n,err }
             n.tok2 = countSelected
             countSelected++
@@ -280,7 +260,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 }
 
 //parse column and file key from quotes and/or dot notation
-func parseDotQuote(q* QuerySpecs) (string,string,error) {
+func dotQuoteParser(q* QuerySpecs) (string,string,error) {
 	var S string
 	key := "file1"
     switch q.Tok().Id {
@@ -298,13 +278,14 @@ func parseDotQuote(q* QuerySpecs) (string,string,error) {
 		_,ok := q.files[key]
 		if !ok { return "","", errors.New(key+" is not a file alias") }
 	}
+	q.NextTok()
 	return key, S, nil
 }
 
 //returns column tok
-func parseColumn(q* QuerySpecs) (treeTok,error) {
+func columnParser(q* QuerySpecs) (treeTok,error) {
     var ii int
-	key, col, err := parseDotQuote(q)
+	key, col, err := dotQuoteParser(q)
     if err != nil { return treeTok{},err }
 	//if it's a number
 	ii, err = Atoi(col)
@@ -317,7 +298,6 @@ func parseColumn(q* QuerySpecs) (treeTok,error) {
     if err != nil { return treeTok{},err }
     if q.parseCol == COL_ADD { newCol(q, ii) }
     q.parseCol = ii
-    q.NextTok()
     return treeTok{0, ii, q.files[key].types[ii]},err
 }
 
@@ -330,7 +310,7 @@ func parseSpecial(q* QuerySpecs) (*Node,error) {
         case KW_DISTINCT:
             q.NextTok()
             q.parseCol = COL_GETIDX
-            n.tok1,err = parseColumn(q)
+            n.tok1,err = columnParser(q)
             if err != nil { return n,err }
             n.tok2 = countSelected
             countSelected++
@@ -393,7 +373,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
         case SP_SQUOTE:
             //get column index before next step
             q.parseCol = COL_GETIDX
-            _,err = parseColumn(q)
+            _,err = columnParser(q)
             if err != nil { return n,err }
             q.lastColumn = treeTok{0, q.parseCol, q.files["file1"].types[q.parseCol]}
             //see if comparison is normal or between
@@ -435,18 +415,8 @@ func parseRel(q* QuerySpecs) (*Node,error) {
         if tok.Id == KW_LIKE { q.like = true; }
         n.tok2 = treeTok{tok.Id, tok.Val, 0}
         q.NextTok()
-        btok,err := comparisonValue(q)
-		if err != nil {return n,err}
-        //if relop is 'like', compile a regex
-        if q.like {
-            q.like = false
-            re := regexp.MustCompile("%")
-            btok.Val = re.ReplaceAllString(Sprint(btok.Val), ".*")
-            re = regexp.MustCompile("_")
-            btok.Val = re.ReplaceAllString(Sprint(btok.Val), ".")
-            btok.Val,err = regexp.Compile("(?i)^"+btok.Val.(string)+"$")
-        }
-        n.tok3 = btok
+		var err error
+        n.tok3, err = comparisonValue(q)
         return n,err
     }
     return n,errors.New("Expected relational operator. Found: "+q.Tok().Val)
@@ -517,11 +487,20 @@ func comparisonValue(q* QuerySpecs) (treeTok,error) {
     if q.Tok().Id != SP_SQUOTE && q.Tok().Id != SP_DQUOTE && q.Tok().Id != WORD {
 		return tok, errors.New("Expected a comparision value but got "+q.Tok().Val)
 	}
-	_, val, err := parseDotQuote(q)
+	_, val, err := dotQuoteParser(q)
 	if err != nil { return tok, err }
 	tok = treeTok{0, val, q.lastColumn.Dtype}
-	//keep wcomp a string if using regex
-	if q.like { q.NextTok(); return tok, err }
+	//if relop is 'like', compile a regex
+	if q.like {
+		q.like = false
+		re := regexp.MustCompile("%")
+		tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".*")
+		re = regexp.MustCompile("_")
+		tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".")
+		tok.Val,err = regexp.Compile("(?i)^"+tok.Val.(string)+"$")
+		return tok, err
+	}
+	//otherwise parse its data type
 	if s.ToLower(tok.Val.(string)) == "null" { tok.Dtype = T_NULL }
 	switch tok.Dtype {
 		case T_INT:    tok.Val,err = Atoi(tok.Val.(string))
@@ -530,7 +509,6 @@ func comparisonValue(q* QuerySpecs) (treeTok,error) {
 		case T_NULL:   tok.Val = nil
 		case T_STRING: tok.Val = tok.Val.(string)
 	}
-	q.NextTok()
 	return tok, err
 }
 
@@ -542,7 +520,7 @@ func parseOrder(q* QuerySpecs) error {
         if q.NextTok().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.Tok().Val) }
         q.NextTok()
         q.parseCol = COL_GETIDX
-        _,err = parseColumn(q)
+        _,err = columnParser(q)
         if err == nil {
             q.sortCol = q.parseCol
             q.sortWay = 1

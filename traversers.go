@@ -160,7 +160,7 @@ func treePrint(n *Node, i int){
 
 //tree node labels for debugging
 var treeMap = map[int]string {
-    N_PPTOKENS:   "N_PPTOKENS",
+    N_QUERY:   "N_QUERY",
     N_SELECT:     "N_SELECT",
     N_TOP:        "N_TOP",
     N_SELECTIONS: "N_SELECTIONS",
