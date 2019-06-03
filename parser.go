@@ -260,7 +260,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 }
 
 //parse column and file key from quotes and/or dot notation
-func dotQuoteParser(q* QuerySpecs) (string,string,error) {
+func dotQuoteParser(q* QuerySpecs, dot bool) (string,string,error) {
 	var S string
 	key := "file1"
 	switch q.Tok().Id {
@@ -272,7 +272,8 @@ func dotQuoteParser(q* QuerySpecs) (string,string,error) {
 			if q.Tok().Id != quote { return "","",errors.New("Quote was not terminated") }
 	}
 	split := s.SplitAfterN(S, ".", 2)
-	if (len(split) > 1){
+	//see if doing dot notation
+	if dot && len(split) > 1 {
 		key = s.TrimRight(split[0], ".")
 		S = split[1]
 		_,ok := q.files[key]
@@ -285,7 +286,7 @@ func dotQuoteParser(q* QuerySpecs) (string,string,error) {
 //returns column tok
 func columnParser(q* QuerySpecs) (treeTok,error) {
 	var ii int
-	key, col, err := dotQuoteParser(q)
+	key, col, err := dotQuoteParser(q, true)
 	if err != nil { return treeTok{},err }
 	//if it's a number
 	ii, err = Atoi(col)
@@ -487,7 +488,7 @@ func comparisonValue(q* QuerySpecs) (treeTok,error) {
 	if q.Tok().Id != SP_SQUOTE && q.Tok().Id != SP_DQUOTE && q.Tok().Id != WORD {
 		return tok, errors.New("Expected a comparision value but got "+q.Tok().Val)
 	}
-	_, val, err := dotQuoteParser(q)
+	_, val, err := dotQuoteParser(q, false)
 	if err != nil { return tok, err }
 	tok = treeTok{0, val, q.lastColumn.Dtype}
 	//if relop is 'like', compile a regex

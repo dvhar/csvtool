@@ -24,272 +24,272 @@ $loginbg: #fdffe5;
 $historyArrows: #ffff99;
 
 @mixin sgradient($top,$tp,$bt,$bot) {
-    background: $top;
-    background: linear-gradient(to bottom, $top 1%,$tp 22%,$bt 22%,$bot 100%);
+	background: $top;
+	background: linear-gradient(to bottom, $top 1%,$tp 22%,$bt 22%,$bot 100%);
 }
 @mixin gradient($top,$bot) {
-    background-color:$top;
-    background: linear-gradient(to bottom, $top, $bot); }
+	background-color:$top;
+	background: linear-gradient(to bottom, $top, $bot); }
 
 html {
-    min-height: 100%;
-    background-color: #DDDDDD;
-    background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
-    //background-image: url("/bg.jpg");
-    background-attachment: fixed;
+	min-height: 100%;
+	background-color: #DDDDDD;
+	background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
+	//background-image: url("/bg.jpg");
+	background-attachment: fixed;
 }
 
 //dropdown menu
 .absolute-pos {
-    position: absolute;
+	position: absolute;
 }
 .dropmenu-content{
-    display: none;
-    padding: 1em;
-    //background: $dropdownbg;
-    div {
-        padding: .2em .5em;
-        background-color: $button1;
-        border-radius: 4px;
-        margin: .2em .2em;
-    }
+	display: none;
+	padding: 1em;
+	//background: $dropdownbg;
+	div {
+		padding: .2em .5em;
+		background-color: $button1;
+		border-radius: 4px;
+		margin: .2em .2em;
+	}
 }
 .dropSelect {
-    top: 0;
-    float: left;
+	top: 0;
+	float: left;
 }
 .dropmenu:hover .dropmenu-content {
-    display: block;
+	display: block;
 }
 .hiddenColumn {
-    color: red;
+	color: red;
 }
 .dropButton {
-    display: block;
-    text-align: center;
-    margin: auto;
+	display: block;
+	text-align: center;
+	margin: auto;
 }
 .queryFileBox {
-    display: inherit;
-    width: 99%;
-    margin-bottom: 0.3em;
+	display: inherit;
+	width: 99%;
+	margin-bottom: 0.3em;
 }
 .queryMenuDiv {
-    z-index: 10;
-    display: inline-block;
-    min-width: 12em;
-    padding: .2em .2em;
-    //@include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
-    @include sgradient($ttop,$ttp,$bbt,$bbot);
+	z-index: 10;
+	display: inline-block;
+	min-width: 12em;
+	padding: .2em .2em;
+	//@include sgradient($ojgradient1,$ojgradient2,$ojgradient3,$ojgradient4);
+	@include sgradient($ttop,$ttp,$bbt,$bbot);
 }
 .commandtitle {
-    margin: auto;
+	margin: auto;
 }
 .queryMenuButton {
-    width: 15em;
-    padding: .2em .5em;
-    background-color: $button1;
-    border-radius: 4px;
+	width: 15em;
+	padding: .2em .5em;
+	background-color: $button1;
+	border-radius: 4px;
 }
 .queryTextEntry {
-    width: calc(95vw);
+	width: calc(95vw);
 }
 .queryTextContainer {
-    padding: 0.2em;
+	padding: 0.2em;
 }
 .queryRunButton {
-    background: linear-gradient(to bottom, #ffffff 0%,#f1f1f1 50%,#e1e1e1 51%,#f6f6f6 100%);
-    padding: 0.2em 1em;
-    font-size: medium;
+	background: linear-gradient(to bottom, #ffffff 0%,#f1f1f1 50%,#e1e1e1 51%,#f6f6f6 100%);
+	padding: 0.2em 1em;
+	font-size: medium;
 }
 .queryRunButton:hover {
-    background: linear-gradient(to bottom, #e0f3fa 0%,#d8f0fc 50%,#b8e2f6 51%,#b6dffd 100%);
+	background: linear-gradient(to bottom, #e0f3fa 0%,#d8f0fc 50%,#b8e2f6 51%,#b6dffd 100%);
 }
 
 .tableModDiv {
-    z-index: 10;
-    display: inline-block;
-    min-width: 12em;
-    background-color: $button1;
-    padding: .2em .2em;
-    background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	z-index: 10;
+	display: inline-block;
+	min-width: 12em;
+	background-color: $button1;
+	padding: .2em .2em;
+	background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
 }
 .tableModDrop {
-    background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
 }
 .tableModButton {
-    width: 15em;
-    padding: .2em .5em;
-    background-color: $button1;
-    border-radius: 4px;
+	width: 15em;
+	padding: .2em .5em;
+	background-color: $button1;
+	border-radius: 4px;
 }
 
 //table display
 .tableHead {
-    td { background-color: $headcell; }
-    th { background-color: $headcell; }
+	td { background-color: $headcell; }
+	th { background-color: $headcell; }
 }
 .tableBody td {
-    background-color: $bodycell;
+	background-color: $bodycell;
 }
 .tableCell {
-    text-align: center;
-    white-space:nowrap;
-    min-width: 4em;
+	text-align: center;
+	white-space:nowrap;
+	min-width: 4em;
 }
 .tableRow {
-    padding: 1em;
+	padding: 1em;
 }
 .tableDiv {
-    background: $tablebg;
-    position: static;
-    top: 3em;
-    max-height: calc(80vh - 100px);
-    max-width: calc(95%);
-    margin: auto;
-    border: 2px solid black;
+	background: $tablebg;
+	position: static;
+	top: 3em;
+	max-height: calc(80vh - 100px);
+	max-width: calc(95%);
+	margin: auto;
+	border: 2px solid black;
 }
 .tableBodyDiv {
-    overflow: auto;
+	overflow: auto;
 }
 .tableHeadDiv {
-    overflow: hidden;
-    border-bottom: none;
+	overflow: hidden;
+	border-bottom: none;
 }
 .tableQuery {
-    margin: auto;
-    display: table;
-    background: linear-gradient(to top, #fefcea 0%,#fff5ac 100%);
-    border-radius: 0.4em;
-    padding: 0.3em 1em 0em 1em;
+	margin: auto;
+	display: table;
+	background: linear-gradient(to top, #fefcea 0%,#fff5ac 100%);
+	border-radius: 0.4em;
+	padding: 0.3em 1em 0em 1em;
 }
 //bigger query section
 .querySelect {
-    margin-top: 2.3em;
+	margin-top: 2.3em;
 }
 .queryMenuContainer {
-    text-align: center;
-    margin-bottom: 1em;
+	text-align: center;
+	margin-bottom: 1em;
 }
 .tableModifiers {
-    text-align: center;
+	text-align: center;
 }
 
 //top bar
 .topBar {
-    background: $topbarbg;
-    background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
-    min-height: 2em;
-    padding: 0.2em;
-    display: flex;
-    justify-content: left;
-    position: fixed;
-    width: 100%;
-    top: 0;
+	background: $topbarbg;
+	background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	min-height: 2em;
+	padding: 0.2em;
+	display: flex;
+	justify-content: left;
+	position: fixed;
+	width: 100%;
+	top: 0;
 }
 .topMessage {
-    color: $historyArrows;
-    padding: 0.3em 1em 0em;
+	color: $historyArrows;
+	padding: 0.3em 1em 0em;
 }
 .topButton {
-    background: linear-gradient(to bottom, #ffffff 0%,#f1f1f1 50%,#e1e1e1 51%,#f6f6f6 100%);
+	background: linear-gradient(to bottom, #ffffff 0%,#f1f1f1 50%,#e1e1e1 51%,#f6f6f6 100%);
 }
 .topButton:hover {
-    background: linear-gradient(to bottom, #e0f3fa 0%,#d8f0fc 50%,#b8e2f6 51%,#b6dffd 100%);
+	background: linear-gradient(to bottom, #e0f3fa 0%,#d8f0fc 50%,#b8e2f6 51%,#b6dffd 100%);
 }
 
 //login section
 .loginBox {
 }
 .loginButtonDiv {
-    padding-left: 9em;
+	padding-left: 9em;
 }
 .LoginShow {
-    padding: 0.3em;
-    background: $loginbg;
-    top: 2.2em;
-    position: absolute;
+	padding: 0.3em;
+	background: $loginbg;
+	top: 2.2em;
+	position: absolute;
 }
 .LoginShow label {
-    width: 9em;
-    display: inline-block;
-    text-align: right;
+	width: 9em;
+	display: inline-block;
+	text-align: right;
 }
 .LoginShow input {
-    min-width: 20em;
+	min-width: 20em;
 }
 
 //save section
 .fileSelectShow {
-    padding: 0.3em;
-    background: linear-gradient(to top, #fefcea 0%,#fff5ac 100%);
-    top: 2.2em;
-    position: absolute;
-    border: 1px solid black;
+	padding: 0.3em;
+	background: linear-gradient(to top, #fefcea 0%,#fff5ac 100%);
+	top: 2.2em;
+	position: absolute;
+	border: 1px solid black;
 }
 .fileSelectShow label {
-    display: inline-block;
+	display: inline-block;
 }
 .fileSelectShow input[type="text"] {
-    min-width: 40em;
-    margin: 0.5em 0em 0.5em 0.5em;
+	min-width: 40em;
+	margin: 0.5em 0em 0.5em 0.5em;
 }
 .saveRadio {
-    margin: 0.6em;
+	margin: 0.6em;
 }
 .saveButton {
-    float: right;
+	float: right;
 }
 
 //file browser
 .fileBrowser {
-    min-width: 40em;
-    max-height: 33em;
+	min-width: 40em;
+	max-height: 33em;
 }
 .browseDirs {
-    height: 80%;
-    background-color: white;
-    border: 1px solid black;
-    overflow: auto;
+	height: 80%;
+	background-color: white;
+	border: 1px solid black;
+	overflow: auto;
 }
 .browseDir {
-    display: block;
-    width: 100%;
-    color: darkblue;
+	display: block;
+	width: 100%;
+	color: darkblue;
 }
 .browseFile {
-    display: block;
-    width: 100%;
-    color: darkGreen;
+	display: block;
+	width: 100%;
+	color: darkGreen;
 }
 .browseCurrent {
-    width: -webkit-fill-available;
-    width: -moz-available;
+	width: -webkit-fill-available;
+	width: -moz-available;
 }
 .browseEntry:hover {
-    background-color: bisque;
+	background-color: bisque;
 }
 
 //mode select section
 .modeShow {
-    padding: 0.3em;
-    background: $loginbg;
-    top: 2.2em;
-    position: absolute;
+	padding: 0.3em;
+	background: $loginbg;
+	top: 2.2em;
+	position: absolute;
 }
 .modeButton {
-    padding: 1em;
-    margin: 1em;
+	padding: 1em;
+	margin: 1em;
 }
 
 //history arrows
 .historyArrows {
-    right: 0;
-    position: inherit;
-    color: $historyArrows;
+	right: 0;
+	position: inherit;
+	color: $historyArrows;
 }
 .arrow {
-    font-size: x-large;
+	font-size: x-large;
 }
 .show { display: block; }
 .dim { color: grey; }
@@ -297,30 +297,30 @@ html {
 
 //helper
 .helpBox {
-    display: block;
-    position: fixed;
-    width: 90%;
-    left: 5%;
-    height: 90%;
-    border: 1px solid black;
-    background-color: beige;
-    margin: auto;
-    border-radius: 1em;
-    padding: 1em;
-    overflow-y: scroll;
+	display: block;
+	position: fixed;
+	width: 90%;
+	left: 5%;
+	height: 90%;
+	border: 1px solid black;
+	background-color: beige;
+	margin: auto;
+	border-radius: 1em;
+	padding: 1em;
+	overflow-y: scroll;
 }
 
 //dynamic table
 .dynoDiv {
-    border: 1px solid black;
-    max-height: 20em;
-    overflow: auto;
-    display: inline-block;
+	border: 1px solid black;
+	max-height: 20em;
+	overflow: auto;
+	display: inline-block;
 }
 .dynoTable {
-    border-collapse: collapse;
+	border-collapse: collapse;
 }
 .dynoTableCell {
-    border: 1px solid grey;
-    height: 1.5em;
+	border: 1px solid grey;
+	height: 1.5em;
 }
