@@ -215,9 +215,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
     //Order by
     err =  parseOrder(q)
 
-    if q.Tok().Id != EOS {
-        err = errors.New("Expected end of query, got "+q.Tok().Val)
-    }
+    if q.Tok().Id != EOS { err = errors.New("Expected end of query, got "+q.Tok().Val) }
     return n,err
 }
 
