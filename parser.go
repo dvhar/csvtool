@@ -279,39 +279,46 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
     return n,nil
 }
 
-//returns column tok
-func parseColumn(q* QuerySpecs) (treeTok,error) {
-    var ii int
-    var err error
+//parse column and file key from quotes and/or dot notation
+func parseDotQuote(q* QuerySpecs) (string,string,error) {
+	var S string
+	key := "file1"
     switch q.Tok().Id {
-        //parse selected column
-        case WORD:
-            c := q.Tok().Val
-            ii, err = Atoi(c)
-            //if it's a number
-            if err == nil {
-                if ii > q.files["file1"].width { return treeTok{},errors.New("Column number too big: "+c+". Max is "+Itoa(q.files["file1"].width)) }
-                if ii < 1 { return treeTok{},errors.New("Column number too small: "+c) }
-                ii -= 1
-            //if it's a name
-            } else {
-                ii, err = getColumnIdx(q.files["file1"].names, c)
-            }
-        //parse column from quotes
+        case WORD: S = q.Tok().Val
         case SP_SQUOTE: fallthrough
         case SP_DQUOTE:
             quote := q.Tok().Id
-            var S string
             for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
-            if q.Tok().Id == EOS { return treeTok{},errors.New("Quote was not terminated") }
-            ii, err = getColumnIdx(q.files["file1"].names, S)
-    }
+            if q.Tok().Id != quote { return "","",errors.New("Quote was not terminated") }
+	}
+	split := s.SplitAfterN(S, ".", 2)
+	if (len(split) > 1){
+		key = s.TrimRight(split[0], ".")
+		S = split[1]
+		_,ok := q.files[key]
+		if !ok { return "","", errors.New(key+" is not a file alias") }
+	}
+	return key, S, nil
+}
+
+//returns column tok
+func parseColumn(q* QuerySpecs) (treeTok,error) {
+    var ii int
+	key, col, err := parseDotQuote(q)
     if err != nil { return treeTok{},err }
-    //see if adding column to colSpec
+	//if it's a number
+	ii, err = Atoi(col)
+	if err == nil {
+		if ii > q.files[key].width { return treeTok{},errors.New("Column number too big: "+col+". Max is "+Itoa(q.files[key].width)) }
+		if ii < 1 { return treeTok{},errors.New("Column number too small: "+col) }
+		ii -= 1
+	//else it's a name
+	} else { ii, err = getColumnIdx(q.files[key].names, col) }
+    if err != nil { return treeTok{},err }
     if q.parseCol == COL_ADD { newCol(q, ii) }
     q.parseCol = ii
     q.NextTok()
-    return treeTok{0, ii, q.files["file1"].types[ii]},err
+    return treeTok{0, ii, q.files[key].types[ii]},err
 }
 
 //tok1 is selected column if distinct
@@ -341,11 +348,11 @@ func parseSpecial(q* QuerySpecs) (*Node,error) {
 func parseFrom(q* QuerySpecs) (*Node,error) {
     n := &Node{label:N_FROM}
     if q.Tok().Id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().Val) }
-    q.NextTok()
     n.tok1 = q.NextTok()
+    q.NextTok()
     if q.Tok().Id == KW_AS {
-        q.NextTok()
         n.tok2 = q.NextTok()
+        q.NextTok()
     }
     return n, nil
 }
@@ -428,7 +435,8 @@ func parseRel(q* QuerySpecs) (*Node,error) {
         if tok.Id == KW_LIKE { q.like = true; }
         n.tok2 = treeTok{tok.Id, tok.Val, 0}
         q.NextTok()
-        btok,err := tokFromQuotes(q)
+        btok,err := comparisonValue(q)
+		if err != nil {return n,err}
         //if relop is 'like', compile a regex
         if q.like {
             q.like = false
@@ -465,11 +473,11 @@ func parseBetween(q* QuerySpecs) (*Node,error) {
     //negation and get to value token
     if q.Tok().Id == SP_NEGATE { n.tok1 = SP_NEGATE; q.NextTok() }
     q.NextTok()
-    val1, err = tokFromQuotes(q)
+    val1, err = comparisonValue(q)
     if err != nil { return n,err }
     if q.Tok().Id != KW_AND { return n,errors.New("Expected 'and' in between clause, got "+q.Tok().Val) }
     q.NextTok()
-    val2, err = tokFromQuotes(q)
+    val2, err = comparisonValue(q)
     if err != nil { return n,err }
 
     //see which is smaller
@@ -504,40 +512,26 @@ func parseBetween(q* QuerySpecs) (*Node,error) {
 }
 
 //comparison values in where section
-func tokFromQuotes(q* QuerySpecs) (treeTok,error) {
-    var good bool
+func comparisonValue(q* QuerySpecs) (treeTok,error) {
     var tok treeTok
-    var err error
-    //add to array if just a word
-    if q.Tok().Id == WORD {
-        tok = treeTok{0, q.Tok().Val, q.lastColumn.Dtype}
-        good = true
-    }
-    //construct string from values between quotes
-    if q.Tok().Id == SP_SQUOTE || q.Tok().Id == SP_DQUOTE {
-        quote := q.Tok().Id
-        var S string
-        for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
-        if q.Tok().Id == EOS { return tok, errors.New("Quote was not terminated") }
-        tok = treeTok{0, S, q.lastColumn.Dtype}
-        good = true
-    }
-    //give interface the right type
-    if good {
-        //keep wcomp a string if using regex
-        if q.like { q.NextTok(); return tok, err }
-        if s.ToLower(tok.Val.(string)) == "null" { tok.Dtype = T_NULL }
-        switch tok.Dtype {
-            case T_INT:    tok.Val,err = Atoi(tok.Val.(string))
-            case T_FLOAT:  tok.Val,err = ParseFloat(tok.Val.(string), 64)
-            case T_DATE:   tok.Val,err = d.ParseAny(tok.Val.(string))
-            case T_NULL:   tok.Val = nil
-            case T_STRING: tok.Val = tok.Val.(string)
-        }
-        q.NextTok()
-        return tok, err
-    }
-    return tok, errors.New("Expected a comparision value but got "+q.Tok().Val)
+    if q.Tok().Id != SP_SQUOTE && q.Tok().Id != SP_DQUOTE && q.Tok().Id != WORD {
+		return tok, errors.New("Expected a comparision value but got "+q.Tok().Val)
+	}
+	_, val, err := parseDotQuote(q)
+	if err != nil { return tok, err }
+	tok = treeTok{0, val, q.lastColumn.Dtype}
+	//keep wcomp a string if using regex
+	if q.like { q.NextTok(); return tok, err }
+	if s.ToLower(tok.Val.(string)) == "null" { tok.Dtype = T_NULL }
+	switch tok.Dtype {
+		case T_INT:    tok.Val,err = Atoi(tok.Val.(string))
+		case T_FLOAT:  tok.Val,err = ParseFloat(tok.Val.(string), 64)
+		case T_DATE:   tok.Val,err = d.ParseAny(tok.Val.(string))
+		case T_NULL:   tok.Val = nil
+		case T_STRING: tok.Val = tok.Val.(string)
+	}
+	q.NextTok()
+	return tok, err
 }
 
 //currently order is only thing after where

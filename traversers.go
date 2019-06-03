@@ -151,6 +151,8 @@ func treePrint(n *Node, i int){
     if n==nil {return}
     for j:=0;j<i;j++ { Print("  ") }
     Println(treeMap[n.label])
+    for j:=0;j<i;j++ { Print("  ") }
+    Println(n.tok1, n.tok2, n.tok3)
     treePrint(n.node1,i+1)
     treePrint(n.node2,i+1)
     treePrint(n.node3,i+1)
