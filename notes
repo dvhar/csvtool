@@ -4,7 +4,14 @@ current BNF:
 <Select>     -> <top> <Selections>
 <top>        -> top INT | ε
 <Selections> -> <column> <Selections> | * <Selections> | <Special> <Selections> | ε
-<column>     -> column | quotedColumn
+<column>     -> column
+
+//maybe want expressions instead of just columns where data type allows
+<column>     = <expr>
+<expr>     -> <A> + <expr> | <A> - <expr> | <A>
+<A>          -> <N> * <A> | <N> / <A> | <N>
+<N>          -> ( <expr> ) | column | value
+
 <Special>    -> distinct <column> | <Function> | <Case>
 <From>       -> from filename <alias>
 <alias>      -> as alias | ε

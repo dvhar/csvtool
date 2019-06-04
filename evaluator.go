@@ -108,7 +108,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
 	//prepare reader and run query
 	var reader LineReader
-	reader.Init(q, "file1")
+	reader.Init(q, "_fmk01")
 	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.fp.Close() }()
 	if q.sortWay == 0 {
 		err = normalQuery(q, &res, &reader)
@@ -145,7 +145,6 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 	}
 	return nil
 }
-
 
 //see if row has distinct value if looking for one
 func evalDistinct(q *QuerySpecs, fromRow *[]interface{}, distinctCheck map[interface{}]bool) bool {
@@ -185,20 +184,17 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	sort.Slice(reader.valPositions, func(i, j int) bool {
 		if reader.valPositions[i].Val == nil && reader.valPositions[j].Val == nil { return false
 		} else if reader.valPositions[i].Val == nil { return false
-		} else if reader.valPositions[j].Val == nil { return true
-		} else {
-			ret := false
-			switch colType {
-				case T_NULL:   fallthrough
-				case T_STRING: ret = reader.valPositions[i].Val.(string)		> reader.valPositions[j].Val.(string)
-				case T_INT:	ret = reader.valPositions[i].Val.(int)		   > reader.valPositions[j].Val.(int)
-				case T_FLOAT:  ret = reader.valPositions[i].Val.(float64)	   > reader.valPositions[j].Val.(float64)
-				case T_DATE:   ret = reader.valPositions[i].Val.(time.Time).After(reader.valPositions[j].Val.(time.Time))
-			}
-			if q.sortWay == 2 { return !ret }
-			return ret
+		} else if reader.valPositions[j].Val == nil { return true }
+		ret := false
+		switch colType {
+			case T_NULL:   fallthrough
+			case T_STRING: ret = reader.valPositions[i].Val.(string)        > reader.valPositions[j].Val.(string)
+			case T_INT:	ret = reader.valPositions[i].Val.(int)              > reader.valPositions[j].Val.(int)
+			case T_FLOAT:  ret = reader.valPositions[i].Val.(float64)       > reader.valPositions[j].Val.(float64)
+			case T_DATE:   ret = reader.valPositions[i].Val.(time.Time).After(reader.valPositions[j].Val.(time.Time))
 		}
-		return false
+		if q.sortWay == 2 { return !ret }
+		return ret
 	})
 
 	//go back and retrieve lines in the right order

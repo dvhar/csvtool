@@ -1,8 +1,10 @@
 //file provides the parseQuery function
+// _fmk0# is file map key designed to avoid collisions with aliases and file names
 package main
 import (
   "regexp"
   "encoding/csv"
+  "path/filepath"
   "os"
   "errors"
   s "strings"
@@ -106,16 +108,16 @@ func getColumnIdx(colNames []string, column string) (int, error) {
 }
 func selectAll(q* QuerySpecs) {
 	q.selectAll = true
-	q.colSpec.NewNames = q.files["file1"].names
-	q.colSpec.NewTypes = q.files["file1"].types
-	q.colSpec.NewWidth = q.files["file1"].width
-	q.colSpec.NewPos = make([]int,q.files["file1"].width)
+	q.colSpec.NewNames = q.files["_fmk01"].names
+	q.colSpec.NewTypes = q.files["_fmk01"].types
+	q.colSpec.NewWidth = q.files["_fmk01"].width
+	q.colSpec.NewPos = make([]int,q.files["_fmk01"].width)
 	for i,_ := range q.colSpec.NewNames { q.colSpec.NewPos[i] = i+1 }
 }
 func newCol(q* QuerySpecs,ii int) {
 	if !q.selectAll {
-		q.colSpec.NewNames = append(q.colSpec.NewNames, q.files["file1"].names[ii])
-		q.colSpec.NewTypes = append(q.colSpec.NewTypes, q.files["file1"].types[ii])
+		q.colSpec.NewNames = append(q.colSpec.NewNames, q.files["_fmk01"].names[ii])
+		q.colSpec.NewTypes = append(q.colSpec.NewTypes, q.files["_fmk01"].types[ii])
 		q.colSpec.NewPos = append(q.colSpec.NewPos, ii+1)
 		q.colSpec.NewWidth++
 	}
@@ -163,20 +165,23 @@ func inferTypes(q *QuerySpecs, k string) error {
 }
 //find files and open them
 func openFiles(q *QuerySpecs) error {
+	extension := regexp.MustCompile(`\.csv$`)
 	q.files = make(map[string]*FileData)
 	fileNum := 1
-	for ; q.Tok().Id != EOS ; {
+	for ; q.Tok().Id != EOS ; q.NextTok() {
 		_,err := os.Stat(q.Tok().Val)
-		//found a file path
-		if err == nil {
+		//open file and add to file map
+		if err == nil && extension.MatchString(q.Tok().Val) {
 			file := &FileData{fname : q.Tok().Val}
-			key := "file" + Sprint(fileNum)
+			filename := filepath.Base(file.fname)
+			key := "_fmk0" + Sprint(fileNum)
 			fileNum++
 			q.files[key] = file
-			if q.NextTok().Id == KW_AS && q.NextTok().Id == WORD { q.files[q.Tok().Val] = file }
+			q.files[filename[:len(filename)-4]] = file
+			if q.NextTok().Id == WORD { q.files[q.Tok().Val] = file }
+			if q.Tok().Id == KW_AS && q.NextTok().Id == WORD { q.files[q.Tok().Val] = file }
 			if inferTypes(q, key) != nil {return err}
 		}
-		q.NextTok()
 	}
 	q.Reset()
 	return nil
@@ -262,7 +267,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 //parse column and file key from quotes and/or dot notation
 func dotQuoteParser(q* QuerySpecs, dot bool) (string,string,error) {
 	var S string
-	key := "file1"
+	key := "_fmk01"
 	switch q.Tok().Id {
 		case WORD: S = q.Tok().Val
 		case SP_SQUOTE: fallthrough
@@ -331,6 +336,10 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	if q.Tok().Id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().Val) }
 	n.tok1 = q.NextTok()
 	q.NextTok()
+	if q.Tok().Id == WORD {
+		n.tok2 = q.Tok()
+		q.NextTok()
+	}
 	if q.Tok().Id == KW_AS {
 		n.tok2 = q.NextTok()
 		q.NextTok()
@@ -376,7 +385,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
 			q.parseCol = COL_GETIDX
 			_,err = columnParser(q)
 			if err != nil { return n,err }
-			q.lastColumn = treeTok{0, q.parseCol, q.files["file1"].types[q.parseCol]}
+			q.lastColumn = treeTok{0, q.parseCol, q.files["_fmk01"].types[q.parseCol]}
 			//see if comparison is normal or between
 			if q.Tok().Id == KW_BETWEEN || q.PeekTok().Id == KW_BETWEEN {
 				n.node1, err = parseBetween(q)
