@@ -22,3 +22,6 @@ current BNF:
 <Rel>        -> relop value | between value and value
 <Order>      -> order by <column> <OMethod> | ε
 <Omethod>    -> asc | ε
+
+
+dot with quotes: maybe use scanner to check if dot follewed by quote but not in quotes

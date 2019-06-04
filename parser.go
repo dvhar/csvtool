@@ -32,6 +32,7 @@ type QuerySpecs struct {
 	lastColumn treeTok
 	tree *Node
 	files map[string]*FileData
+	numfiles int
 	tempVal interface{}
 }
 func (q *QuerySpecs) NextTok() *Token {
@@ -108,10 +109,14 @@ func getColumnIdx(colNames []string, column string) (int, error) {
 }
 func selectAll(q* QuerySpecs) {
 	q.selectAll = true
-	q.colSpec.NewNames = q.files["_fmk01"].names
-	q.colSpec.NewTypes = q.files["_fmk01"].types
-	q.colSpec.NewWidth = q.files["_fmk01"].width
-	q.colSpec.NewPos = make([]int,q.files["_fmk01"].width)
+	q.colSpec.NewNames = make([]string,0)
+	q.colSpec.NewTypes = make([]int,0)
+	for i := 1; i <= q.numfiles; i++ {
+		q.colSpec.NewNames = append(q.colSpec.NewNames, q.files["_fmk0"+Itoa(i)].names...)
+		q.colSpec.NewTypes = append(q.colSpec.NewTypes, q.files["_fmk0"+Itoa(i)].types...)
+		q.colSpec.NewWidth += q.files["_fmk0"+Itoa(i)].width
+	}
+	q.colSpec.NewPos = make([]int,q.colSpec.NewWidth)
 	for i,_ := range q.colSpec.NewNames { q.colSpec.NewPos[i] = i+1 }
 }
 func newCol(q* QuerySpecs,ii int) {
@@ -167,15 +172,15 @@ func inferTypes(q *QuerySpecs, k string) error {
 func openFiles(q *QuerySpecs) error {
 	extension := regexp.MustCompile(`\.csv$`)
 	q.files = make(map[string]*FileData)
-	fileNum := 1
+	q.numfiles = 0
 	for ; q.Tok().Id != EOS ; q.NextTok() {
 		_,err := os.Stat(q.Tok().Val)
 		//open file and add to file map
 		if err == nil && extension.MatchString(q.Tok().Val) {
 			file := &FileData{fname : q.Tok().Val}
 			filename := filepath.Base(file.fname)
-			key := "_fmk0" + Sprint(fileNum)
-			fileNum++
+			q.numfiles++
+			key := "_fmk0" + Sprint(q.numfiles)
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
 			if q.NextTok().Id == WORD { q.files[q.Tok().Val] = file }
