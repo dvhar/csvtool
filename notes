@@ -5,13 +5,6 @@ current BNF:
 <top>        -> top INT | ε
 <Selections> -> <column> <Selections> | * <Selections> | <Special> <Selections> | ε
 <column>     -> column
-
-//maybe want expressions instead of just columns where data type allows
-<column>     = <expr>
-<expr>     -> <A> + <expr> | <A> - <expr> | <A>
-<A>          -> <N> * <A> | <N> / <A> | <N>
-<N>          -> ( <expr> ) | column | value
-
 <Special>    -> distinct <column> | <Function> | <Case>
 <From>       -> from filename <alias>
 <alias>      -> as alias | ε
@@ -24,4 +17,21 @@ current BNF:
 <Omethod>    -> asc | ε
 
 
-dot with quotes: maybe use scanner to check if dot follewed by quote but not in quotes
+
+TODO expressions: <exprAdd> instead of column and value
+
+<exprAdd>  ->  * | <exprMult> + <exprAdd> | <exprMult> - <exprAdd> | <exprMult>
+<exprMult> ->  <exprNeg> * <exprMult> | <exprNeg> / <exprMult> | <exprNeg>
+<exprNeg>  ->  - <exprCase> | <exprCase>
+<exprCase  ->  case <caseWhenExprList> end
+             | case <caseWhenExprList> else <exprAdd> end
+             | case <exprAdd> <casePredicateList> end
+             | case <exprAdd> <casePredicateList> else <exprAdd> end
+             | <value>
+<value> -> column | literal | ( <exprAdd> )
+<caseWhenExprList> -> <caseWhenExpr> <caseWhenExprList> | <caseWhenExpr>
+<caseWhenExpr>     -> when <exprAdd> then <exprAdd>
+<casePredicateList> -> <casePredicate> <casePredicateList> | <casePredicate>
+<casePredicate>     -> when <predicates> then <exprAdd>
+<predicates>        -> <predicateCompare> <logop> <predicates> | <predicateCompare>
+<predicateCompare>  -> <exprAdd> <relop> <exprAdd>
