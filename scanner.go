@@ -33,6 +33,7 @@ const (
 	KW_DISTINCT = KEYWORD|iota
 	KW_ORDHOW =   KEYWORD|iota
 	KW_BETWEEN =  KEYWORD|iota
+	KW_CASE =     KEYWORD|iota
 	KW_LIKE =     RELOP|KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
@@ -50,7 +51,10 @@ const (
 	SP_COMMA =     SPECIAL|iota
 	SP_LPAREN =    SPECIAL|iota
 	SP_RPAREN =    SPECIAL|iota
-	SP_ALL =       SPECIAL|iota
+	SP_STAR =       SPECIAL|iota
+	SP_DIV =       SPECIAL|iota
+	SP_MINUS =     SPECIAL|iota
+	SP_PLUS =      SPECIAL|iota
 	//non-final states
 	STATE_INITAL =    0
 	STATE_SSPECIAL =  1
@@ -79,6 +83,7 @@ var enumMap = map[int]string {
 	KW_DISTINCT :   "KW_DISTINCT",
 	KW_TOP :        "KW_TOP",
 	KW_ORDHOW :     "KW_ORDHOW",
+	KW_CASE :       "KW_CASE",
 	SPECIALBIT :    "SPECIALBIT",
 	SPECIAL :       "SPECIAL",
 	SP_EQ :         "SP_EQ",
@@ -93,7 +98,10 @@ var enumMap = map[int]string {
 	SP_COMMA :      "SP_COMMA",
 	SP_LPAREN :     "SP_LPAREN",
 	SP_RPAREN :     "SP_RPAREN",
-	SP_ALL :        "SP_ALL",
+	SP_STAR :        "SP_STAR",
+	SP_DIV :        "SP_DIV",
+	SP_MINUS :      "SP_MINUS",
+	SP_PLUS :       "SP_PLUS",
 	STATE_INITAL :  "STATE_INITAL",
 	STATE_SSPECIAL :"STATE_SSPECIAL",
 	STATE_DSPECIAL :"STATE_DSPECIAL",
@@ -118,6 +126,7 @@ var keywordMap = map[string]int {
 	"asc" :       KW_ORDHOW,
 	"between" :   KW_BETWEEN,
 	"like" :      KW_LIKE,
+	"case" :      KW_CASE,
 	"not" :       SP_NEGATE,
 }
 var specialMap = map[string]int {
@@ -133,7 +142,10 @@ var specialMap = map[string]int {
 	"," :  SP_COMMA,
 	"(" :  SP_LPAREN,
 	")" :  SP_RPAREN,
-	"*" :  SP_ALL,
+	"*" :  SP_STAR,
+	"/" :  SP_DIV,
+	"-" :  SP_MINUS,
+	"+" :  SP_PLUS,
 }
 var table [NUM_STATES][256]int
 var tabinit bool = false

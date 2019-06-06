@@ -61,6 +61,11 @@ const (
 	N_COMPARE = iota
 	N_REL = iota
 	N_ORDER = iota
+	N_COLITEM = iota
+    N_EXPRADD = iota
+    N_EXPRMULT = iota
+    N_EXPRNEG = iota
+    N_EXPRCASE = iota
 )
 type FileData struct {
 	fname string
@@ -245,7 +250,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
 	switch q.Tok().Id {
-		case SP_ALL:
+		case SP_STAR:
 			selectAll(q)
 			q.NextTok()
 			return parseSelections(q)
