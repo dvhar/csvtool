@@ -18,35 +18,35 @@ func wTraverse(q *QuerySpecs, n *Node, r *[]interface{}) (bool, error) {
 	if n == nil { return false,nil }
 
 	switch n.label {
-		case N_CONDITIONS:
-			match, err := wTraverse(q,n.node1,r)
-			if err != nil { return false, err }
-			match2, err := wTraverse(q,n.node2,r)
-			if err != nil { return false, err }
-			if q.tempVal == KW_AND {
-				match = match && match2
-			} else if q.tempVal == KW_OR {
-				match = match || match2
-			}
-			if n.tok1 == SP_NEGATE { match = !match }
-			return match, err
+	case N_CONDITIONS:
+		match, err := wTraverse(q,n.node1,r)
+		if err != nil { return false, err }
+		match2, err := wTraverse(q,n.node2,r)
+		if err != nil { return false, err }
+		if q.tempVal == KW_AND {
+			match = match && match2
+		} else if q.tempVal == KW_OR {
+			match = match || match2
+		}
+		if n.tok1 == SP_NEGATE { match = !match }
+		return match, err
 
-		case N_COMPARE:
-			return execRelop(n.tok1.(treeTok), n.node1, r)
+	case N_COMPARE:
+		return execRelop(n.tok1.(treeTok), n.node1, r)
 
-		case N_MORE:
-			if n.tok1 == nil { q.tempVal = 0; return true,nil }
-			match2,err := wTraverse(q,n.node1,r)
-			q.tempVal = n.tok1
-			return match2, err
+	case N_MORE:
+		if n.tok1 == nil { q.tempVal = 0; return true,nil }
+		match2,err := wTraverse(q,n.node1,r)
+		q.tempVal = n.tok1
+		return match2, err
 
-		default:
-			_,err := wTraverse(q,n.node1,r)
-			if err != nil { return false, err }
-			_,err = wTraverse(q,n.node2,r)
-			if err != nil { return false, err }
-			_,err = wTraverse(q,n.node3,r)
-			if err != nil { return false, err }
+	default:
+		_,err := wTraverse(q,n.node1,r)
+		if err != nil { return false, err }
+		_,err = wTraverse(q,n.node2,r)
+		if err != nil { return false, err }
+		_,err = wTraverse(q,n.node3,r)
+		if err != nil { return false, err }
 	}
 	return false,nil
 }
@@ -63,34 +63,34 @@ func execRelop(c treeTok, n *Node, r *[]interface{}) (bool, error) {
 	//if neither comparison value or column are null
 	if compVal.Val != nil && colVal != nil {
 		switch relop.Id {
-			case KW_LIKE:  match = compVal.Val.(*regexp.Regexp).MatchString(Sprint(colVal))
-			case SP_NOEQ: negate ^= 1
-					   fallthrough
-			case SP_EQ :
-				switch compVal.Dtype {
-					case T_DATE:   match = compVal.Val.(time.Time).Equal(colVal.(time.Time))
-					default:	   match = compVal.Val == colVal
-				}
-			case SP_LESSEQ: negate ^= 1
-					   fallthrough
-			case SP_GREAT :
-				switch compVal.Dtype {
-					case T_NULL:   fallthrough
-					case T_STRING: match = colVal.(string) > compVal.Val.(string)
-					case T_INT:	match = colVal.(int) > compVal.Val.(int)
-					case T_FLOAT:  match = colVal.(float64) > compVal.Val.(float64)
-					case T_DATE:   match = colVal.(time.Time).After(compVal.Val.(time.Time))
-				}
-			case SP_GREATEQ : negate ^= 1
-					   fallthrough
-			case SP_LESS:
-				switch compVal.Dtype {
-					case T_NULL:   fallthrough
-					case T_STRING: match = colVal.(string) < compVal.Val.(string)
-					case T_INT:	match = colVal.(int) < compVal.Val.(int)
-					case T_FLOAT:  match = colVal.(float64) < compVal.Val.(float64)
-					case T_DATE:   match = colVal.(time.Time).Before(compVal.Val.(time.Time))
-				}
+		case KW_LIKE:  match = compVal.Val.(*regexp.Regexp).MatchString(Sprint(colVal))
+		case SP_NOEQ: negate ^= 1
+				   fallthrough
+		case SP_EQ :
+			switch compVal.Dtype {
+				case T_DATE:   match = compVal.Val.(time.Time).Equal(colVal.(time.Time))
+				default:	   match = compVal.Val == colVal
+			}
+		case SP_LESSEQ: negate ^= 1
+				   fallthrough
+		case SP_GREAT :
+			switch compVal.Dtype {
+				case T_NULL:   fallthrough
+				case T_STRING: match = colVal.(string) > compVal.Val.(string)
+				case T_INT:	match = colVal.(int) > compVal.Val.(int)
+				case T_FLOAT:  match = colVal.(float64) > compVal.Val.(float64)
+				case T_DATE:   match = colVal.(time.Time).After(compVal.Val.(time.Time))
+			}
+		case SP_GREATEQ : negate ^= 1
+				   fallthrough
+		case SP_LESS:
+			switch compVal.Dtype {
+				case T_NULL:   fallthrough
+				case T_STRING: match = colVal.(string) < compVal.Val.(string)
+				case T_INT:	match = colVal.(int) < compVal.Val.(int)
+				case T_FLOAT:  match = colVal.(float64) < compVal.Val.(float64)
+				case T_DATE:   match = colVal.(time.Time).Before(compVal.Val.(time.Time))
+			}
 		}
 
 	//if comparison value is null

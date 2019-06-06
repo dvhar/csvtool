@@ -34,6 +34,9 @@ const (
 	KW_ORDHOW =   KEYWORD|iota
 	KW_BETWEEN =  KEYWORD|iota
 	KW_CASE =     KEYWORD|iota
+	KW_WHEN =     KEYWORD|iota
+	KW_ELSE =     KEYWORD|iota
+	KW_END =      KEYWORD|iota
 	KW_LIKE =     RELOP|KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
@@ -84,6 +87,9 @@ var enumMap = map[int]string {
 	KW_TOP :        "KW_TOP",
 	KW_ORDHOW :     "KW_ORDHOW",
 	KW_CASE :       "KW_CASE",
+	KW_WHEN :       "KW_WHEN",
+	KW_ELSE :       "KW_ELSE",
+	KW_END :        "KW_END",
 	SPECIALBIT :    "SPECIALBIT",
 	SPECIAL :       "SPECIAL",
 	SP_EQ :         "SP_EQ",
@@ -98,7 +104,7 @@ var enumMap = map[int]string {
 	SP_COMMA :      "SP_COMMA",
 	SP_LPAREN :     "SP_LPAREN",
 	SP_RPAREN :     "SP_RPAREN",
-	SP_STAR :        "SP_STAR",
+	SP_STAR :       "SP_STAR",
 	SP_DIV :        "SP_DIV",
 	SP_MINUS :      "SP_MINUS",
 	SP_PLUS :       "SP_PLUS",
@@ -127,6 +133,9 @@ var keywordMap = map[string]int {
 	"between" :   KW_BETWEEN,
 	"like" :      KW_LIKE,
 	"case" :      KW_CASE,
+	"when" :      KW_WHEN,
+	"else" :      KW_ELSE,
+	"end" :       KW_END,
 	"not" :       SP_NEGATE,
 }
 var specialMap = map[string]int {

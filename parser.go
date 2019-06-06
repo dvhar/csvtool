@@ -250,26 +250,26 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
 	switch q.Tok().Id {
-		case SP_STAR:
-			selectAll(q)
-			q.NextTok()
-			return parseSelections(q)
-		//non-column words in select section
-		case KW_DISTINCT:
-			return parseSpecial(q)
-		//column
-		case WORD: fallthrough
-		case SP_SQUOTE: fallthrough
-		case SP_DQUOTE:
-			q.parseCol = COL_ADD
-			n.tok1,err = columnParser(q)
-			if err != nil { return n,err }
-			n.tok2 = countSelected
-			countSelected++
-			n.node1,err = parseSelections(q)
-			return n,err
-		case KW_FROM:
-			if q.colSpec.NewWidth == 0 { selectAll(q) }
+	case SP_STAR:
+		selectAll(q)
+		q.NextTok()
+		return parseSelections(q)
+	//non-column words in select section
+	case KW_DISTINCT:
+		return parseSpecial(q)
+	//column
+	case WORD: fallthrough
+	case SP_SQUOTE: fallthrough
+	case SP_DQUOTE:
+		q.parseCol = COL_ADD
+		n.tok1,err = columnParser(q)
+		if err != nil { return n,err }
+		n.tok2 = countSelected
+		countSelected++
+		n.node1,err = parseSelections(q)
+		return n,err
+	case KW_FROM:
+		if q.colSpec.NewWidth == 0 { selectAll(q) }
 	}
 	return n,nil
 }
@@ -279,12 +279,12 @@ func dotQuoteParser(q* QuerySpecs, dot bool) (string,string,error) {
 	var S string
 	key := "_fmk01"
 	switch q.Tok().Id {
-		case WORD: S = q.Tok().Val
-		case SP_SQUOTE: fallthrough
-		case SP_DQUOTE:
-			quote := q.Tok().Id
-			for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
-			if q.Tok().Id != quote { return "","",errors.New("Quote was not terminated") }
+	case WORD: S = q.Tok().Val
+	case SP_SQUOTE: fallthrough
+	case SP_DQUOTE:
+		quote := q.Tok().Id
+		for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
+		if q.Tok().Id != quote { return "","",errors.New("Quote was not terminated") }
 	}
 	split := s.SplitAfterN(S, ".", 2)
 	//see if doing dot notation
@@ -323,18 +323,18 @@ func parseSpecial(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SPECIAL}
 	var err error
 	switch q.Tok().Id {
-		case KW_DISTINCT:
-			q.NextTok()
-			q.parseCol = COL_GETIDX
-			n.tok1,err = columnParser(q)
-			if err != nil { return n,err }
-			n.tok2 = countSelected
-			countSelected++
-			q.distinctIdx = q.parseCol
-			if !q.selectAll { newCol(q, q.parseCol) }
-			n.node1,err = parseSelections(q)
-			n.label = N_SELECTIONS
-			return n,err
+	case KW_DISTINCT:
+		q.NextTok()
+		q.parseCol = COL_GETIDX
+		n.tok1,err = columnParser(q)
+		if err != nil { return n,err }
+		n.tok2 = countSelected
+		countSelected++
+		q.distinctIdx = q.parseCol
+		if !q.selectAll { newCol(q, q.parseCol) }
+		n.node1,err = parseSelections(q)
+		n.label = N_SELECTIONS
+		return n,err
 	}
 	return n,errors.New("Unexpected token in 'select' section:"+q.Tok().Val)
 }
@@ -378,33 +378,33 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
 		n.tok1 = SP_NEGATE
 	}
 	switch q.Tok().Id {
-		case SP_LPAREN:
-			tok := q.Tok()
-			q.NextTok();
-			n.node1,err = parseConditions(q)
-			if err != nil { return n,err }
-			tok = q.Tok()
-			if tok.Id != SP_RPAREN { return n,errors.New("No closing parentheses. Found: "+tok.Val) }
-			q.NextTok()
-			n.node2,err = preparseMore(q)
-			return n,err
-		case WORD: fallthrough
-		case SP_DQUOTE: fallthrough
-		case SP_SQUOTE:
-			//get column index before next step
-			q.parseCol = COL_GETIDX
-			_,err = columnParser(q)
-			if err != nil { return n,err }
-			q.lastColumn = treeTok{0, q.parseCol, q.files["_fmk01"].types[q.parseCol]}
-			//see if comparison is normal or between
-			if q.Tok().Id == KW_BETWEEN || q.PeekTok().Id == KW_BETWEEN {
-				n.node1, err = parseBetween(q)
-			} else {
-				n.node1, err = parseCompare(q)
-			}
-			if err != nil { return n,err }
-			n.node2,err = preparseMore(q)
-			return n,err
+	case SP_LPAREN:
+		tok := q.Tok()
+		q.NextTok();
+		n.node1,err = parseConditions(q)
+		if err != nil { return n,err }
+		tok = q.Tok()
+		if tok.Id != SP_RPAREN { return n,errors.New("No closing parentheses. Found: "+tok.Val) }
+		q.NextTok()
+		n.node2,err = preparseMore(q)
+		return n,err
+	case WORD: fallthrough
+	case SP_DQUOTE: fallthrough
+	case SP_SQUOTE:
+		//get column index before next step
+		q.parseCol = COL_GETIDX
+		_,err = columnParser(q)
+		if err != nil { return n,err }
+		q.lastColumn = treeTok{0, q.parseCol, q.files["_fmk01"].types[q.parseCol]}
+		//see if comparison is normal or between
+		if q.Tok().Id == KW_BETWEEN || q.PeekTok().Id == KW_BETWEEN {
+			n.node1, err = parseBetween(q)
+		} else {
+			n.node1, err = parseCompare(q)
+		}
+		if err != nil { return n,err }
+		n.node2,err = preparseMore(q)
+		return n,err
 	}
 	return n,errors.New("Unexpected token in 'where' section: "+q.Tok().Val)
 }
