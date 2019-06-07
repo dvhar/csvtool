@@ -115,7 +115,7 @@ var enumMap = map[int]string {
 	STATE_WORD :    "STATE_WORD",
 }
 //characters of special tokens
-var specials = []int{ '*','=','!','<','>','\'','"','(',')',',' }
+var specials = []int{ '*','=','!','<','>','\'','"','(',')',',','+' }
 //non-alphanumeric characters of words
 var others = []int{ '/','\\',':','-','_','.','%','[',']','^' }
 var keywordMap = map[string]int {
@@ -137,6 +137,8 @@ var keywordMap = map[string]int {
 	"else" :      KW_ELSE,
 	"end" :       KW_END,
 	"not" :       SP_NEGATE,
+	"-" :         SP_MINUS,
+	"/" :         SP_DIV,
 }
 var specialMap = map[string]int {
 	"=" :  SP_EQ,
@@ -152,8 +154,6 @@ var specialMap = map[string]int {
 	"(" :  SP_LPAREN,
 	")" :  SP_RPAREN,
 	"*" :  SP_STAR,
-	"/" :  SP_DIV,
-	"-" :  SP_MINUS,
 	"+" :  SP_PLUS,
 }
 var table [NUM_STATES][256]int
@@ -202,7 +202,7 @@ func initable(){
 	for ii:='A'; ii<='Z'; ii++ { table[STATE_MBSPECIAL][ii] = SPECIAL }
 	for ii:='0'; ii<='9'; ii++ { table[STATE_MBSPECIAL][ii] = SPECIAL }
 	for ii:=0; ii<len(others); ii++ { table[STATE_MBSPECIAL][others[ii]] = SPECIAL }
-		//next state from word
+	//next state from word
 	for ii:=0; ii<len(specials); ii++ { table[STATE_WORD][specials[ii]] = WORD }
 	for ii:=0; ii<len(others); ii++ { table[STATE_WORD][others[ii]] = STATE_WORD }
 	table[STATE_WORD][' '] =  WORD
@@ -247,7 +247,7 @@ func scanner(s* StringLookahead) Token {
 		if (nextState & ERROR) != 0 {
 		//end of string
 			if state == 255 { return Token { Id: 255, Val: "END", Line: lineNo } }
-			Printf("error peek: %d state: %d nextstates: %d nextchar: %c\n",s.peek(),state, nextState, nextchar)
+			Printf("error peek: %d state: %d nextstates: %d nextchar: %c S: %s\n",s.peek(),state, nextState, nextchar,S)
 			return Token{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
 		}
 

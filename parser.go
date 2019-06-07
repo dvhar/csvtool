@@ -208,6 +208,13 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	err = openFiles(q)
 	if err != nil { return n,err }
+
+	//new expression parser test
+	n.node1,err =  parse2Select(q)
+	if err != nil { return n,err }
+	treePrint(n.node1,0)
+	q.Reset()
+
 	n.node1,err =  parseSelect(q)
 	if err != nil { return n,err }
 	n.node2, err = parseFrom(q)
