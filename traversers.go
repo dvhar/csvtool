@@ -152,7 +152,9 @@ func treePrint(n *Node, i int){
 	for j:=0;j<i;j++ { Print("  ") }
 	Println(treeMap[n.label])
 	for j:=0;j<i;j++ { Print("  ") }
-	Println(n.tok1, n.tok2, n.tok3)
+	Println("toks:",n.tok1, n.tok2, n.tok3)
+	//for j:=0;j<i;j++ { Print("  ") }
+	//Println("nodes:",n.node1, n.node2, n.node3)
 	treePrint(n.node1,i+1)
 	treePrint(n.node2,i+1)
 	treePrint(n.node3,i+1)
@@ -177,6 +179,11 @@ var treeMap = map[int]string {
     N_COLITEM:    "N_COLITEM",
     N_EXPRADD:    "N_EXPRADD",
     N_EXPRMULT:   "N_EXPRMULT",
-    N_EXPRNEG:   "N_EXPRNEG",
+    N_EXPRNEG:    "N_EXPRNEG",
+	N_CPREDLIST:  "N_CPREDLIST",
+	N_CPRED:      "N_CPRED",
+	N_PREDICATES: "N_PREDICATES",
+	N_PREDCOMP:   "N_PREDCOMP",
+	N_CWEXPRLIST: "N_CWEXPRLIST",
     N_EXPRCASE:   "N_EXPRCASE",
 }
