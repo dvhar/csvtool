@@ -1,5 +1,4 @@
 //new expression parsing - under construction
-package main
 /*
 <Selections>        -> * <Selections> | <columnItem> <Selections> | ε
 <columnItem>        -> <exprAdd> | <exprAdd> as <alias> | <alias> = <exprAdd>
@@ -20,6 +19,10 @@ package main
 <predicateCompare>  -> <exprAdd> <relop> <exprAdd> | ( predicates )
 */
 
+package main
+import (
+	"errors"
+)
 //node1 is expression
 //node2 is next selection
 //tok1 is selection number
@@ -163,5 +166,15 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		if q.Tok().Id != SP_RPAREN { return n,errors.New("Expected closing parenthesis. Found "+q.Tok().Val) }
 		q.NextTok()
 	}
+	return n, err
+}
+func parseCasePredicateList(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_CPREDLIST}
+	var err error
+	return n, err
+}
+func parseCaseWhenExprList(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_CWEXPRLIST}
+	var err error
 	return n, err
 }

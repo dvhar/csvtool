@@ -66,6 +66,8 @@ const (
     N_EXPRMULT = iota
     N_EXPRNEG = iota
     N_EXPRCASE = iota
+	N_CPREDLIST = iota
+	N_CWEXPRLIST = iota
 )
 type FileData struct {
 	fname string
@@ -258,9 +260,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case KW_DISTINCT:
 		return parseSpecial(q)
 	//column
-	case WORD: fallthrough
-	case SP_SQUOTE: fallthrough
-	case SP_DQUOTE:
+	case WORD:
 		q.parseCol = COL_ADD
 		n.tok1,err = columnParser(q)
 		if err != nil { return n,err }
@@ -275,17 +275,10 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 }
 
 //parse column and file key from quotes and/or dot notation
-func dotQuoteParser(q* QuerySpecs, dot bool) (string,string,error) {
+func dotParser(q* QuerySpecs, dot bool) (string,string,error) {
 	var S string
 	key := "_fmk01"
-	switch q.Tok().Id {
-	case WORD: S = q.Tok().Val
-	case SP_SQUOTE: fallthrough
-	case SP_DQUOTE:
-		quote := q.Tok().Id
-		for ; q.NextTok().Id != quote && q.Tok().Id != EOS; { S += q.Tok().Val }
-		if q.Tok().Id != quote { return "","",errors.New("Quote was not terminated") }
-	}
+	S = q.Tok().Val
 	split := s.SplitAfterN(S, ".", 2)
 	//see if doing dot notation
 	if dot && len(split) > 1 {
@@ -301,7 +294,7 @@ func dotQuoteParser(q* QuerySpecs, dot bool) (string,string,error) {
 //returns column tok
 func columnParser(q* QuerySpecs) (treeTok,error) {
 	var ii int
-	key, col, err := dotQuoteParser(q, true)
+	key, col, err := dotParser(q, true)
 	if err != nil { return treeTok{},err }
 	//if it's a number
 	ii, err = Atoi(col)
@@ -388,9 +381,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
 		q.NextTok()
 		n.node2,err = preparseMore(q)
 		return n,err
-	case WORD: fallthrough
-	case SP_DQUOTE: fallthrough
-	case SP_SQUOTE:
+	case WORD:
 		//get column index before next step
 		q.parseCol = COL_GETIDX
 		_,err = columnParser(q)
@@ -504,10 +495,8 @@ func parseBetween(q* QuerySpecs) (*Node,error) {
 //comparison values in where section
 func comparisonValue(q* QuerySpecs) (treeTok,error) {
 	var tok treeTok
-	if q.Tok().Id != SP_SQUOTE && q.Tok().Id != SP_DQUOTE && q.Tok().Id != WORD {
-		return tok, errors.New("Expected a comparision value but got "+q.Tok().Val)
-	}
-	_, val, err := dotQuoteParser(q, false)
+	if q.Tok().Id != WORD { return tok, errors.New("Expected a comparision value but got "+q.Tok().Val) }
+	_, val, err := dotParser(q, false)
 	if err != nil { return tok, err }
 	tok = treeTok{0, val, q.lastColumn.Dtype}
 	//if relop is 'like', compile a regex

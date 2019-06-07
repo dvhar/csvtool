@@ -322,6 +322,15 @@ func scanTokens(q *QuerySpecs) error {
 	input := &StringLookahead{Str:q.queryString}
 	for {
 		t := scanner(input)
+		//turn tokens inside quotes into single token
+		if t.Id == SP_SQUOTE || t.Id == SP_DQUOTE {
+			quote := t.Id
+			S := ""
+			t = scanner(input)
+			for ; t.Id != quote && t.Id != EOS ; t = scanner(input) { S += t.Val }
+			if t.Id != quote { return errors.New("Quote was not terminated") }
+			t = Token{WORD,S,t.Line}
+		}
 		q.tokArray = append(q.tokArray, t)
 		if t.Id == ERROR { return errors.New("scanner error: "+t.Val) }
 		if t.Id == EOS { break }
