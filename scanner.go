@@ -1,9 +1,10 @@
 package main
 import (
-. "fmt"
-  "errors"
-. "strconv"
-"strings"
+	"regexp"
+	. "fmt"
+	"errors"
+	. "strconv"
+	"strings"
 )
 
 const (
@@ -337,7 +338,7 @@ func scanTokens(q *QuerySpecs) error {
 			if t.id != quote { return errors.New("Quote was not terminated") }
 			t = Token{WORD,S,t.line,true}
 		}
-		if cIntRe.MatchString(t.val) { q.intColumn = false }
+		if cIntRe.MatchString(t.val) && !t.quoted { q.intColumn = false }
 		q.tokArray = append(q.tokArray, t)
 		if t.id == ERROR { return errors.New("scanner error: "+t.val) }
 		if t.id == EOS { break }

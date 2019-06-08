@@ -72,6 +72,7 @@ const (
 	N_CWEXPRLIST = iota
 	N_PREDICATES = iota
 	N_PREDCOMP = iota
+	N_VALUE = iota
 )
 type FileData struct {
 	fname string

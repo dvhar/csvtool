@@ -21,21 +21,23 @@
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
 
-ints: number when c2 present, column when '2' present, number when both present, column when neither present
+ints: column unless c2 present, overridden by c or n before select
 */
 
 
 package main
 import (
 	"errors"
+	"regexp"
+	. "strconv"
 	. "fmt"
 )
 //node1 is selections
 func parse2Select(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
-	if q.Tok().Val == "c" { q.intColumn = true; q.NextTok() }
-	if q.Tok().Val == "n" { q.intColumn = false; q.NextTok() }
+	if q.Tok().val == "c" { q.intColumn = true; q.NextTok() }
+	if q.Tok().val == "n" { q.intColumn = false; q.NextTok() }
 	if q.Tok().id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)
@@ -195,6 +197,33 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis. Found "+q.Tok().val) }
 		q.NextTok()
 	}
+	return n, err
+}
+
+//if implement dot notation, put parser here
+//tok1 is value
+//tok2 is [0,1] for literal/col
+func parseValue(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_VALUE}
+	var err error
+	var ncol bool
+	cIntRe := regexp.MustCompile(`^c\d+$`)
+	tok := q.Tok()
+	//given a column number
+	if num,er := Atoi(tok.val); er == nil && q.intColumn {
+		n.tok1 = num-1
+		n.tok2 = 1
+		ncol = true
+	} else if cIntRe.MatchString(tok.val) {
+		n.tok1,_ = Atoi(tok.val[1:])
+		n.tok1 = n.tok1.(int) - 1
+		n.tok2 = 1
+		ncol = true
+	}
+	if ncol &&  n.tok1.(int) > q.files["_fmk01"].width {
+		return n,errors.New("Column number too big: "+Sprint(n.tok1)+". Max is "+Itoa(q.files["_fmk01"].width)) }
+	if n.tok1.(int) < 1 { return n,errors.New("Column number too small: "+Sprint(n.tok1)) }
+	//TODO: given a column name
 	return n, err
 }
 
