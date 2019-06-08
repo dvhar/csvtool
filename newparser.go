@@ -210,6 +210,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 //if implement dot notation, put parser here
 //tok1 is [value, column index]
 //tok2 is [0,1] for literal/col
+//tok3 is data type
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
@@ -232,12 +233,14 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		err = nil
 		n.tok1 = tok.val
 		n.tok2 = 0
+		n.tok3 = getNarrowestType(tok.val)
 	}
 	q.NextTok()
 	//check column number bounds
 	if n.tok2.(int)==1 && n.tok1.(int) > fdata.width {
 		return n,errors.New("Column number too big: "+Sprint(n.tok1.(int)+1)+". Max is "+Itoa(fdata.width)) }
 	if n.tok2.(int)==1 && n.tok1.(int) < 0 { return n,errors.New("Column number too small: "+Sprint(n.tok1)) }
+	if n.tok2.(int)==1 { n.tok3 = fdata.types[n.tok1.(int)] }
 	return n, err
 }
 
@@ -282,6 +285,7 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is [relop, paren] for comparison or more predicates
+//tok2 is negation
 //node1 is [expr, predicates]
 //node2 is second expr
 //node3 is third expr for betweens
@@ -289,7 +293,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_PREDCOMP}
 	var err error
 	var negate int
-	var compare bool
+	var expression bool
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 	if q.Tok().id == SP_LPAREN {
 		n.tok1 = SP_LPAREN
@@ -301,13 +305,14 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		//if failed, reparse as expression
 		if err != nil {
 			q.tokIdx = pos
-			compare = true
+			expression = true
 		}
 	}
-	if q.Tok().id == WORD || compare {
+	if q.Tok().id == WORD || expression {
 		n.node1, err = parseExprAdd(q)
 		if err != nil { return n,err }
 		if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
+		if negate == 1 { n.tok2 = SP_NEGATE }
 		if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
 		n.tok1 = q.Tok()
 		q.NextTok()

@@ -140,9 +140,31 @@ func newCol(q* QuerySpecs,ii int) {
 	}
 }
 
-func inferTypes(q *QuerySpecs, k string) error {
+//infer type of single string value
+var LeadingZeroString *regexp.Regexp
+func getNarrowestType(value string) int {
+	entry := s.TrimSpace(value)
+	ret := 0
+	if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
+	  ret = max(T_NULL, ret)
+	} else if LeadingZeroString.MatchString(entry) {
+	  ret = T_STRING
+	} else if _, err := Atoi(entry); err == nil {
+	  ret = max(T_INT, ret)
+	} else if _, err := ParseFloat(entry,64); err == nil {
+	  ret = max(T_FLOAT, ret)
+	} else if _,err := d.ParseAny(entry); err == nil{
+	  ret = max(T_DATE, ret)
+	} else {
+	  ret = T_STRING
+	}
+	return ret
+}
+//infer types of all infile columns
+func inferTypes(q *QuerySpecs, f string) error {
+	LeadingZeroString = regexp.MustCompile(`^0\d+$`)
 	//open file
-	fp,err := os.Open(q.files[k].fname)
+	fp,err := os.Open(q.files[f].fname)
 	if err != nil { return errors.New("problem opening input file") }
 	defer func(){ fp.Seek(0,0); fp.Close() }()
 	cread := csv.NewReader(fp)
@@ -150,33 +172,15 @@ func inferTypes(q *QuerySpecs, k string) error {
 	if err != nil { return errors.New("problem reading input file") }
 	//get col names and initialize blank types
 	for i,entry := range line {
-		q.files[k].names = append(q.files[k].names, entry)
-		q.files[k].types = append(q.files[k].types, 0)
-		q.files[k].width = i+1
+		q.files[f].names = append(q.files[f].names, entry)
+		q.files[f].types = append(q.files[f].types, 0)
+		q.files[f].width = i+1
 	}
-	//regex catches string that would otherwise get typed as int
-	LeadingZeroString := regexp.MustCompile(`^0\d+$`)
-
 	//get samples and infer types from them
 	for j:=0;j<10000;j++ {
 		line, err := cread.Read()
 		if err != nil { break }
-		for i,cell := range line {
-			entry := s.TrimSpace(cell)
-			if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
-			  q.files[k].types[i] = max(T_NULL, q.files[k].types[i])
-			} else if LeadingZeroString.MatchString(entry) {
-			  q.files[k].types[i] = T_STRING
-			} else if _, err := Atoi(entry); err == nil {
-			  q.files[k].types[i] = max(T_INT, q.files[k].types[i])
-			} else if _, err := ParseFloat(entry,64); err == nil {
-			  q.files[k].types[i] = max(T_FLOAT, q.files[k].types[i])
-			} else if _,err := d.ParseAny(entry); err == nil{
-			  q.files[k].types[i] = max(T_DATE, q.files[k].types[i])
-			} else {
-			  q.files[k].types[i] = T_STRING
-			}
-		}
+		for i,cell := range line { q.files[f].types[i] = getNarrowestType(cell) }
 	}
 	return  err
 }
