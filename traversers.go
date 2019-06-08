@@ -32,7 +32,7 @@ func wTraverse(q *QuerySpecs, n *Node, r *[]interface{}) (bool, error) {
 		return match, err
 
 	case N_COMPARE:
-		return execRelop(n.tok1.(treeTok), n.node1, r)
+		return execRelop(n.tok1.(TreeTok), n.node1, r)
 
 	case N_MORE:
 		if n.tok1 == nil { q.tempVal = 0; return true,nil }
@@ -52,58 +52,58 @@ func wTraverse(q *QuerySpecs, n *Node, r *[]interface{}) (bool, error) {
 }
 
 //each comparison
-func execRelop(c treeTok, n *Node, r *[]interface{}) (bool, error) {
+func execRelop(c TreeTok, n *Node, r *[]interface{}) (bool, error) {
 	match := false
-	colVal := (*r)[c.Val.(int)]
-	relop := n.tok2.(treeTok)
-	compVal := n.tok3.(treeTok)
+	colVal := (*r)[c.val.(int)]
+	relop := n.tok2.(TreeTok)
+	compVal := n.tok3.(TreeTok)
 	negate := 0
 	if n.tok1 == SP_NEGATE { negate ^= 1 }
 
 	//if neither comparison value or column are null
-	if compVal.Val != nil && colVal != nil {
-		switch relop.Id {
-		case KW_LIKE:  match = compVal.Val.(*regexp.Regexp).MatchString(Sprint(colVal))
+	if compVal.val != nil && colVal != nil {
+		switch relop.id {
+		case KW_LIKE:  match = compVal.val.(*regexp.Regexp).MatchString(Sprint(colVal))
 		case SP_NOEQ: negate ^= 1
 				   fallthrough
 		case SP_EQ :
-			switch compVal.Dtype {
-				case T_DATE:   match = compVal.Val.(time.Time).Equal(colVal.(time.Time))
-				default:	   match = compVal.Val == colVal
+			switch compVal.dtype {
+				case T_DATE:   match = compVal.val.(time.Time).Equal(colVal.(time.Time))
+				default:	   match = compVal.val == colVal
 			}
 		case SP_LESSEQ: negate ^= 1
 				   fallthrough
 		case SP_GREAT :
-			switch compVal.Dtype {
+			switch compVal.dtype {
 				case T_NULL:   fallthrough
-				case T_STRING: match = colVal.(string) > compVal.Val.(string)
-				case T_INT:	match = colVal.(int) > compVal.Val.(int)
-				case T_FLOAT:  match = colVal.(float64) > compVal.Val.(float64)
-				case T_DATE:   match = colVal.(time.Time).After(compVal.Val.(time.Time))
+				case T_STRING: match = colVal.(string) > compVal.val.(string)
+				case T_INT:	match = colVal.(int) > compVal.val.(int)
+				case T_FLOAT:  match = colVal.(float64) > compVal.val.(float64)
+				case T_DATE:   match = colVal.(time.Time).After(compVal.val.(time.Time))
 			}
 		case SP_GREATEQ : negate ^= 1
 				   fallthrough
 		case SP_LESS:
-			switch compVal.Dtype {
+			switch compVal.dtype {
 				case T_NULL:   fallthrough
-				case T_STRING: match = colVal.(string) < compVal.Val.(string)
-				case T_INT:	match = colVal.(int) < compVal.Val.(int)
-				case T_FLOAT:  match = colVal.(float64) < compVal.Val.(float64)
-				case T_DATE:   match = colVal.(time.Time).Before(compVal.Val.(time.Time))
+				case T_STRING: match = colVal.(string) < compVal.val.(string)
+				case T_INT:	match = colVal.(int) < compVal.val.(int)
+				case T_FLOAT:  match = colVal.(float64) < compVal.val.(float64)
+				case T_DATE:   match = colVal.(time.Time).Before(compVal.val.(time.Time))
 			}
 		}
 
 	//if comparison value is null
-	} else if compVal.Val == nil {
-		switch relop.Id {
+	} else if compVal.val == nil {
+		switch relop.id {
 			case SP_NOEQ: negate ^= 1
 					   fallthrough
 			case SP_EQ : match = colVal == nil
-			default  : return false, errors.New("Invalid operation with null: "+relop.Val.(string)+". Valid operators: = != <>")
+			default  : return false, errors.New("Invalid operation with null: "+relop.val.(string)+". Valid operators: = != <>")
 		}
 	//if only column is null
-	} else if compVal.Val != nil && colVal == nil  {
-		switch relop.Id {
+	} else if compVal.val != nil && colVal == nil  {
+		switch relop.id {
 			case SP_NOEQ: negate ^= 1
 					   fallthrough
 			default: match = false
@@ -141,7 +141,7 @@ func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]in
 		if q.save { saver <- saveData{Type : CH_ROW, Row : selected} ; <-savedLine}
 		return
 	} else {
-		(*selected)[n.tok2.(int)] = (*fromRow)[n.tok1.(treeTok).Val.(int)]
+		(*selected)[n.tok2.(int)] = (*fromRow)[n.tok1.(TreeTok).val.(int)]
 	}
 	execSelections(q,n.node1,res,fromRow,selected)
 }

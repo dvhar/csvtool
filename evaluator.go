@@ -33,7 +33,7 @@ type LineReader struct {
 }
 type ValPos struct {
 	pos int64
-	Val interface{}
+	val interface{}
 }
 func (l*LineReader) SavePos(colNo int) {
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, l.results[colNo]})
@@ -182,16 +182,16 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	messager <- "Sorting Rows..."
 	colType := reader.types[q.sortCol]
 	sort.Slice(reader.valPositions, func(i, j int) bool {
-		if reader.valPositions[i].Val == nil && reader.valPositions[j].Val == nil { return false
-		} else if reader.valPositions[i].Val == nil { return false
-		} else if reader.valPositions[j].Val == nil { return true }
+		if reader.valPositions[i].val == nil && reader.valPositions[j].val == nil { return false
+		} else if reader.valPositions[i].val == nil { return false
+		} else if reader.valPositions[j].val == nil { return true }
 		ret := false
 		switch colType {
 			case T_NULL:   fallthrough
-			case T_STRING: ret = reader.valPositions[i].Val.(string)        > reader.valPositions[j].Val.(string)
-			case T_INT:	ret = reader.valPositions[i].Val.(int)              > reader.valPositions[j].Val.(int)
-			case T_FLOAT:  ret = reader.valPositions[i].Val.(float64)       > reader.valPositions[j].Val.(float64)
-			case T_DATE:   ret = reader.valPositions[i].Val.(time.Time).After(reader.valPositions[j].Val.(time.Time))
+			case T_STRING: ret = reader.valPositions[i].val.(string)        > reader.valPositions[j].val.(string)
+			case T_INT:	ret = reader.valPositions[i].val.(int)              > reader.valPositions[j].val.(int)
+			case T_FLOAT:  ret = reader.valPositions[i].val.(float64)       > reader.valPositions[j].val.(float64)
+			case T_DATE:   ret = reader.valPositions[i].val.(time.Time).After(reader.valPositions[j].val.(time.Time))
 		}
 		if q.sortWay == 2 { return !ret }
 		return ret

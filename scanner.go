@@ -231,9 +231,9 @@ func initable(){
 
 
 type Token struct {
-	Id int
-	Val string
-	Line int
+	id int
+	val string
+	line int
 }
 
 var lineNo = 1
@@ -249,9 +249,9 @@ func scanner(s* StringLookahead) Token {
 		nextState = table[state][s.peek()]
 		if (nextState & ERROR) != 0 {
 		//end of string
-			if state == 255 { return Token { Id: 255, Val: "END", Line: lineNo } }
+			if state == 255 { return Token { id: 255, val: "END", line: lineNo } }
 			Printf("error peek: %d state: %d nextstates: %d nextchar: %c S: %s\n",s.peek(),state, nextState, nextchar,S)
-			return Token{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
+			return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo }
 		}
 
 		if (nextState & FINAL) != 0 {
@@ -259,10 +259,10 @@ func scanner(s* StringLookahead) Token {
 			if nextState == WORD {
 				if kw,ok := keywordMap[strings.ToLower(S)];ok && waitForQuote == 0 {
 					//return keyword token
-					return Token { Id: kw, Val: S, Line: lineNo }
+					return Token { id: kw, val: S, line: lineNo }
 				} else {
 					//return word token
-					return Token { Id: nextState, Val: S, Line: lineNo }
+					return Token { id: nextState, val: S, line: lineNo }
 				}
 			//see if special type or something else
 			} else if nextState == SPECIAL {
@@ -274,14 +274,14 @@ func scanner(s* StringLookahead) Token {
 						waitForQuote = 0
 					}
 					//return special token
-					return Token { Id: sp, Val: S, Line: lineNo }
+					return Token { id: sp, val: S, line: lineNo }
 				} else {
 					println("error: unknown special. peek: "+Itoa(s.peek())+" state: "+Itoa(state)+" ns: "+Itoa(nextState));
 					println(enumMap[nextState])
-					return Token{ Id: ERROR, Val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), Line: lineNo }
+					return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo }
 				}
 			} else {
-				return Token { Id: nextState, Val: S, Line: lineNo }
+				return Token { id: nextState, val: S, line: lineNo }
 			}
 
 		} else {
@@ -296,11 +296,11 @@ func scanner(s* StringLookahead) Token {
 			}
 			if nextchar == '\n' { lineNo++; colNo=0 }
 			if nextchar == EOS {
-				return Token { Id: EOS, Val: "END", Line: lineNo }
+				return Token { id: EOS, val: "END", line: lineNo }
 			}
 		}
 	}
-	return Token { Id: EOS, Val: "END", Line: lineNo }
+	return Token { id: EOS, val: "END", line: lineNo }
 
 
 }
@@ -326,17 +326,17 @@ func scanTokens(q *QuerySpecs) error {
 	for {
 		t := scanner(input)
 		//turn tokens inside quotes into single token
-		if t.Id == SP_SQUOTE || t.Id == SP_DQUOTE {
-			quote := t.Id
+		if t.id == SP_SQUOTE || t.id == SP_DQUOTE {
+			quote := t.id
 			S := ""
 			t = scanner(input)
-			for ; t.Id != quote && t.Id != EOS ; t = scanner(input) { S += t.Val }
-			if t.Id != quote { return errors.New("Quote was not terminated") }
-			t = Token{WORD,S,t.Line}
+			for ; t.id != quote && t.id != EOS ; t = scanner(input) { S += t.val }
+			if t.id != quote { return errors.New("Quote was not terminated") }
+			t = Token{WORD,S,t.line}
 		}
 		q.tokArray = append(q.tokArray, t)
-		if t.Id == ERROR { return errors.New("scanner error: "+t.Val) }
-		if t.Id == EOS { break }
+		if t.id == ERROR { return errors.New("scanner error: "+t.val) }
+		if t.id == EOS { break }
 	}
 	return nil
 }

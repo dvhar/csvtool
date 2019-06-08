@@ -29,7 +29,7 @@ type QuerySpecs struct {
 	like bool
 	parseCol int
 	showLimit int
-	lastColumn treeTok
+	lastColumn TreeTok
 	tree *Node
 	files map[string]*FileData
 	numfiles int
@@ -102,10 +102,10 @@ const (
 	COL_ADD = iota
 	COL_GETIDX = iota
 )
-type treeTok struct {
-	Id int
-	Val interface{}
-	Dtype int
+type TreeTok struct {
+	id int
+	val interface{}
+	dtype int
 }
 func max(a int, b int) int {
 	if a>b { return a }
@@ -183,18 +183,18 @@ func openFiles(q *QuerySpecs) error {
 	extension := regexp.MustCompile(`\.csv$`)
 	q.files = make(map[string]*FileData)
 	q.numfiles = 0
-	for ; q.Tok().Id != EOS ; q.NextTok() {
-		_,err := os.Stat(q.Tok().Val)
+	for ; q.Tok().id != EOS ; q.NextTok() {
+		_,err := os.Stat(q.Tok().val)
 		//open file and add to file map
-		if err == nil && extension.MatchString(q.Tok().Val) {
-			file := &FileData{fname : q.Tok().Val}
+		if err == nil && extension.MatchString(q.Tok().val) {
+			file := &FileData{fname : q.Tok().val}
 			filename := filepath.Base(file.fname)
 			q.numfiles++
 			key := "_fmk0" + Sprint(q.numfiles)
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
-			if q.NextTok().Id == WORD { q.files[q.Tok().Val] = file }
-			if q.Tok().Id == KW_AS && q.NextTok().Id == WORD { q.files[q.Tok().Val] = file }
+			if q.NextTok().id == WORD { q.files[q.Tok().val] = file }
+			if q.Tok().id == KW_AS && q.NextTok().id == WORD { q.files[q.Tok().val] = file }
 			if inferTypes(q, key) != nil {return err}
 		}
 	}
@@ -226,7 +226,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	err =  parseOrder(q)
 	if err != nil { return n,err }
-	if q.Tok().Id != EOS { err = errors.New("Expected end of query, got "+q.Tok().Val) }
+	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
 	return n,err
 }
 
@@ -234,7 +234,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 func parseSelect(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
-	if q.Tok().Id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().Val) }
+	if q.Tok().id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)
 	if err != nil { return n,err }
@@ -246,9 +246,9 @@ func parseSelect(q* QuerySpecs) (*Node,error) {
 //row limit
 func parseTop(q* QuerySpecs) error {
 	var err error
-	if q.Tok().Id == KW_TOP {
-		q.quantityLimit, err = Atoi(q.PeekTok().Val)
-		if err != nil { return errors.New("Expected number after 'top'. Found "+q.PeekTok().Val) }
+	if q.Tok().id == KW_TOP {
+		q.quantityLimit, err = Atoi(q.PeekTok().val)
+		if err != nil { return errors.New("Expected number after 'top'. Found "+q.PeekTok().val) }
 		q.NextTok(); q.NextTok()
 	}
 	return nil
@@ -261,7 +261,7 @@ var countSelected int
 func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
-	switch q.Tok().Id {
+	switch q.Tok().id {
 	case SP_STAR:
 		selectAll(q)
 		q.NextTok()
@@ -288,7 +288,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 func dotParser(q* QuerySpecs, dot bool) (string,string,error) {
 	var S string
 	key := "_fmk01"
-	S = q.Tok().Val
+	S = q.Tok().val
 	split := s.SplitAfterN(S, ".", 2)
 	//see if doing dot notation
 	if dot && len(split) > 1 {
@@ -302,22 +302,22 @@ func dotParser(q* QuerySpecs, dot bool) (string,string,error) {
 }
 
 //returns column tok
-func columnParser(q* QuerySpecs) (treeTok,error) {
+func columnParser(q* QuerySpecs) (TreeTok,error) {
 	var ii int
 	key, col, err := dotParser(q, true)
-	if err != nil { return treeTok{},err }
+	if err != nil { return TreeTok{},err }
 	//if it's a number
 	ii, err = Atoi(col)
 	if err == nil {
-		if ii > q.files[key].width { return treeTok{},errors.New("Column number too big: "+col+". Max is "+Itoa(q.files[key].width)) }
-		if ii < 1 { return treeTok{},errors.New("Column number too small: "+col) }
+		if ii > q.files[key].width { return TreeTok{},errors.New("Column number too big: "+col+". Max is "+Itoa(q.files[key].width)) }
+		if ii < 1 { return TreeTok{},errors.New("Column number too small: "+col) }
 		ii -= 1
 	//else it's a name
 	} else { ii, err = getColumnIdx(q.files[key].names, col) }
-	if err != nil { return treeTok{},err }
+	if err != nil { return TreeTok{},err }
 	if q.parseCol == COL_ADD { newCol(q, ii) }
 	q.parseCol = ii
-	return treeTok{0, ii, q.files[key].types[ii]},err
+	return TreeTok{0, ii, q.files[key].types[ii]},err
 }
 
 //tok1 is selected column if distinct
@@ -325,7 +325,7 @@ func columnParser(q* QuerySpecs) (treeTok,error) {
 func parseSpecial(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SPECIAL}
 	var err error
-	switch q.Tok().Id {
+	switch q.Tok().id {
 	case KW_DISTINCT:
 		q.NextTok()
 		q.parseCol = COL_GETIDX
@@ -339,21 +339,21 @@ func parseSpecial(q* QuerySpecs) (*Node,error) {
 		n.label = N_SELECTIONS
 		return n,err
 	}
-	return n,errors.New("Unexpected token in 'select' section:"+q.Tok().Val)
+	return n,errors.New("Unexpected token in 'select' section:"+q.Tok().val)
 }
 
 //tok1 is file path
 //tok2 is alias
 func parseFrom(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FROM}
-	if q.Tok().Id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().Val) }
+	if q.Tok().id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().val) }
 	n.tok1 = q.NextTok()
 	q.NextTok()
-	if q.Tok().Id == WORD {
+	if q.Tok().id == WORD {
 		n.tok2 = q.Tok()
 		q.NextTok()
 	}
-	if q.Tok().Id == KW_AS {
+	if q.Tok().id == KW_AS {
 		n.tok2 = q.NextTok()
 		q.NextTok()
 	}
@@ -364,7 +364,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 func parseWhere(q*QuerySpecs) (*Node,error) {
 	n := &Node{label:N_WHERE}
 	var err error
-	if q.Tok().Id != KW_WHERE { return n,nil }
+	if q.Tok().id != KW_WHERE { return n,nil }
 	q.NextTok()
 	n.node1,err = parseConditions(q)
 	return n,err
@@ -376,18 +376,18 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 func parseConditions(q*QuerySpecs) (*Node,error) {
 	n := &Node{label:N_CONDITIONS}
 	var err error
-	if q.Tok().Id == SP_NEGATE {
+	if q.Tok().id == SP_NEGATE {
 		q.NextTok()
 		n.tok1 = SP_NEGATE
 	}
-	switch q.Tok().Id {
+	switch q.Tok().id {
 	case SP_LPAREN:
 		tok := q.Tok()
 		q.NextTok();
 		n.node1,err = parseConditions(q)
 		if err != nil { return n,err }
 		tok = q.Tok()
-		if tok.Id != SP_RPAREN { return n,errors.New("No closing parentheses. Found: "+tok.Val) }
+		if tok.id != SP_RPAREN { return n,errors.New("No closing parentheses. Found: "+tok.val) }
 		q.NextTok()
 		n.node2,err = preparseMore(q)
 		return n,err
@@ -396,9 +396,9 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
 		q.parseCol = COL_GETIDX
 		_,err = columnParser(q)
 		if err != nil { return n,err }
-		q.lastColumn = treeTok{0, q.parseCol, q.files["_fmk01"].types[q.parseCol]}
+		q.lastColumn = TreeTok{0, q.parseCol, q.files["_fmk01"].types[q.parseCol]}
 		//see if comparison is normal or between
-		if q.Tok().Id == KW_BETWEEN || q.PeekTok().Id == KW_BETWEEN {
+		if q.Tok().id == KW_BETWEEN || q.PeekTok().id == KW_BETWEEN {
 			n.node1, err = parseBetween(q)
 		} else {
 			n.node1, err = parseCompare(q)
@@ -407,7 +407,7 @@ func parseConditions(q*QuerySpecs) (*Node,error) {
 		n.node2,err = preparseMore(q)
 		return n,err
 	}
-	return n,errors.New("Unexpected token in 'where' section: "+q.Tok().Val)
+	return n,errors.New("Unexpected token in 'where' section: "+q.Tok().val)
 }
 
 //tok1 is column to compare
@@ -426,21 +426,21 @@ func parseCompare(q* QuerySpecs) (*Node,error) {
 func parseRel(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_REL}
 	//negater before relop
-	if q.Tok().Id == SP_NEGATE {
+	if q.Tok().id == SP_NEGATE {
 		q.NextTok()
 		n.tok1 = SP_NEGATE
 	}
 	//relop and value
-	if (q.Tok().Id & RELOP) != 0 {
+	if (q.Tok().id & RELOP) != 0 {
 		tok := q.Tok()
-		if tok.Id == KW_LIKE { q.like = true; }
-		n.tok2 = treeTok{tok.Id, tok.Val, 0}
+		if tok.id == KW_LIKE { q.like = true; }
+		n.tok2 = TreeTok{tok.id, tok.val, 0}
 		q.NextTok()
 		var err error
 		n.tok3, err = comparisonValue(q)
 		return n,err
 	}
-	return n,errors.New("Expected relational operator. Found: "+q.Tok().Val)
+	return n,errors.New("Expected relational operator. Found: "+q.Tok().val)
 }
 
 //tok1 is logical operator
@@ -448,8 +448,8 @@ func parseRel(q* QuerySpecs) (*Node,error) {
 func preparseMore(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_MORE}
 	var err error
-	if (q.Tok().Id & LOGOP) == 0 { return n,nil }
-	n.tok1 = q.Tok().Id
+	if (q.Tok().id & LOGOP) == 0 { return n,nil }
+	n.tok1 = q.Tok().id
 	q.NextTok()
 	n.node1,err = parseConditions(q)
 	return n,err
@@ -458,33 +458,33 @@ func preparseMore(q* QuerySpecs) (*Node,error) {
 //return parse tree segment for between as conditions node
 func parseBetween(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_CONDITIONS}
-	var  val1, val2, relop1, relop2 treeTok
+	var  val1, val2, relop1, relop2 TreeTok
 	var firstSmaller bool
 	var err error
 	//negation and get to value token
-	if q.Tok().Id == SP_NEGATE { n.tok1 = SP_NEGATE; q.NextTok() }
+	if q.Tok().id == SP_NEGATE { n.tok1 = SP_NEGATE; q.NextTok() }
 	q.NextTok()
 	val1, err = comparisonValue(q)
 	if err != nil { return n,err }
-	if q.Tok().Id != KW_AND { return n,errors.New("Expected 'and' in between clause, got "+q.Tok().Val) }
+	if q.Tok().id != KW_AND { return n,errors.New("Expected 'and' in between clause, got "+q.Tok().val) }
 	q.NextTok()
 	val2, err = comparisonValue(q)
 	if err != nil { return n,err }
 
 	//see which is smaller
-	if val1.Dtype == T_NULL || val2.Dtype == T_NULL { return n,errors.New("Cannot use 'null' with 'between'") }
-	switch val1.Dtype {
-		case T_INT:	firstSmaller = val1.Val.(int) < val2.Val.(int)
-		case T_FLOAT:  firstSmaller = val1.Val.(float64) < val2.Val.(float64)
-		case T_DATE:   firstSmaller = val1.Val.(time.Time).Before(val2.Val.(time.Time))
-		case T_STRING: firstSmaller = val1.Val.(string) < val2.Val.(string)
+	if val1.dtype == T_NULL || val2.dtype == T_NULL { return n,errors.New("Cannot use 'null' with 'between'") }
+	switch val1.dtype {
+		case T_INT:	firstSmaller = val1.val.(int) < val2.val.(int)
+		case T_FLOAT:  firstSmaller = val1.val.(float64) < val2.val.(float64)
+		case T_DATE:   firstSmaller = val1.val.(time.Time).Before(val2.val.(time.Time))
+		case T_STRING: firstSmaller = val1.val.(string) < val2.val.(string)
 	}
 	if firstSmaller {
-		relop1 = treeTok{SP_GREATEQ, ">=", 0}
-		relop2 = treeTok{SP_LESS, "<", 0}
+		relop1 = TreeTok{SP_GREATEQ, ">=", 0}
+		relop2 = TreeTok{SP_LESS, "<", 0}
 	} else {
-		relop1 = treeTok{SP_LESS, "<", 0}
-		relop2 = treeTok{SP_GREATEQ, ">=", 0}
+		relop1 = TreeTok{SP_LESS, "<", 0}
+		relop2 = TreeTok{SP_GREATEQ, ">=", 0}
 	}
 
 	//parse tree for 2 comparisions
@@ -503,30 +503,30 @@ func parseBetween(q* QuerySpecs) (*Node,error) {
 }
 
 //comparison values in where section
-func comparisonValue(q* QuerySpecs) (treeTok,error) {
-	var tok treeTok
-	if q.Tok().Id != WORD { return tok, errors.New("Expected a comparision value but got "+q.Tok().Val) }
+func comparisonValue(q* QuerySpecs) (TreeTok,error) {
+	var tok TreeTok
+	if q.Tok().id != WORD { return tok, errors.New("Expected a comparision value but got "+q.Tok().val) }
 	_, val, err := dotParser(q, false)
 	if err != nil { return tok, err }
-	tok = treeTok{0, val, q.lastColumn.Dtype}
+	tok = TreeTok{0, val, q.lastColumn.dtype}
 	//if relop is 'like', compile a regex
 	if q.like {
 		q.like = false
 		re := regexp.MustCompile("%")
-		tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".*")
+		tok.val = re.ReplaceAllString(Sprint(tok.val), ".*")
 		re = regexp.MustCompile("_")
-		tok.Val = re.ReplaceAllString(Sprint(tok.Val), ".")
-		tok.Val,err = regexp.Compile("(?i)^"+tok.Val.(string)+"$")
+		tok.val = re.ReplaceAllString(Sprint(tok.val), ".")
+		tok.val,err = regexp.Compile("(?i)^"+tok.val.(string)+"$")
 		return tok, err
 	}
 	//otherwise parse its data type
-	if s.ToLower(tok.Val.(string)) == "null" { tok.Dtype = T_NULL }
-	switch tok.Dtype {
-		case T_INT:	tok.Val,err = Atoi(tok.Val.(string))
-		case T_FLOAT:  tok.Val,err = ParseFloat(tok.Val.(string), 64)
-		case T_DATE:   tok.Val,err = d.ParseAny(tok.Val.(string))
-		case T_NULL:   tok.Val = nil
-		case T_STRING: tok.Val = tok.Val.(string)
+	if s.ToLower(tok.val.(string)) == "null" { tok.dtype = T_NULL }
+	switch tok.dtype {
+		case T_INT:	tok.val,err = Atoi(tok.val.(string))
+		case T_FLOAT:  tok.val,err = ParseFloat(tok.val.(string), 64)
+		case T_DATE:   tok.val,err = d.ParseAny(tok.val.(string))
+		case T_NULL:   tok.val = nil
+		case T_STRING: tok.val = tok.val.(string)
 	}
 	return tok, err
 }
@@ -534,16 +534,16 @@ func comparisonValue(q* QuerySpecs) (treeTok,error) {
 //currently order is only thing after where
 func parseOrder(q* QuerySpecs) error {
 	var err error
-	if q.Tok().Id == EOS { return nil }
-	if q.Tok().Id == KW_ORDER {
-		if q.NextTok().Id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.Tok().Val) }
+	if q.Tok().id == EOS { return nil }
+	if q.Tok().id == KW_ORDER {
+		if q.NextTok().id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.Tok().val) }
 		q.NextTok()
 		q.parseCol = COL_GETIDX
 		_,err = columnParser(q)
 		if err == nil {
 			q.sortCol = q.parseCol
 			q.sortWay = 1
-			if q.Tok().Id == KW_ORDHOW { q.sortWay = 2; q.NextTok() }
+			if q.Tok().id == KW_ORDHOW { q.sortWay = 2; q.NextTok() }
 		} else { return err }
 	}
 	return nil
