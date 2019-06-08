@@ -186,10 +186,9 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		default:
 			return n,errors.New("Expected 'end' or 'else' after case expression. Found "+q.Tok().val)
 		}
-	//TODO: parseValue(q)
 	case WORD:
-		n.tok1 = q.Tok()
-		q.NextTok()
+		n.tok1 = WORD
+		n.node1,err = parseValue(q)
 	case SP_LPAREN:
 		n.tok1 = N_EXPRADD
 		q.NextTok()
@@ -206,24 +205,30 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
-	var ncol bool
-	cIntRe := regexp.MustCompile(`^c\d+$`)
+	cInt := regexp.MustCompile(`^c\d+$`)
 	tok := q.Tok()
 	//given a column number
-	if num,er := Atoi(tok.val); er == nil && q.intColumn {
+	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
 		n.tok1 = num-1
 		n.tok2 = 1
-		ncol = true
-	} else if cIntRe.MatchString(tok.val) {
+	} else if !q.intColumn && !tok.quoted && cInt.MatchString(tok.val) {
 		n.tok1,_ = Atoi(tok.val[1:])
 		n.tok1 = n.tok1.(int) - 1
 		n.tok2 = 1
-		ncol = true
+	//else try column name
+	} else if n.tok1, err = getColumnIdx(q.files["_fmk01"].names, tok.val); err == nil {
+		n.tok2 = 1
+	//else must be literal
+	} else {
+		err = nil
+		n.tok1 = tok.val
+		n.tok2 = 0
 	}
-	if ncol &&  n.tok1.(int) > q.files["_fmk01"].width {
+	//check column number bounds
+	if n.tok2.(int)==1 &&  n.tok1.(int) > q.files["_fmk01"].width {
 		return n,errors.New("Column number too big: "+Sprint(n.tok1)+". Max is "+Itoa(q.files["_fmk01"].width)) }
-	if n.tok1.(int) < 1 { return n,errors.New("Column number too small: "+Sprint(n.tok1)) }
-	//TODO: given a column name
+	if n.tok2.(int)==1 &&  n.tok1.(int) < 1 { return n,errors.New("Column number too small: "+Sprint(n.tok1)) }
+	q.NextTok()
 	return n, err
 }
 
