@@ -85,6 +85,7 @@ func parseColumnItem(q* QuerySpecs) (*Node,error) {
 	if q.Tok().id == KW_DISTINCT { n.tok3 = KW_DISTINCT; q.NextTok() }
 	//alias = expression
 	if q.PeekTok().id == SP_EQ {
+		if q.Tok().id != WORD { return n,errors.New("Alias must be a word. Found "+q.Tok().val) }
 		n.tok1 = q.Tok().val
 		n.tok2 = KW_AS
 		q.NextTok()
@@ -109,6 +110,7 @@ func parseExprAdd(q* QuerySpecs) (*Node,error) {
 	var err error
 	n := &Node{label:N_EXPRADD}
 	n.node1,err = parseExprMult(q)
+	if err != nil { return n,err }
 	switch q.Tok().id {
 	case SP_MINUS: fallthrough
 	case SP_PLUS:
@@ -126,6 +128,7 @@ func parseExprMult(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_EXPRMULT}
 	var err error
 	n.node1,err = parseExprNeg(q)
+	if err != nil { return n,err }
 	switch q.Tok().id {
 	case SP_STAR: fallthrough
 	case SP_DIV:
@@ -166,14 +169,17 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		case KW_WHEN:
 			n.tok2 = q.Tok().id
 			n.node1,err = parseCaseWhenPredList(q)
+			if err != nil { return n,err }
 		//expression matches predicates
 		case WORD: fallthrough
 		case SP_LPAREN:
 			Println("case starts with expression:", q.Tok())
 			n.tok2 = N_EXPRADD
 			n.node1,err = parseExprAdd(q)
+			if err != nil { return n,err }
 			if q.Tok().id != KW_WHEN { return n,errors.New("Expected 'when' after case expression. Found "+q.Tok().val) }
 			n.node2,err = parseCaseWhenExprList(q)
+			if err != nil { return n,err }
 		}
 		switch q.Tok().id {
 		case KW_END:
@@ -181,6 +187,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		case KW_ELSE:
 			q.NextTok()
 			n.node3,err = parseExprAdd(q)
+			if err != nil { return n,err }
 			if q.Tok().id != KW_END { return n,errors.New("Expected 'end' after 'else' expression. Found "+q.Tok().val) }
 			q.NextTok()
 		default:
@@ -193,6 +200,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		n.tok1 = N_EXPRADD
 		q.NextTok()
 		n.node1,err = parseExprAdd(q)
+		if err != nil { return n,err }
 		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis. Found "+q.Tok().val) }
 		q.NextTok()
 	}
@@ -200,23 +208,24 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 }
 
 //if implement dot notation, put parser here
-//tok1 is value
+//tok1 is [value, column index]
 //tok2 is [0,1] for literal/col
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
 	cInt := regexp.MustCompile(`^c\d+$`)
+	fdata := q.files["_fmk01"]
 	tok := q.Tok()
 	//given a column number
 	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
 		n.tok1 = num-1
 		n.tok2 = 1
 	} else if !q.intColumn && !tok.quoted && cInt.MatchString(tok.val) {
-		n.tok1,_ = Atoi(tok.val[1:])
-		n.tok1 = n.tok1.(int) - 1
+		num,_ := Atoi(tok.val[1:])
+		n.tok1 = num - 1
 		n.tok2 = 1
 	//else try column name
-	} else if n.tok1, err = getColumnIdx(q.files["_fmk01"].names, tok.val); err == nil {
+	} else if n.tok1, err = getColumnIdx(fdata.names, tok.val); err == nil {
 		n.tok2 = 1
 	//else must be literal
 	} else {
@@ -224,11 +233,11 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.tok1 = tok.val
 		n.tok2 = 0
 	}
-	//check column number bounds
-	if n.tok2.(int)==1 &&  n.tok1.(int) > q.files["_fmk01"].width {
-		return n,errors.New("Column number too big: "+Sprint(n.tok1)+". Max is "+Itoa(q.files["_fmk01"].width)) }
-	if n.tok2.(int)==1 &&  n.tok1.(int) < 1 { return n,errors.New("Column number too small: "+Sprint(n.tok1)) }
 	q.NextTok()
+	//check column number bounds
+	if n.tok2.(int)==1 && n.tok1.(int) > fdata.width {
+		return n,errors.New("Column number too big: "+Sprint(n.tok1.(int)+1)+". Max is "+Itoa(fdata.width)) }
+	if n.tok2.(int)==1 && n.tok1.(int) < 0 { return n,errors.New("Column number too small: "+Sprint(n.tok1)) }
 	return n, err
 }
 
@@ -238,6 +247,7 @@ func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_CPREDLIST}
 	var err error
 	n.node1,err = parseCasePredicate(q)
+	if err != nil { return n,err }
 	if q.Tok().id == KW_WHEN { n.node2,err = parseCaseWhenPredList(q) }
 	return n, err
 }
@@ -249,7 +259,7 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 	var err error
 	q.NextTok() //eat when token
 	n.node1,err = parsePredicates(q)
-	if err != nil { println("case pred error"); return n,err }
+	if err != nil { return n,err }
 	q.NextTok() //eat then token
 	n.node2,err = parseExprAdd(q)
 	return n, err
@@ -262,7 +272,7 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_PREDICATES}
 	var err error
 	n.node1,err = parsePredCompare(q)
-	if err != nil { println("case preds error"); return n,err }
+	if err != nil { return n,err }
 	if (q.Tok().id & LOGOP) != 0 {
 		n.tok1 = q.Tok().id
 		q.NextTok()
@@ -296,12 +306,13 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	}
 	if q.Tok().id == WORD || compare {
 		n.node1, err = parseExprAdd(q)
-		if err != nil { println("pred comp error"); return n,err }
+		if err != nil { return n,err }
 		if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 		if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
 		n.tok1 = q.Tok()
 		q.NextTok()
 		n.node2, err = parseExprAdd(q)
+		if err != nil { return n,err }
 		if n.tok1 == KW_BETWEEN {
 			q.NextTok()
 			n.node3, err = parseExprAdd(q)
