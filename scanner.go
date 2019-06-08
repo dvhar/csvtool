@@ -234,6 +234,7 @@ type Token struct {
 	id int
 	val string
 	line int
+	quoted bool
 }
 
 var lineNo = 1
@@ -320,20 +321,23 @@ func (s* StringLookahead) peek() int {
 	return int(s.Str[s.idx])
 }
 
-//turn query text into tokens
+//turn query text into tokens and check if ints are columns or numbers
 func scanTokens(q *QuerySpecs) error {
 	input := &StringLookahead{Str:q.queryString}
+	//used to see if ints are num or col
+	cIntRe := regexp.MustCompile(`^c\d+$`)
+	q.intColumn = true
 	for {
 		t := scanner(input)
 		//turn tokens inside quotes into single token
 		if t.id == SP_SQUOTE || t.id == SP_DQUOTE {
 			quote := t.id
 			S := ""
-			t = scanner(input)
-			for ; t.id != quote && t.id != EOS ; t = scanner(input) { S += t.val }
+			for t = scanner(input); t.id != quote && t.id != EOS ; t = scanner(input) { S += t.val }
 			if t.id != quote { return errors.New("Quote was not terminated") }
-			t = Token{WORD,S,t.line}
+			t = Token{WORD,S,t.line,true}
 		}
+		if cIntRe.MatchString(t.val) { q.intColumn = false }
 		q.tokArray = append(q.tokArray, t)
 		if t.id == ERROR { return errors.New("scanner error: "+t.val) }
 		if t.id == EOS { break }

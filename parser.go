@@ -34,6 +34,7 @@ type QuerySpecs struct {
 	files map[string]*FileData
 	numfiles int
 	tempVal interface{}
+	intColumn bool
 }
 func (q *QuerySpecs) NextTok() *Token {
 	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }

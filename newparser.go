@@ -1,5 +1,6 @@
 //new expression parsing - under construction
 /*
+<Select>            -> {c|n} Select { <top> } <Selections>
 <Selections>        -> * <Selections> | <columnItem> <Selections> | ε
 <columnItem>        -> <exprAdd> | <exprAdd> as <alias> | <alias> = <exprAdd>
 <exprAdd>           -> <exprMult> + <exprAdd> | <exprMult> - <exprAdd> | <exprMult>
@@ -19,6 +20,8 @@
 <predicateCompare>  -> {not} <exprAdd> {not} <relop> <exprAdd> 
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
+
+ints: number when c2 present, column when '2' present, number when both present, column when neither present
 */
 
 
@@ -31,6 +34,8 @@ import (
 func parse2Select(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
+	if q.Tok().Val == "c" { q.intColumn = true; q.NextTok() }
+	if q.Tok().Val == "n" { q.intColumn = false; q.NextTok() }
 	if q.Tok().id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)
