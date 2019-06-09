@@ -177,6 +177,7 @@ func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
 
 //type checker
 //only return val interface if can be precomputed
+var caseWhenExprType int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
 	var val interface{}
@@ -193,17 +194,28 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			return typeCheck(n.node1)
 		//TODO: make initial expression match whencaseexpr type, but don't return that one
 		case KW_CASE:
-			_, d1, v1, err := typeCheck(n.node1)
+			n1, d1, v1, err := typeCheck(n.node1)
 			if err != nil { return 0,0,nil,err }
 			n2, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			n3, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
 			var thisType int
-			if n2==0 && n3==0 { thisType = d1; val = v1
-			} else if n2>0 && n3==0 { thisType = typeCompute(v1,v2,nil,d1,d2,0,2)
-			} else if n2==0 && n3>0 { thisType = typeCompute(v1,v3,nil,d1,d3,0,2)
-			} else if n2>0 && n3>0 { thisType = typeCompute(v1,v2,v3,d1,d2,d3,3) }
+			//when comparing an intial expression
+			if n1 == N_EXPRADD {
+				caseWhenExprType = typeCompute(v1,caseWhenExprType,nil,d1,d2,0,2)
+				//TODO: use type enforcer here for case 'when' expressions
+				//node1 and
+				//	expr: node2.node1.node1 nextExpr: node2.node2.node1.node1
+				thisType = d2
+				if n3>0 { thisType = typeCompute(v2,v3,nil,d2,d3,0,2) }
+			//when using predicates
+			} else {
+				thisType = d1
+				if n2>0 { thisType = typeCompute(v1,v2,nil,d1,d2,0,2) }
+			}
+			//when just a value
+			if n2==0 && n3==0 { thisType = d1; val = v1 }
 			Println("case types are ",d1,d2,d3,thisType)
 			return N_EXPRCASE, thisType, val, nil
 		}
@@ -260,10 +272,10 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		}
 		return n.label, thisType, val, err
 
-	//TODO: make sure 'when' expression matches parent case initial expression type
 	case N_CWEXPR:
-		_, whenType, _, err := typeCheck(n.node1)
-		if err != nil { return 0,whenType,nil,err }
+		var err error
+		_, caseWhenExprType, _, err = typeCheck(n.node1)
+		if err != nil { return 0,0,nil,err }
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
 
