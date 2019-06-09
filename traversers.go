@@ -176,78 +176,93 @@ func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
 
 //type checker
 //only return val interface if can be precomputed
-func typeCheck(q *QuerySpecs, n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
+func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
 	var val interface{}
 	switch n.label {
 
 	case N_VALUE:
 		if n.tok2.(int)==0 { val = n.tok1 }
-		Println("n_value is",n.tok3.(int))
 		return N_VALUE, n.tok3.(int), val, nil
 
 	case N_EXPRCASE:
 		switch n.tok1.(int) {
 		case WORD: fallthrough
 		case N_EXPRADD:
-			return typeCheck(q, n.node1)
+			return typeCheck(n.node1)
 		case KW_CASE:
-			_, d1, v1, err := typeCheck(q, n.node1)
+			_, d1, v1, err := typeCheck(n.node1)
 			if err != nil { return 0,0,nil,err }
-			n2, d2, v2, err := typeCheck(q, n.node2)
+			n2, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
-			n3, d3, v3, err := typeCheck(q, n.node3)
+			n3, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
 			var thisType int
 			if n2==0 && n3==0 { thisType = d1; val = v1
 			} else if n2>0 && n3==0 { thisType = typeCompute(v1,v2,nil,d1,d2,0,2)
 			} else if n2==0 && n3>0 { thisType = typeCompute(v1,v3,nil,d1,d3,0,2)
 			} else if n2>0 && n3>0 { thisType = typeCompute(v1,v2,v3,d1,d2,d3,3) }
-			Println("n_exprcase is",thisType)
 			return N_EXPRCASE, thisType, val, nil
 		}
 
 	case N_EXPRNEG:
-		_, d1, v1, err := typeCheck(q, n.node1)
+		_, d1, v1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
 		if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT {
+			Println("minus error");
 			err = errors.New("Minus sign does not work with type "+typeMap[d1]) }
-		Println("n_exprneg is",d1)
 		return N_EXPRNEG,d1,v1,err
 
 	case N_EXPRMULT:
-		_, d1, val, err := typeCheck(q, n.node1)
+		_, d1, val, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
-		_, d2, v2, err := typeCheck(q, n.node1)
+		_, d2, v2, err := typeCheck(n.node2)
 		if err != nil { return 0,0,nil,err }
 		thisType := d1
 		if _,ok:=n.tok1.(int); ok {
 			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
 			if !isOneOfType(d1,d2,T_INT,T_FLOAT){
+				Println("mult error");
 				err = errors.New("Cannot multiply type "+typeMap[thisType]) }
 			//TODO: precompute if possible
 			val = nil
 		}
-		Println("n_exprmult is",thisType)
 		return N_EXPRMULT, thisType, val, err
 
 	case N_EXPRADD:
-		_, d1, val, err := typeCheck(q, n.node1)
+		_, d1, val, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
-		_, d2, v2, err := typeCheck(q, n.node1)
+		_, d2, v2, err := typeCheck(n.node2)
 		if err != nil { return 0,0,nil,err }
 		thisType := d1
 		if _,ok:=n.tok1.(int); ok {
 			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
 			if !isOneOfType(d1,d2,T_INT,T_FLOAT) && (d1!=T_STRING && d2!=T_STRING){
+				Println("add error");
 				err = errors.New("Cannot add type "+typeMap[thisType]) }
 			//TODO: precompute if possible
 			val = nil
 		}
-		Println("n_expradd is",thisType)
 		return N_EXPRADD, thisType, val, err
 
-	default: return typeCheck(q, n.node1)
+	case N_COLITEM:
+		_, d1, val, err := typeCheck(n.node1)
+		Println("n_colitem is",d1)
+		return N_COLITEM, d1, val, err
+
+	case N_SELECTIONS:
+		_, d1, val, err := typeCheck(n.node1)
+		if err != nil { return 0,0,nil,err }
+		_, _, _, err = typeCheck(n.node2)
+		return N_SELECTIONS, d1, val, err
+
+	default:
+		_, _, _, err := typeCheck(n.node1)
+		if err != nil { return 0,0,nil,err }
+		_, _, _, err = typeCheck(n.node2)
+		if err != nil { return 0,0,nil,err }
+		_, _, _, err = typeCheck(n.node3)
+		return 0,0,nil,err
 	}
 	return 0,0,nil,nil
 }

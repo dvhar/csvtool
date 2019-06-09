@@ -71,6 +71,7 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 	//done with selections
 	case KW_FROM:
 		if q.colSpec.NewWidth == 0 { selectAll(q) }
+		return nil,nil
 	}
 	return n,err
 }
