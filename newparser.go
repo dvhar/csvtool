@@ -108,6 +108,7 @@ func parseColumnItem(q* QuerySpecs) (*Node,error) {
 //node1 is exprMult
 //node2 is exprAdd
 //tok1 is add/minus operator
+//tok2 will be type of expression - set by type enforcer
 func parseExprAdd(q* QuerySpecs) (*Node,error) {
 	var err error
 	n := &Node{label:N_EXPRADD}

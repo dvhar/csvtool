@@ -1,6 +1,8 @@
 package main
 import (
   . "fmt"
+  . "strconv"
+  d "github.com/araddon/dateparse"
   "regexp"
   "time"
   "errors"
@@ -204,7 +206,15 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			//when comparing an intial expression
 			if n1 == N_EXPRADD {
 				caseWhenExprType = typeCompute(v1,caseWhenExprType,nil,d1,d2,0,2)
-				//TODO: use type enforcer here for case 'when' expressions
+				err = enforceType(n.node1, caseWhenExprType)
+				if err != nil { return 0,0,nil,err }
+				whenNode := n.node2
+				for {
+					if enforceType(whenNode.node1.node1, caseWhenExprType) != nil { return 0,0,nil,err }
+					if whenNode.node2 == nil { break }
+					whenNode = whenNode.node2
+				}
+				caseWhenExprType = 0
 				//node1 and
 				//	expr: node2.node1.node1 nextExpr: node2.node2.node1.node1
 				thisType = d2
@@ -212,7 +222,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			//when using predicates
 			} else {
 				thisType = d1
-				if n2>0 { thisType = typeCompute(v1,v2,nil,d1,d2,0,2) }
+				if n3>0 { thisType = typeCompute(v1,v3,nil,d1,d3,0,2) }
 			}
 			//when just a value
 			if n2==0 && n3==0 { thisType = d1; val = v1 }
@@ -281,8 +291,9 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 
 	case N_CPRED:
 		_, predType, _, err := typeCheck(n.node1)
-		if err != nil { return 0,predType,nil,err }
-		//run type enforcer on predicate here ^
+		if err != nil { return 0,0,nil,err }
+		err = enforceType(n.node1, predType)
+		if err != nil { return 0,0,nil,err }
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
 
@@ -297,8 +308,47 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	return 0,0,nil,nil
 }
 //parse subtree values as a type
-func enforceType(q *QuerySpecs, n *Node, d int) error {
-	return nil
+func enforceType(n *Node, t int) error {
+	if n == nil { return nil }
+	var err error
+	switch n.label {
+	case N_VALUE:
+		n.tok3 = t
+		if n.tok2 == 0 {
+			switch t {
+			case T_INT:   n.tok1,err = Atoi(n.tok1.(string))
+			case T_FLOAT: n.tok1,err = Atoi(n.tok1.(string))
+			case T_DATE:  n.tok1,err = d.ParseAny(n.tok1.(string))
+			}
+		}
+		return err
+
+	case N_EXPRCASE:
+		if tk2,ok := n.tok2.(int); ok && tk2 == N_EXPRADD {
+			err = enforceType(n.node2,t)
+			if err != nil { return err }
+		} else {
+			err = enforceType(n.node1,t)
+			if err != nil { return err }
+		}
+		err = enforceType(n.node3,t)
+
+	case N_CWEXPR: fallthrough
+	case N_CPRED:
+		err = enforceType(n.node2,t)
+
+
+	case N_EXPRADD:
+		n.tok2 = t
+		fallthrough
+	default:
+		err = enforceType(n.node1,t)
+		if err != nil { return err }
+		err = enforceType(n.node2,t)
+		if err != nil { return err }
+		err = enforceType(n.node3,t)
+	}
+	return err
 }
 
 func isOneOfType(test1, test2, type1, type2 int) bool {
