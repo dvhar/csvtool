@@ -70,6 +70,7 @@ const (
 	N_CPREDLIST = iota
 	N_CPRED = iota
 	N_CWEXPRLIST = iota
+	N_CWEXPR = iota
 	N_PREDICATES = iota
 	N_PREDCOMP = iota
 	N_VALUE = iota

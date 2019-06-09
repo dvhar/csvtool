@@ -191,6 +191,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		case WORD: fallthrough
 		case N_EXPRADD:
 			return typeCheck(n.node1)
+		//TODO: make initial expression match whencaseexpr type, but don't return that one
 		case KW_CASE:
 			_, d1, v1, err := typeCheck(n.node1)
 			if err != nil { return 0,0,nil,err }
@@ -211,19 +212,20 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	case N_COLITEM:   fallthrough
 	case N_SELECTIONS:
 		_, d1, v1, err := typeCheck(n.node1)
+		if err != nil { return 0,0,nil,err }
 		switch n.label {
 		case N_EXPRNEG:
 			if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT {
 				Println("minus error");
 				err = errors.New("Minus sign does not work with type "+typeMap[d1]) }
-		case N_COLITEM: Println("n_colitem is",d1)
+		case N_COLITEM: Println("n_colitem is type",d1," value ",v1)
 		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)
 		}
 		return n.label, d1, val, err
 
-	//these nodes have similar type semantics
 	case N_EXPRADD:   fallthrough
 	case N_EXPRMULT:  fallthrough
+	case N_CWEXPRLIST:fallthrough
 	case N_CPREDLIST: fallthrough
 	case N_PREDCOMP:  fallthrough
 	case N_PREDICATES:
@@ -235,14 +237,16 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
+			if n.label==N_EXPRADD{ Println("add types",d1,d2,"got",thisType) }
+			if n.label==N_EXPRMULT{ Println("mult types",d1,d2,"got",thisType) }
 			//check addition semantics
-			if (rel==SP_PLUS || rel==SP_MINUS) && !isOneOfType(d1,d2,T_INT,T_FLOAT) && (d1!=T_STRING && d2!=T_STRING){
+			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING){
 				Println("add error");
-				err = errors.New("Cannot add or subtract type "+typeMap[thisType]) }
+				return 0,0,nil, errors.New("Cannot add or subtract types "+typeMap[d1]+" and "+typeMap[d2]) }
 			//check multiplication semantics
-			if (rel==SP_DIV || rel==SP_STAR) && !isOneOfType(d1,d2,T_INT,T_FLOAT){
+			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
 				Println("mult error");
-				err = errors.New("Cannot multiply or divide type "+typeMap[thisType]) }
+				return 0,0,nil, errors.New("Cannot multiply or divide type "+typeMap[thisType]) }
 				val = nil //TODO: precompute if possible
 		}
 		//there is third part because between
@@ -256,12 +260,19 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		}
 		return n.label, thisType, val, err
 
+	//TODO: make sure 'when' expression matches parent case initial expression type
+	case N_CWEXPR:
+		_, whenType, _, err := typeCheck(n.node1)
+		if err != nil { return 0,whenType,nil,err }
+		_, thisType, _, err := typeCheck(n.node2)
+		return n.label, thisType, nil, err
+
 	case N_CPRED:
 		_, predType, _, err := typeCheck(n.node1)
 		if err != nil { return 0,predType,nil,err }
 		//run type enforcer on predicate here ^
 		_, thisType, _, err := typeCheck(n.node2)
-		return N_CPRED, thisType, nil, err
+		return n.label, thisType, nil, err
 
 	default:
 		_, _, _, err := typeCheck(n.node1)
@@ -279,8 +290,7 @@ func enforceType(q *QuerySpecs, n *Node, d int) error {
 }
 
 func isOneOfType(test1, test2, type1, type2 int) bool {
-	return (test1 == type1 || test1 == type2) &&
-	       (test2 == type1 || test2 == type2)
+	return (test1 == type1 || test1 == type2) && (test2 == type1 || test2 == type2)
 }
 
 //print parse tree for debuggging

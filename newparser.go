@@ -335,22 +335,25 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
+//tok1 int tells that there's another
 //node1 is case expression
 //node2 is next exprlist node
 func parseCaseWhenExprList(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_CWEXPRLIST}
 	var err error
-	if q.Tok().id != KW_WHEN { return n,errors.New("Expected when. Found "+q.Tok().val) }
 	n.node1, err = parseCaseWhenExpr(q)
 	if err != nil { return n,err }
-	if q.Tok().id == KW_WHEN { n.node2, err = parseCaseWhenExprList(q) }
+	if q.Tok().id == KW_WHEN {
+		n.tok1 = 1
+		n.node2, err = parseCaseWhenExprList(q)
+	}
 	return n, err
 }
 
 //node1 is comparison expression
 //node2 is result expression
 func parseCaseWhenExpr(q* QuerySpecs) (*Node,error) {
-	n := &Node{label:N_CWEXPRLIST}
+	n := &Node{label:N_CWEXPR}
 	var err error
 	q.NextTok() //eat when token
 	n.node1,err = parseExprAdd(q)
