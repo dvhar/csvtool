@@ -144,7 +144,7 @@ func newCol(q* QuerySpecs,ii int) {
 var LeadingZeroString *regexp.Regexp
 func getNarrowestType(value string) int {
 	entry := s.TrimSpace(value)
-	ret := 0
+	ret := T_NULL
 	if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
 	  ret = max(T_NULL, ret)
 	} else if LeadingZeroString.MatchString(entry) {
@@ -222,6 +222,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	n.node1,err =  parse2Select(q)
 	if err != nil { return n,err }
 	treePrint(n.node1,0)
+	_,_,_,err = typeCheck(q,n.node1)
+	if err != nil { return n,err }
 	q.Reset()
 
 	n.node1,err =  parseSelect(q)

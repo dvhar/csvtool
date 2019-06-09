@@ -146,6 +146,123 @@ func execSelections(q *QuerySpecs, n *Node, res*SingleQueryResult, fromRow *[]in
 	execSelections(q,n.node1,res,fromRow,selected)
 }
 
+//what type results in operation with 2 expressions with various data types and column/literal source
+//null[c,l], int[c,l], float[c,l], date[c,l], string[c,l] in both dimensions
+var typeChart = [10][10]int {
+	{4,4,4,4,4,4,4,4,4,4},
+	{4,4,1,1,2,2,3,3,4,4},
+	{4,1,1,1,2,1,3,1,4,1},
+	{4,1,1,1,2,2,3,1,4,4},
+	{4,2,2,2,2,2,3,2,4,2},
+	{4,2,1,2,2,2,3,2,4,4},
+	{4,3,3,3,3,3,3,3,3,3},
+	{4,3,1,1,2,2,3,3,4,4},
+	{4,4,4,4,4,4,3,4,4,4},
+	{4,4,1,4,2,4,3,4,4,4},
+}
+
+//figure out what type to give subtreee given its expression types
+func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
+	i1 := 2*d1
+	i2 := 2*d2
+	i3 := 2*d3
+	if v1 != nil { i1++ }
+	if v2 != nil { i2++ }
+	if v3 != nil { i3++ }
+	resultType := typeChart[i1][i2]
+	if howmany == 3 { resultType = typeChart[resultType][i3] }
+	return resultType
+}
+
+//type checker
+//only return val interface if can be precomputed
+func typeCheck(q *QuerySpecs, n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
+	if n == nil { return 0,0,nil,nil }
+	var val interface{}
+	switch n.label {
+
+	case N_VALUE:
+		if n.tok2.(int)==0 { val = n.tok1 }
+		Println("n_value is",n.tok3.(int))
+		return N_VALUE, n.tok3.(int), val, nil
+
+	case N_EXPRCASE:
+		switch n.tok1.(int) {
+		case WORD: fallthrough
+		case N_EXPRADD:
+			return typeCheck(q, n.node1)
+		case KW_CASE:
+			_, d1, v1, err := typeCheck(q, n.node1)
+			if err != nil { return 0,0,nil,err }
+			n2, d2, v2, err := typeCheck(q, n.node2)
+			if err != nil { return 0,0,nil,err }
+			n3, d3, v3, err := typeCheck(q, n.node3)
+			if err != nil { return 0,0,nil,err }
+			var thisType int
+			if n2==0 && n3==0 { thisType = d1; val = v1
+			} else if n2>0 && n3==0 { thisType = typeCompute(v1,v2,nil,d1,d2,0,2)
+			} else if n2==0 && n3>0 { thisType = typeCompute(v1,v3,nil,d1,d3,0,2)
+			} else if n2>0 && n3>0 { thisType = typeCompute(v1,v2,v3,d1,d2,d3,3) }
+			Println("n_exprcase is",thisType)
+			return N_EXPRCASE, thisType, val, nil
+		}
+
+	case N_EXPRNEG:
+		_, d1, v1, err := typeCheck(q, n.node1)
+		if err != nil { return 0,0,nil,err }
+		if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT {
+			err = errors.New("Minus sign does not work with type "+typeMap[d1]) }
+		Println("n_exprneg is",d1)
+		return N_EXPRNEG,d1,v1,err
+
+	case N_EXPRMULT:
+		_, d1, val, err := typeCheck(q, n.node1)
+		if err != nil { return 0,0,nil,err }
+		_, d2, v2, err := typeCheck(q, n.node1)
+		if err != nil { return 0,0,nil,err }
+		thisType := d1
+		if _,ok:=n.tok1.(int); ok {
+			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
+			if !isOneOfType(d1,d2,T_INT,T_FLOAT){
+				err = errors.New("Cannot multiply type "+typeMap[thisType]) }
+			//TODO: precompute if possible
+			val = nil
+		}
+		Println("n_exprmult is",thisType)
+		return N_EXPRMULT, thisType, val, err
+
+	case N_EXPRADD:
+		_, d1, val, err := typeCheck(q, n.node1)
+		if err != nil { return 0,0,nil,err }
+		_, d2, v2, err := typeCheck(q, n.node1)
+		if err != nil { return 0,0,nil,err }
+		thisType := d1
+		if _,ok:=n.tok1.(int); ok {
+			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
+			if !isOneOfType(d1,d2,T_INT,T_FLOAT) && (d1!=T_STRING && d2!=T_STRING){
+				err = errors.New("Cannot add type "+typeMap[thisType]) }
+			//TODO: precompute if possible
+			val = nil
+		}
+		Println("n_expradd is",thisType)
+		return N_EXPRADD, thisType, val, err
+
+	default: return typeCheck(q, n.node1)
+	}
+	return 0,0,nil,nil
+}
+//parse subtree values as a type
+func enforceType(q *QuerySpecs, n *Node, d int) error {
+	return nil
+}
+
+func isOneOfType(test1, test2, type1, type2 int) bool {
+	return (test1 == type1 && test2 == type1) ||
+	       (test1 == type1 && test2 == type2) ||
+	       (test1 == type2 && test2 == type2) ||
+	       (test1 == type2 && test2 == type1)
+}
+
 //print parse tree for debuggging
 func treePrint(n *Node, i int){
 	if n==nil {return}
@@ -162,7 +279,7 @@ func treePrint(n *Node, i int){
 
 //tree node labels for debugging
 var treeMap = map[int]string {
-	N_QUERY:   "N_QUERY",
+	N_QUERY:      "N_QUERY",
 	N_SELECT:     "N_SELECT",
 	N_TOP:        "N_TOP",
 	N_SELECTIONS: "N_SELECTIONS",
@@ -186,4 +303,12 @@ var treeMap = map[int]string {
 	N_PREDCOMP:   "N_PREDCOMP",
 	N_CWEXPRLIST: "N_CWEXPRLIST",
     N_EXPRCASE:   "N_EXPRCASE",
+    N_VALUE:      "N_VALUE",
+}
+var typeMap = map[int]string {
+	T_NULL:      "null",
+	T_INT:       "integer",
+	T_FLOAT:     "float",
+	T_DATE:      "date",
+	T_STRING:    "string",
 }

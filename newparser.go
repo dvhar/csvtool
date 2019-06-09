@@ -163,11 +163,11 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 	Println("exprcase tok:", q.Tok())
 	switch q.Tok().id {
 	case KW_CASE:
-		n.tok1 = q.Tok()
+		n.tok1 = KW_CASE
 		switch q.NextTok().id {
 		//when expressions are true
 		case KW_WHEN:
-			n.tok2 = q.Tok().id
+			n.tok2 = KW_WHEN
 			n.node1,err = parseCaseWhenPredList(q)
 			if err != nil { return n,err }
 		//expression matches predicates
@@ -221,13 +221,16 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
 		n.tok1 = num-1
 		n.tok2 = 1
+		n.tok3 = fdata.types[num-1]
 	} else if !q.intColumn && !tok.quoted && cInt.MatchString(tok.val) {
 		num,_ := Atoi(tok.val[1:])
 		n.tok1 = num - 1
 		n.tok2 = 1
+		n.tok3 = fdata.types[num-1]
 	//else try column name
 	} else if n.tok1, err = getColumnIdx(fdata.names, tok.val); err == nil {
 		n.tok2 = 1
+		n.tok3 = fdata.types[n.tok1.(int)]
 	//else must be literal
 	} else {
 		err = nil
