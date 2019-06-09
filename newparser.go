@@ -61,6 +61,7 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 	case KW_DISTINCT: fallthrough
 	case KW_CASE:     fallthrough
 	case WORD:        fallthrough
+	case SP_MINUS:        fallthrough
 	case SP_LPAREN:
 		n.tok1 = countSelected
 		countSelected++
@@ -248,6 +249,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
+//tok1 says if more predicates
 //node1 is case predicate
 //node2 is next case predicate list node
 func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
@@ -255,7 +257,10 @@ func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
 	var err error
 	n.node1,err = parseCasePredicate(q)
 	if err != nil { return n,err }
-	if q.Tok().id == KW_WHEN { n.node2,err = parseCaseWhenPredList(q) }
+	if q.Tok().id == KW_WHEN {
+		n.tok1 = 1
+		n.node2,err = parseCaseWhenPredList(q)
+	}
 	return n, err
 }
 
@@ -300,7 +305,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	var expression bool
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 	if q.Tok().id == SP_LPAREN {
-		n.tok1 = SP_LPAREN
+		n.tok1 = N_PREDICATES
 		pos := q.tokIdx
 		//try parsing as predicate
 		q.NextTok()
