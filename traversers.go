@@ -313,15 +313,23 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
 	var err error
+	var val interface{}
 	switch n.label {
 	case N_VALUE:
 		n.tok3 = t
 		if n.tok2 == 0 {
 			switch t {
-			case T_INT:   n.tok1,err = Atoi(n.tok1.(string))
-			case T_FLOAT: n.tok1,err = Atoi(n.tok1.(string))
-			case T_DATE:  n.tok1,err = d.ParseAny(n.tok1.(string))
+			case T_INT:
+				val,err = Atoi(n.tok1.(string))
+				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as integer") }
+			case T_FLOAT:
+				val,err = ParseFloat(n.tok1.(string),64)
+				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as decimal") }
+			case T_DATE:
+				val,err = d.ParseAny(n.tok1.(string))
+				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
 			}
+			n.tok1 = val
 		}
 		return err
 
