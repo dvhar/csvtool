@@ -353,6 +353,31 @@ func enforceType(n *Node, t int) error {
 	return err
 }
 
+//remove useless nodes from parse tree
+func branchShortener(n *Node) *Node {
+	if n == nil { return n }
+	n.node1 = branchShortener(n.node1)
+	n.node2 = branchShortener(n.node2)
+	n.node3 = branchShortener(n.node3)
+	//node only links to next node
+	if n.tok1 == nil &&
+		n.tok2 == nil &&
+		n.tok3 == nil &&
+		n.node2 == nil &&
+		n.node3 == nil { return n.node1 }
+	//expradd only has type token and next is terminal which also does
+	if n.label == N_EXPRADD &&
+		n.tok1 == nil &&
+		n.tok3 == nil &&
+		n.node2 == nil &&
+		n.node3 == nil &&
+		n.node1.label == N_VALUE { return n.node1 }
+	//case node just links to next node
+	if n.label == N_EXPRCASE &&
+		(n.tok1.(int) == WORD || n.tok1.(int) == N_EXPRADD) { return n.node1 }
+	return n
+}
+
 func isOneOfType(test1, test2, type1, type2 int) bool {
 	return (test1 == type1 || test1 == type2) && (test2 == type1 || test2 == type2)
 }

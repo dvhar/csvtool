@@ -224,6 +224,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil {Println("err:",err); return n,err }
+	branchShortener(n.node1)
+	treePrint(n.node1,0)
 	q.Reset()
 
 	n.node1,err =  parseSelect(q)
