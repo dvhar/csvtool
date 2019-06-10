@@ -222,7 +222,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	//new expression parser test
 	n.node1,err =  parse2Select(q)
 	if err != nil { return n,err }
-	treePrint(n.node1,0)
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil {Println("err:",err); return n,err }
 	q.Reset()

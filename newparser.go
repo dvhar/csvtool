@@ -163,7 +163,6 @@ func parseExprNeg(q* QuerySpecs) (*Node,error) {
 func parseExprCase(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_EXPRCASE}
 	var err error
-	Println("exprcase tok:", q.Tok())
 	switch q.Tok().id {
 	case KW_CASE:
 		n.tok1 = KW_CASE
@@ -324,7 +323,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 		if negate == 1 { n.tok2 = SP_NEGATE }
 		if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
-		n.tok1 = q.Tok()
+		n.tok1 = q.Tok().id
 		q.NextTok()
 		n.node2, err = parseExprAdd(q)
 		if err != nil { return n,err }

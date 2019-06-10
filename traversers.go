@@ -180,8 +180,18 @@ func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
 //type checker
 //only return val interface if can be precomputed
 var caseWhenExprType int
+var it int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
+
+	//printer for debugging
+	it++
+	for j:=0;j<it;j++ { Print("  ") }
+	Println(treeMap[n.label])
+	for j:=0;j<it;j++ { Print("  ") }
+	Println("toks:",n.tok1, n.tok2, n.tok3)
+	defer func(){ it-- }()
+
 	var val interface{}
 	switch n.label {
 
@@ -191,21 +201,24 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 
 	case N_EXPRCASE:
 		switch n.tok1.(int) {
-		case WORD: fallthrough
+		case WORD:  fallthrough
 		case N_EXPRADD:
 			return typeCheck(n.node1)
-		//TODO: make initial expression match whencaseexpr type, but don't return that one
 		case KW_CASE:
+			println("case case")
 			n1, d1, v1, err := typeCheck(n.node1)
 			if err != nil { return 0,0,nil,err }
 			n2, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			n3, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
+			Println("n1 n2 n3 are: ",n1,n2,n3);
 			var thisType int
 			//when comparing an intial expression
 			if n1 == N_EXPRADD {
-				caseWhenExprType = typeCompute(v1,caseWhenExprType,nil,d1,d2,0,2)
+				//node1 and
+				//	expr: node2.node1.node1 nextExpr: node2.node2.node1.node1
+				caseWhenExprType = typeCompute(v1,nil,nil,d1,caseWhenExprType,0,2)
 				err = enforceType(n.node1, caseWhenExprType)
 				if err != nil { return 0,0,nil,err }
 				whenNode := n.node2
@@ -215,8 +228,6 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 					whenNode = whenNode.node2
 				}
 				caseWhenExprType = 0
-				//node1 and
-				//	expr: node2.node1.node1 nextExpr: node2.node2.node1.node1
 				thisType = d2
 				if n3>0 { thisType = typeCompute(v2,v3,nil,d2,d3,0,2) }
 			//when using predicates
@@ -224,10 +235,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 				thisType = d1
 				if n3>0 { thisType = typeCompute(v1,v3,nil,d1,d3,0,2) }
 			}
-			//when just a value
-			if n2==0 && n3==0 { thisType = d1; val = v1 }
-			Println("case types are ",d1,d2,d3,thisType)
-			return N_EXPRCASE, thisType, val, nil
+			return N_EXPRCASE, thisType, nil, nil
 		}
 
 	case N_EXPRNEG:   fallthrough
@@ -243,7 +251,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		case N_COLITEM: Println("n_colitem is type",d1," value ",v1)
 		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)
 		}
-		return n.label, d1, val, err
+		return n.label, d1, v1, err
 
 	case N_EXPRADD:   fallthrough
 	case N_EXPRMULT:  fallthrough
@@ -269,6 +277,9 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
 				Println("mult error");
 				return 0,0,nil, errors.New("Cannot multiply or divide type "+typeMap[thisType]) }
+			if n.label==N_PREDCOMP && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING) && !(d1==T_DATE && d2==T_DATE){
+				Println("mult error");
+				return 0,0,nil, errors.New("Cannot compare types "+typeMap[d1]+" and "+typeMap[d2]) }
 				val = nil //TODO: precompute if possible
 		}
 		//there is third part because between
@@ -385,17 +396,18 @@ var treeMap = map[int]string {
 	N_COMPARE:    "N_COMPARE",
 	N_REL:        "N_REL",
 	N_ORDER:      "N_ORDER",
-    N_COLITEM:    "N_COLITEM",
-    N_EXPRADD:    "N_EXPRADD",
-    N_EXPRMULT:   "N_EXPRMULT",
-    N_EXPRNEG:    "N_EXPRNEG",
+	N_COLITEM:    "N_COLITEM",
+	N_EXPRADD:    "N_EXPRADD",
+	N_EXPRMULT:   "N_EXPRMULT",
+	N_EXPRNEG:    "N_EXPRNEG",
 	N_CPREDLIST:  "N_CPREDLIST",
 	N_CPRED:      "N_CPRED",
 	N_PREDICATES: "N_PREDICATES",
 	N_PREDCOMP:   "N_PREDCOMP",
 	N_CWEXPRLIST: "N_CWEXPRLIST",
-    N_EXPRCASE:   "N_EXPRCASE",
-    N_VALUE:      "N_VALUE",
+	N_CWEXPR:     "N_CWEXPR",
+	N_EXPRCASE:   "N_EXPRCASE",
+	N_VALUE:      "N_VALUE",
 }
 var typeMap = map[int]string {
 	T_NULL:      "null",
