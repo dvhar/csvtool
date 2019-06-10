@@ -205,20 +205,17 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		case N_EXPRADD:
 			return typeCheck(n.node1)
 		case KW_CASE:
-			println("case case")
 			n1, d1, v1, err := typeCheck(n.node1)
 			if err != nil { return 0,0,nil,err }
-			n2, d2, v2, err := typeCheck(n.node2)
+			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			n3, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
-			Println("n1 n2 n3 are: ",n1,n2,n3);
 			var thisType int
 			//when comparing an intial expression
 			if n1 == N_EXPRADD {
-				//node1 and
-				//	expr: node2.node1.node1 nextExpr: node2.node2.node1.node1
 				caseWhenExprType = typeCompute(v1,nil,nil,d1,caseWhenExprType,0,2)
+				//enforce node1 and expr: node2.node1.node1 nextExpr: node2.node2.node1.node1
 				err = enforceType(n.node1, caseWhenExprType)
 				if err != nil { return 0,0,nil,err }
 				whenNode := n.node2
@@ -278,7 +275,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 				Println("mult error");
 				return 0,0,nil, errors.New("Cannot multiply or divide type "+typeMap[thisType]) }
 			if n.label==N_PREDCOMP && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING) && !(d1==T_DATE && d2==T_DATE){
-				Println("mult error");
+				Println("comp error");
 				return 0,0,nil, errors.New("Cannot compare types "+typeMap[d1]+" and "+typeMap[d2]) }
 				val = nil //TODO: precompute if possible
 		}
@@ -308,13 +305,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
 
-	default:
-		_, _, _, err := typeCheck(n.node1)
-		if err != nil { return 0,0,nil,err }
-		_, _, _, err = typeCheck(n.node2)
-		if err != nil { return 0,0,nil,err }
-		_, _, _, err = typeCheck(n.node3)
-		return 0,0,nil,err
+	case N_SELECT: return typeCheck(n.node1)
 	}
 	return 0,0,nil,nil
 }
