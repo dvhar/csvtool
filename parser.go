@@ -143,9 +143,8 @@ func newCol(q* QuerySpecs,ii int) {
 
 //infer type of single string value
 var LeadingZeroString *regexp.Regexp
-func getNarrowestType(value string) int {
+func getNarrowestType(value string, ret int) int {
 	entry := s.TrimSpace(value)
-	ret := T_NULL
 	if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
 	  ret = max(T_NULL, ret)
 	} else if LeadingZeroString.MatchString(entry) {
@@ -181,7 +180,9 @@ func inferTypes(q *QuerySpecs, f string) error {
 	for j:=0;j<10000;j++ {
 		line, err := cread.Read()
 		if err != nil { break }
-		for i,cell := range line { q.files[f].types[i] = getNarrowestType(cell) }
+		for i,cell := range line {
+			q.files[f].types[i] = getNarrowestType(cell, q.files[f].types[i])
+		}
 	}
 	return  err
 }

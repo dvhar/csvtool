@@ -180,17 +180,18 @@ func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
 //type checker
 //only return val interface if can be precomputed
 var caseWhenExprType int
-var it int
+//var it int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
 
-	//printer for debugging
+	/*printer for debugging
 	it++
 	for j:=0;j<it;j++ { Print("  ") }
 	Println(treeMap[n.label])
 	for j:=0;j<it;j++ { Print("  ") }
 	Println("toks:",n.tok1, n.tok2, n.tok3)
 	defer func(){ it-- }()
+	*/
 
 	var val interface{}
 	switch n.label {
@@ -220,7 +221,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 				if err != nil { return 0,0,nil,err }
 				whenNode := n.node2
 				for {
-					if enforceType(whenNode.node1.node1, caseWhenExprType) != nil { return 0,0,nil,err }
+					if err=enforceType(whenNode.node1.node1, caseWhenExprType);err != nil { return 0,0,nil,err }
 					if whenNode.node2 == nil { break }
 					whenNode = whenNode.node2
 				}
@@ -277,7 +278,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if n.label==N_PREDCOMP && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING) && !(d1==T_DATE && d2==T_DATE){
 				Println("comp error");
 				return 0,0,nil, errors.New("Cannot compare types "+typeMap[d1]+" and "+typeMap[d2]) }
-				val = nil //TODO: precompute if possible
+			val = nil //TODO: precompute if possible
 		}
 		//there is third part because between
 		if rel,ok := n.tok1.(int); ok && rel == KW_BETWEEN {
@@ -309,6 +310,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	}
 	return 0,0,nil,nil
 }
+
 //parse subtree values as a type
 func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
@@ -324,7 +326,7 @@ func enforceType(n *Node, t int) error {
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as integer") }
 			case T_FLOAT:
 				val,err = ParseFloat(n.tok1.(string),64)
-				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as decimal") }
+				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as floating point number") }
 			case T_DATE:
 				val,err = d.ParseAny(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }

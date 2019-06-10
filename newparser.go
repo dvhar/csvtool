@@ -238,7 +238,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		err = nil
 		n.tok1 = tok.val
 		n.tok2 = 0
-		n.tok3 = getNarrowestType(tok.val)
+		n.tok3 = getNarrowestType(tok.val,0)
 	}
 	q.NextTok()
 	//check column number bounds
