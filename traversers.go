@@ -381,12 +381,12 @@ func enforceType(n *Node, t int) error {
 	return err
 }
 
-//remove useless nodes from parse tree
-func branchShortener(n *Node) *Node {
+//remove useless nodes from parse tree, give column names if applicable
+func branchShortener(q *QuerySpecs, n *Node) *Node {
 	if n == nil { return n }
-	n.node1 = branchShortener(n.node1)
-	n.node2 = branchShortener(n.node2)
-	n.node3 = branchShortener(n.node3)
+	n.node1 = branchShortener(q, n.node1)
+	n.node2 = branchShortener(q, n.node2)
+	n.node3 = branchShortener(q, n.node3)
 	//node only links to next node
 	if n.tok1 == nil &&
 		n.tok2 == nil &&
@@ -398,6 +398,17 @@ func branchShortener(n *Node) *Node {
 	//case node just links to next node
 	if n.label == N_EXPRCASE &&
 		(n.tok1.(int) == WORD || n.tok1.(int) == N_EXPRADD) { return n.node1 }
+	//give colitem name of source column if just a col
+	if n.label == N_COLITEM &&
+		n.tok1 == nil &&
+		n.node1.label == N_VALUE &&
+		n.node1.tok2.(int) == 1 { n.tok1 = q.files["_fmk01"].names[n.node1.tok1.(int)] }
+	if n.label == N_SELECTIONS &&
+		n.node1.label == N_COLITEM {
+			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
+			} else { n.tok2 = Sprintf("col%d",n.tok1.(int)) }
+			newColItem(q, n.tok1.(int), n.node1.tok3.(int), n.tok2.(string))
+		}
 	return n
 }
 

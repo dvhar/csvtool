@@ -50,6 +50,7 @@ func parse2Select(q* QuerySpecs) (*Node,error) {
 //node1 is expression
 //node2 is next selection
 //tok1 is destination column index
+//tok2 will be destination column name
 func parse2Selections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
@@ -80,7 +81,7 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 
 //tok1 is alias
 //tok2 is distinct
-//tok3 will be
+//tok3 will be type
 //node1 is expression
 func parseColumnItem(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_COLITEM}
