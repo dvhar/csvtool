@@ -244,7 +244,10 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT {
 				Println("minus error");
 				err = errors.New("Minus sign does not work with type "+typeMap[d1]) }
-		case N_COLITEM: Println("n_colitem is type",d1," value ",v1)
+		case N_COLITEM:
+			n.tok3 = d1
+			Println("n_colitem is type",d1," value ",v1)
+			enforceType(n.node1, d1)
 		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)
 		}
 		return n.label, d1, v1, err
@@ -283,6 +286,8 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			thisType = typeCompute(val,v2,v3,d1,d2,d3,3)
 			val = nil //TODO: precompute if possible
 		}
+		//predicate comparisions are typed independantly, so leave type in node3
+		if n.label == N_PREDCOMP { n.tok3 = thisType }
 		return n.label, thisType, val, err
 
 	//case 'when' expression needs to match others but isn't node's return type
@@ -291,16 +296,15 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
 
-	//always typed independantly
-	case N_PREDICATES:// <predicates>   -> <predicateCompare> <logop> <predicates> | <predicateCompare>
-		_, d1, _, err := typeCheck(n.node1)
+	//only evalutates a boolean, subtrees are typed independantly
+	case N_PREDICATES:
+		_, _, _, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
-		n.tok2 = d1
 		_, _, _, err = typeCheck(n.node2)
 		return n.label, 0, nil, err
 
 	//each predicate condition 
-	case N_CPRED:     //<casePredicate> -> when <predicates> then <exprAdd>
+	case N_CPRED:
 		_, _, _, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
 		_, thisType, _, err := typeCheck(n.node2)
@@ -316,12 +320,11 @@ func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
 	var err error
 	var val interface{}
-	Println("enforcing node",treeMap[n.label])
 	switch n.label {
 	case N_VALUE:
 		n.tok3 = t
 		if n.tok2 == 0 {
-			Println("typing tok",n.tok1)
+			Println("typing tok",n.tok1,"as",t)
 			switch t {
 			case T_INT:
 				val,err = Atoi(n.tok1.(string))
@@ -354,13 +357,19 @@ func enforceType(n *Node, t int) error {
 		}
 		err = enforceType(n.node3,t)
 
-	case N_CWEXPR: fallthrough
-	case N_CPRED:
+	//node1 already done by N_EXPRCASE whenNode loop
+	case N_CWEXPR:
 		err = enforceType(n.node2,t)
 
-	case N_EXPRADD:
-		n.tok3 = t
-		fallthrough
+	//predicate comparisons are typed independantly by node3 when terminal
+	case N_PREDCOMP:
+		if tt, ok := n.tok3.(int); ok { t = tt }
+		err = enforceType(n.node1,t)
+		if err != nil { return err }
+		err = enforceType(n.node2,t)
+		if err != nil { return err }
+		err = enforceType(n.node3,t)
+
 	default:
 		err = enforceType(n.node1,t)
 		if err != nil { return err }
@@ -390,6 +399,8 @@ func branchShortener(n *Node) *Node {
 		n.node2 == nil &&
 		n.node3 == nil &&
 		n.node1.label == N_VALUE { return n.node1 }
+	//predicates has no logical operator so it's just one predicate
+	if n.label == N_PREDICATES && n.tok1 == nil { return n.node1 }
 	//case node just links to next node
 	if n.label == N_EXPRCASE &&
 		(n.tok1.(int) == WORD || n.tok1.(int) == N_EXPRADD) { return n.node1 }

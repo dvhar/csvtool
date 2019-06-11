@@ -289,7 +289,6 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is logop
-//tok2 will be independant type for node1
 //node1 is predicate comparison
 //node2 is next predicates node
 func parsePredicates(q* QuerySpecs) (*Node,error) {
@@ -307,6 +306,7 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 
 //tok1 is [relop, paren] for comparison or more predicates
 //tok2 is negation
+//tok3 will be independant type
 //node1 is [expr, predicates]
 //node2 is second expr
 //node3 is third expr for betweens
