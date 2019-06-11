@@ -214,22 +214,15 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if err != nil { return 0,0,nil,err }
 			var thisType int
 			//when comparing an intial expression
-			if n1 == N_EXPRADD { 
+			if n1 == N_EXPRADD {
 				//independent type cluster is n.node1 and n.node2.node1.node1, looping with n=n.node2
-				//caseWhenExprType is type of n.node2.node1 before here
-				//combining types of initial expression and first 'when' expression
 				caseWhenExprType := d1
-				Println("initial type is",d1)
-				whenNode := n.node2
-				for {
+				for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {  //when expression list
 					_,whentype,_,err := typeCheck(whenNode.node1.node1)
 					if err != nil { return 0,0,nil,err }
 					caseWhenExprType = typeCompute(nil,nil,nil,caseWhenExprType,whentype,0,2)
-					Println("when type is",whentype,"making final type",caseWhenExprType)
-					if whenNode.node2 == nil { break }
-					whenNode = whenNode.node2
 				}
-				n.tok3 = caseWhenExprType
+				n.node2.tok3 = caseWhenExprType
 				thisType = d2
 				if n3>0 { thisType = typeCompute(v2,v3,nil,d2,d3,0,2) }
 			//when using predicates
@@ -271,8 +264,6 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
-			if n.label==N_EXPRADD{ Println("add types",d1,d2,"got",thisType) }
-			if n.label==N_EXPRMULT{ Println("mult types",d1,d2,"got",thisType) }
 			//check addition semantics
 			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING){
 				Println("add error");
@@ -348,6 +339,13 @@ func enforceType(n *Node, t int) error {
 
 	case N_EXPRCASE:
 		if tk2,ok := n.tok2.(int); ok && tk2 == N_EXPRADD {
+			err = enforceType(n.node1, n.node2.tok3.(int))  //initial when expression
+			if err != nil { return err }
+			for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {  //when expression list
+				enforceType(whenNode.node1.node1, n.node2.tok3.(int))
+				if err != nil { return err }
+			}
+			//finally get to this node's type
 			err = enforceType(n.node2,t)
 			if err != nil { return err }
 		} else {
@@ -360,9 +358,8 @@ func enforceType(n *Node, t int) error {
 	case N_CPRED:
 		err = enforceType(n.node2,t)
 
-
 	case N_EXPRADD:
-		n.tok2 = t
+		n.tok3 = t
 		fallthrough
 	default:
 		err = enforceType(n.node1,t)

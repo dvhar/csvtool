@@ -79,13 +79,13 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is alias
-//tok2 is [as] for alias
-//tok3 is distinct
+//tok2 is distinct
+//tok3 will be
 //node1 is expression
 func parseColumnItem(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_COLITEM}
 	var err error
-	if q.Tok().id == KW_DISTINCT { n.tok3 = KW_DISTINCT; q.NextTok() }
+	if q.Tok().id == KW_DISTINCT { n.tok2 = KW_DISTINCT; q.NextTok() }
 	//alias = expression
 	if q.PeekTok().id == SP_EQ {
 		if q.Tok().id != WORD { return n,errors.New("Alias must be a word. Found "+q.Tok().val) }
@@ -109,7 +109,7 @@ func parseColumnItem(q* QuerySpecs) (*Node,error) {
 //node1 is exprMult
 //node2 is exprAdd
 //tok1 is add/minus operator
-//tok2 will be type of expression - set by type enforcer
+//tok3 will be type
 func parseExprAdd(q* QuerySpecs) (*Node,error) {
 	var err error
 	n := &Node{label:N_EXPRADD}
@@ -128,6 +128,7 @@ func parseExprAdd(q* QuerySpecs) (*Node,error) {
 //node1 is exprNeg
 //node2 is exprMult
 //tok1 is mult/div operator
+//tok3 will be type
 func parseExprMult(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_EXPRMULT}
 	var err error
@@ -144,6 +145,7 @@ func parseExprMult(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is minus operator
+//tok3 will be type
 //node1 is exprCase
 func parseExprNeg(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_EXPRNEG}
@@ -158,7 +160,8 @@ func parseExprNeg(q* QuerySpecs) (*Node,error) {
 
 //tok1 is [case, word, expr] token - tells if case, terminal value, or (expr)
 //tok2 is [when, expr] token - tells what kind of case. predlist, or expr exprlist respectively
-//tok3 will be initial 'when' expression type
+//tok3 will be type
+//node2.tok3 will be initial 'when' expression type
 //node1 is (expression), when predicate list, expression for exprlist
 //node2 is expression list to compare to initial expression
 //node3 is else expression
@@ -217,7 +220,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 //if implement dot notation, put parser here
 //tok1 is [value, column index]
 //tok2 is [0,1] for literal/col
-//tok3 is data type
+//tok3 is type
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
@@ -255,6 +258,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 says if more predicates
+//tok3 of case node will be type
 //node1 is case predicate
 //node2 is next case predicate list node
 func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
@@ -269,6 +273,7 @@ func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
+//tok3 of case node will be type
 //node1 is predicates
 //node2 is expression if true
 func parseCasePredicate(q* QuerySpecs) (*Node,error) {
@@ -277,6 +282,7 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 	q.NextTok() //eat when token
 	n.node1,err = parsePredicates(q)
 	if err != nil { return n,err }
+	if q.Tok().id != KW_THEN { return n,errors.New("Expected 'then' after predicate. Found: "+q.Tok().val) }
 	q.NextTok() //eat then token
 	n.node2,err = parseExprAdd(q)
 	return n, err
