@@ -214,17 +214,22 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if err != nil { return 0,0,nil,err }
 			var thisType int
 			//when comparing an intial expression
-			if n1 == N_EXPRADD {  //make this only determine type and enforce later
-				caseWhenExprType = typeCompute(v1,nil,nil,d1,caseWhenExprType,0,2)
-				//err = enforceType(n.node1, caseWhenExprType)
-				//if err != nil { return 0,0,nil,err }
+			if n1 == N_EXPRADD { 
+				//independent type cluster is n.node1 and n.node2.node1.node1, looping with n=n.node2
+				//caseWhenExprType is type of n.node2.node1 before here
+				//combining types of initial expression and first 'when' expression
+				caseWhenExprType := d1
+				Println("initial type is",d1)
 				whenNode := n.node2
 				for {
-					if err=enforceType(whenNode.node1.node1, caseWhenExprType);err != nil { return 0,0,nil,err }
+					_,whentype,_,err := typeCheck(whenNode.node1.node1)
+					if err != nil { return 0,0,nil,err }
+					caseWhenExprType = typeCompute(nil,nil,nil,caseWhenExprType,whentype,0,2)
+					Println("when type is",whentype,"making final type",caseWhenExprType)
 					if whenNode.node2 == nil { break }
 					whenNode = whenNode.node2
 				}
-				caseWhenExprType = 0
+				n.tok3 = caseWhenExprType
 				thisType = d2
 				if n3>0 { thisType = typeCompute(v2,v3,nil,d2,d3,0,2) }
 			//when using predicates
@@ -291,9 +296,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 
 	//case 'when' expression needs to match others but isn't node's return type
 	case N_CWEXPR:
-		var err error
-		_, caseWhenExprType, _, err = typeCheck(n.node1)
-		if err != nil { return 0,0,nil,err }
+		//may want to precompute n.node1
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
 
