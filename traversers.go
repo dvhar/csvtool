@@ -335,6 +335,7 @@ func enforceType(n *Node, t int) error {
 			case T_DATE:
 				val,err = d.ParseAny(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
+			default: val = n.tok1.(string)
 			}
 			n.tok1 = val
 		}
@@ -392,13 +393,6 @@ func branchShortener(n *Node) *Node {
 		n.tok3 == nil &&
 		n.node2 == nil &&
 		n.node3 == nil { return n.node1 }
-	//expradd only has type token and next is terminal which also does
-	if n.label == N_EXPRADD &&
-		n.tok1 == nil &&
-		n.tok3 == nil &&
-		n.node2 == nil &&
-		n.node3 == nil &&
-		n.node1.label == N_VALUE { return n.node1 }
 	//predicates has no logical operator so it's just one predicate
 	if n.label == N_PREDICATES && n.tok1 == nil { return n.node1 }
 	//case node just links to next node
