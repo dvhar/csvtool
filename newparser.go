@@ -14,7 +14,7 @@
 <value>             -> column | literal | ( expression )
 <caseWhenExprList>  -> <caseWhenExpr> <caseWhenExprList> | <caseWhenExpr>
 <caseWhenExpr>      -> when <exprAdd> then <exprAdd>
-<caseWhenPredList> -> <casePredicate> <caseWhenPredList> | <casePredicate>
+<caseWhenPredList>  -> <casePredicate> <caseWhenPredList> | <casePredicate>
 <casePredicate>     -> when <predicates> then <exprAdd>
 <predicates>        -> <predicateCompare> <logop> <predicates> | <predicateCompare>
 <predicateCompare>  -> {not} <exprAdd> {not} <relop> <exprAdd> 
@@ -46,6 +46,7 @@ func parse2Select(q* QuerySpecs) (*Node,error) {
 	n.node1,err = parse2Selections(q)
 	return n,err
 }
+
 //node1 is expression
 //node2 is next selection
 //tok1 is destination column index
@@ -157,6 +158,7 @@ func parseExprNeg(q* QuerySpecs) (*Node,error) {
 
 //tok1 is [case, word, expr] token - tells if case, terminal value, or (expr)
 //tok2 is [when, expr] token - tells what kind of case. predlist, or expr exprlist respectively
+//tok3 will be initial 'when' expression type
 //node1 is (expression), when predicate list, expression for exprlist
 //node2 is expression list to compare to initial expression
 //node3 is else expression
@@ -166,13 +168,14 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 	switch q.Tok().id {
 	case KW_CASE:
 		n.tok1 = KW_CASE
+
 		switch q.NextTok().id {
-		//when expressions are true
+		//when predicates are true
 		case KW_WHEN:
 			n.tok2 = KW_WHEN
 			n.node1,err = parseCaseWhenPredList(q)
 			if err != nil { return n,err }
-		//expression matches predicates
+		//expression matches expression list
 		case WORD: fallthrough
 		case SP_LPAREN:
 			Println("case starts with expression:", q.Tok())
@@ -183,6 +186,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 			n.node2,err = parseCaseWhenExprList(q)
 			if err != nil { return n,err }
 		}
+
 		switch q.Tok().id {
 		case KW_END:
 			q.NextTok()
@@ -195,6 +199,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		default:
 			return n,errors.New("Expected 'end' or 'else' after case expression. Found "+q.Tok().val)
 		}
+
 	case WORD:
 		n.tok1 = WORD
 		n.node1,err = parseValue(q)
@@ -278,6 +283,7 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is logop
+//tok2 will be independant type for node1
 //node1 is predicate comparison
 //node2 is next predicates node
 func parsePredicates(q* QuerySpecs) (*Node,error) {
@@ -305,7 +311,6 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	var expression bool
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 	if q.Tok().id == SP_LPAREN {
-		n.tok1 = N_PREDICATES
 		pos := q.tokIdx
 		//try parsing as predicate
 		q.NextTok()

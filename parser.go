@@ -143,22 +143,22 @@ func newCol(q* QuerySpecs,ii int) {
 
 //infer type of single string value
 var LeadingZeroString *regexp.Regexp
-func getNarrowestType(value string, ret int) int {
+func getNarrowestType(value string, startType int) int {
 	entry := s.TrimSpace(value)
 	if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
-	  ret = max(T_NULL, ret)
+	  startType = max(T_NULL, startType)
 	} else if LeadingZeroString.MatchString(entry) {
-	  ret = T_STRING
+	  startType = T_STRING
 	} else if _, err := Atoi(entry); err == nil {
-	  ret = max(T_INT, ret)
+	  startType = max(T_INT, startType)
 	} else if _, err := ParseFloat(entry,64); err == nil {
-	  ret = max(T_FLOAT, ret)
+	  startType = max(T_FLOAT, startType)
 	} else if _,err := d.ParseAny(entry); err == nil{
-	  ret = max(T_DATE, ret)
+	  startType = max(T_DATE, startType)
 	} else {
-	  ret = T_STRING
+	  startType = T_STRING
 	}
-	return ret
+	return startType
 }
 //infer types of all infile columns
 func inferTypes(q *QuerySpecs, f string) error {

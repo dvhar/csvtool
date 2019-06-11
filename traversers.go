@@ -177,21 +177,21 @@ func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
 	return resultType
 }
 
+//predicate typing and enforcing needs work
 //type checker
 //only return val interface if can be precomputed
 var caseWhenExprType int
-//var it int
+var it int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
 
-	/*printer for debugging
+	//printer for debugging
 	it++
 	for j:=0;j<it;j++ { Print("  ") }
 	Println(treeMap[n.label])
 	for j:=0;j<it;j++ { Print("  ") }
 	Println("toks:",n.tok1, n.tok2, n.tok3)
 	defer func(){ it-- }()
-	*/
 
 	var val interface{}
 	switch n.label {
@@ -214,11 +214,10 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if err != nil { return 0,0,nil,err }
 			var thisType int
 			//when comparing an intial expression
-			if n1 == N_EXPRADD {
+			if n1 == N_EXPRADD {  //make this only determine type and enforce later
 				caseWhenExprType = typeCompute(v1,nil,nil,d1,caseWhenExprType,0,2)
-				//enforce node1 and expr: node2.node1.node1 nextExpr: node2.node2.node1.node1
-				err = enforceType(n.node1, caseWhenExprType)
-				if err != nil { return 0,0,nil,err }
+				//err = enforceType(n.node1, caseWhenExprType)
+				//if err != nil { return 0,0,nil,err }
 				whenNode := n.node2
 				for {
 					if err=enforceType(whenNode.node1.node1, caseWhenExprType);err != nil { return 0,0,nil,err }
@@ -236,6 +235,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			return N_EXPRCASE, thisType, nil, nil
 		}
 
+	//1 or 2 type-independant nodes
 	case N_EXPRNEG:   fallthrough
 	case N_COLITEM:   fallthrough
 	case N_SELECTIONS:
@@ -251,17 +251,18 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		}
 		return n.label, d1, v1, err
 
+	//1 2 or 3 type-interdependant nodes
 	case N_EXPRADD:   fallthrough
 	case N_EXPRMULT:  fallthrough
 	case N_CWEXPRLIST:fallthrough
 	case N_CPREDLIST: fallthrough
-	case N_PREDCOMP:  fallthrough
-	case N_PREDICATES:
-		_, d1, val, err := typeCheck(n.node1)
+	case N_PREDCOMP:
+		n1, d1, val, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
+		if n.label == N_PREDCOMP && n1 == N_PREDICATES { return n.label, 0, nil,err }
 		thisType := d1
 		//there is second part but not a third
-		if rel,ok := n.tok1.(int); ok && rel!=KW_BETWEEN && rel!=N_PREDICATES  {
+		if operator,ok := n.tok1.(int); ok && operator!=KW_BETWEEN && operator!=N_PREDICATES  {
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
@@ -275,13 +276,10 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
 				Println("mult error");
 				return 0,0,nil, errors.New("Cannot multiply or divide type "+typeMap[thisType]) }
-			if n.label==N_PREDCOMP && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING) && !(d1==T_DATE && d2==T_DATE){
-				Println("comp error");
-				return 0,0,nil, errors.New("Cannot compare types "+typeMap[d1]+" and "+typeMap[d2]) }
 			val = nil //TODO: precompute if possible
 		}
 		//there is third part because between
-		if rel,ok := n.tok1.(int); ok && rel == KW_BETWEEN {
+		if operator,ok := n.tok1.(int); ok && operator == KW_BETWEEN {
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			_, d3, v3, err := typeCheck(n.node3)
@@ -291,6 +289,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		}
 		return n.label, thisType, val, err
 
+	//case 'when' expression needs to match others but isn't node's return type
 	case N_CWEXPR:
 		var err error
 		_, caseWhenExprType, _, err = typeCheck(n.node1)
@@ -298,10 +297,17 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
 
-	case N_CPRED:
-		_, predType, _, err := typeCheck(n.node1)
+	//always typed independantly
+	case N_PREDICATES:// <predicates>   -> <predicateCompare> <logop> <predicates> | <predicateCompare>
+		_, d1, _, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
-		err = enforceType(n.node1, predType)
+		n.tok2 = d1
+		_, _, _, err = typeCheck(n.node2)
+		return n.label, 0, nil, err
+
+	//each predicate condition 
+	case N_CPRED:     //<casePredicate> -> when <predicates> then <exprAdd>
+		_, _, _, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
@@ -316,10 +322,12 @@ func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
 	var err error
 	var val interface{}
+	Println("enforcing node",treeMap[n.label])
 	switch n.label {
 	case N_VALUE:
 		n.tok3 = t
 		if n.tok2 == 0 {
+			Println("typing tok",n.tok1)
 			switch t {
 			case T_INT:
 				val,err = Atoi(n.tok1.(string))
