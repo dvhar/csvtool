@@ -146,7 +146,7 @@ func main() {
 			} else {
 				counter = 0
 			}
-			if counter > 5 { os.Exit(2) }
+			if counter > 10 { os.Exit(2) }
 		}
 	}()
 
