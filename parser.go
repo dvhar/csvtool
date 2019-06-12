@@ -34,6 +34,8 @@ type QuerySpecs struct {
 	files map[string]*FileData
 	numfiles int
 	tempVal interface{}
+	fromRow []interface{}
+	toRow []interface{}
 	intColumn bool
 }
 func (q *QuerySpecs) NextTok() *Token {
@@ -227,6 +229,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
 	treePrint(n.node1,0)
+	Println("newparser finished with",q.Tok())
 	q.Reset()
 
 	n.node1,err =  parseSelect(q)

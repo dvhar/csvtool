@@ -47,6 +47,37 @@ func parse2Select(q* QuerySpecs) (*Node,error) {
 	return n,err
 }
 
+//node2 is chain of selections for all infile columns
+func selectAll2(q* QuerySpecs) (*Node,error) {
+	var err error
+	n := &Node{label:N_SELECTIONS}
+	file := q.files["_fmk01"]
+	firstSelection := n
+	var lastSelection *Node
+	for i:= range file.names {
+		n.tok1 = countSelected
+		n.tok2  = file.names[i]
+		n.node2 = &Node{label:N_SELECTIONS}
+		n.node1 = &Node{
+			label: N_COLITEM,
+			tok1: file.names[i],
+			tok3: file.types[i],
+			node1: &Node{
+				label: N_VALUE,
+				tok1: i,
+				tok2: 1,
+				tok3: file.types[i],
+			},
+		}
+		countSelected++
+		lastSelection = n
+		n = n.node2
+	}
+	q.NextTok()
+	lastSelection.node2,err = parse2Selections(q)
+	return firstSelection,err
+}
+
 //node1 is column item
 //node2 is next selection
 //tok1 is destination column index
@@ -56,32 +87,7 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 	var err error
 	switch q.Tok().id {
 	case SP_STAR:
-		//do something like this for the other select all method
-		file := q.files["_fmk01"]
-		firstSelection := n
-		var lastSelection *Node
-		for i:= range file.names {
-			n.tok1 = countSelected
-			n.tok2  = file.names[i]
-			n.node2 = &Node{label:N_SELECTIONS}
-			n.node1 = &Node{
-				label: N_COLITEM,
-				tok1: file.names[i],
-				tok3: file.types[i],
-				node1: &Node{
-					label: N_VALUE,
-					tok1: i,
-					tok2: 1,
-					tok3: file.types[i],
-				},
-			}
-			countSelected++
-			lastSelection = n
-			n = n.node2
-		}
-		q.NextTok()
-		lastSelection.node2,err = parse2Selections(q)
-		return firstSelection,err
+		return selectAll2(q)
 	//expression
 	case KW_DISTINCT: fallthrough
 	case KW_CASE:     fallthrough
@@ -96,7 +102,7 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 		return n,err
 	//done with selections
 	case KW_FROM:
-		if q.colSpec.NewWidth == 0 { selectAll(q) }
+		if countSelected == 0 { selectAll2(q) }
 		return nil,nil
 	}
 	return n,err

@@ -412,6 +412,13 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 	return n
 }
 
+func newColItem(q* QuerySpecs, idx, typ int, name string) {
+	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
+	q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
+	q.colSpec.NewPos = append(q.colSpec.NewPos, idx+1)
+	q.colSpec.NewWidth++
+}
+
 func isOneOfType(test1, test2, type1, type2 int) bool {
 	return (test1 == type1 || test1 == type2) && (test2 == type1 || test2 == type2)
 }
