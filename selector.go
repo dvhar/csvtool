@@ -9,7 +9,6 @@ func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
 	q.toRow = make([]interface{}, q.colSpec.NewWidth)
 	exec2Selections(q, q.tree.node1.node1)
 	if q.quantityRetrieved <= q.showLimit {
-		Println("retrieving row:",q.toRow)
 		res.Vals = append(res.Vals, q.toRow)
 		q.quantityRetrieved++
 	}
@@ -18,7 +17,6 @@ func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
 
 func exec2Selections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	Println("selecting from node",treeMap[n.label])
 	_,val := execExpression(q, n.node1.node1)
 	q.toRow[n.tok1.(int)] = val
 	exec2Selections(q, n.node2)
@@ -32,8 +30,6 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_VALUE:
 		if n.tok2.(int) == 0 { return n.tok3.(int), n.tok1
 		} else {
-			//Println("trying to retrieve item at index",n.tok1.(int))
-			//Println("row retrieving from is",q.fromRow)
 			return n.tok3.(int), q.fromRow[n.tok1.(int)]
 		}
 
@@ -65,6 +61,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 			switch typ {
 			case T_INT:   if op==SP_PLUS { v1=v1.(int)+v2.(int) } else { v1=v1.(int)-v2.(int) }
 			case T_FLOAT: if op==SP_PLUS { v1=v1.(float64)+v2.(float64) } else { v1=v1.(float64)-v2.(float64) }
+			case T_STRING: if op==SP_PLUS { v1=v1.(string)+v2.(string) } //else remove substring
 			}
 		}
 		return typ,v1

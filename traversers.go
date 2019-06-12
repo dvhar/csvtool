@@ -381,7 +381,7 @@ func enforceType(n *Node, t int) error {
 	return err
 }
 
-//remove useless nodes from parse tree, give column names if applicable
+//remove useless nodes from parse tree
 func branchShortener(q *QuerySpecs, n *Node) *Node {
 	if n == nil { return n }
 	n.node1 = branchShortener(q, n.node1)
@@ -398,18 +398,26 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 	//case node just links to next node
 	if n.label == N_EXPRCASE &&
 		(n.tok1.(int) == WORD || n.tok1.(int) == N_EXPRADD) { return n.node1 }
-	//give colitem name of source column if just a col
+	//give node its name if just a column
 	if n.label == N_COLITEM &&
 		n.tok1 == nil &&
 		n.node1.label == N_VALUE &&
 		n.node1.tok2.(int) == 1 { n.tok1 = q.files["_fmk01"].names[n.node1.tok1.(int)] }
+	return n
+}
+
+//get column names and put in array
+func columnNamer(q *QuerySpecs, n *Node) {
+	if n == nil { return }
 	if n.label == N_SELECTIONS &&
 		n.node1.label == N_COLITEM {
 			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
 			} else { n.tok2 = Sprintf("col%d",n.tok1.(int)) }
 			newColItem(q, n.tok1.(int), n.node1.tok3.(int), n.tok2.(string))
 		}
-	return n
+	columnNamer(q, n.node1)
+	columnNamer(q, n.node2)
+	columnNamer(q, n.node3)
 }
 
 func newColItem(q* QuerySpecs, idx, typ int, name string) {

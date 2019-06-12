@@ -228,6 +228,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
+	columnNamer(q, n.node1)
 	treePrint(n.node1,0)
 	//Println("newparser finished with",q.Tok())
 	//q.Reset()
