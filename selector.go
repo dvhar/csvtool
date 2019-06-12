@@ -109,7 +109,7 @@ func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interfac
 		return typ,v1
 	case N_CWEXPR:
 		_,v1 := execExpression(q, n.node1)
-		if v1 == testVal { return execExpression(q, n.node2) }
+		if Sprint(v1) == Sprint(testVal) { return execExpression(q, n.node2) }
 	}
 	return -1,nil
 }
