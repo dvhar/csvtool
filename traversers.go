@@ -201,6 +201,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		return N_VALUE, n.tok3.(int), val, nil
 
 	case N_EXPRCASE:
+		Println(treeMap[n.label],n)
 		switch n.tok1.(int) {
 		case WORD:  fallthrough
 		case N_EXPRADD:

@@ -56,9 +56,14 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 	var err error
 	switch q.Tok().id {
 	case SP_STAR:
+		//do something like this for the other select all method
 		file := q.files["_fmk01"]
-		//need to make this act like a recursive thing
+		firstSelection := n
+		var lastSelection *Node
 		for i:= range file.names {
+			n.tok1 = countSelected
+			n.tok2  = file.names[i]
+			n.node2 = &Node{label:N_SELECTIONS}
 			n.node1 = &Node{
 				label: N_COLITEM,
 				tok1: file.names[i],
@@ -69,13 +74,14 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 					tok2: 1,
 					tok3: file.types[i],
 				},
-				node2: &Node{label:N_SELECTIONS},
 			}
+			countSelected++
+			lastSelection = n
 			n = n.node2
 		}
 		q.NextTok()
-		n,err = parse2Selections(q)
-		return n,err
+		lastSelection.node2,err = parse2Selections(q)
+		return firstSelection,err
 	//expression
 	case KW_DISTINCT: fallthrough
 	case KW_CASE:     fallthrough
@@ -155,6 +161,7 @@ func parseExprMult(q* QuerySpecs) (*Node,error) {
 	switch q.Tok().id {
 	case SP_STAR: fallthrough
 	case SP_DIV:
+		if q.PeekTok().id == KW_FROM { break }
 		n.tok1 = q.Tok().id
 		q.NextTok()
 		n.node2,err = parseExprMult(q)
