@@ -47,7 +47,7 @@ func parse2Select(q* QuerySpecs) (*Node,error) {
 	return n,err
 }
 
-//node1 is expression
+//node1 is column item
 //node2 is next selection
 //tok1 is destination column index
 //tok2 will be destination column name
@@ -56,9 +56,26 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 	var err error
 	switch q.Tok().id {
 	case SP_STAR:
-		selectAll(q)
+		file := q.files["_fmk01"]
+		//need to make this act like a recursive thing
+		for i:= range file.names {
+			n.node1 = &Node{
+				label: N_COLITEM,
+				tok1: file.names[i],
+				tok3: file.types[i],
+				node1: &Node{
+					label: N_VALUE,
+					tok1: i,
+					tok2: 1,
+					tok3: file.types[i],
+				},
+				node2: &Node{label:N_SELECTIONS},
+			}
+			n = n.node2
+		}
 		q.NextTok()
-		return parse2Selections(q)
+		n,err = parse2Selections(q)
+		return n,err
 	//expression
 	case KW_DISTINCT: fallthrough
 	case KW_CASE:     fallthrough
