@@ -201,7 +201,6 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		return N_VALUE, n.tok3.(int), val, nil
 
 	case N_EXPRCASE:
-		Println(treeMap[n.label],n)
 		switch n.tok1.(int) {
 		case WORD:  fallthrough
 		case N_EXPRADD:
@@ -270,7 +269,6 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
-			if n.label == N_CPREDLIST { Println("pred list combined type",d1,"val",val,"type",d2,"val",v2,"and got",thisType) }
 
 			//check addition semantics
 			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING){
@@ -323,6 +321,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 }
 
 //parse subtree values as a type
+//modify this to handle 'like' with regular expressions
 func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
 	var err error
@@ -331,6 +330,7 @@ func enforceType(n *Node, t int) error {
 	case N_VALUE:
 		n.tok3 = t
 		if n.tok2 == 0 {
+			if _,ok := n.tok1.(*regexp.Regexp); ok { return err }
 			Println("typing tok",n.tok1,"as",t)
 			switch t {
 			case T_INT:
@@ -342,7 +342,7 @@ func enforceType(n *Node, t int) error {
 			case T_DATE:
 				val,err = d.ParseAny(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
-			default: val = n.tok1.(string)
+			default: val = n.tok1
 			}
 			n.tok1 = val
 		}

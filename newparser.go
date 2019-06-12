@@ -335,6 +335,7 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
+//modify this to immediatly compile a regular expression for 'like' relop
 //tok1 is [relop, paren] for comparison or more predicates
 //tok2 is negation
 //tok3 will be independant type
@@ -367,8 +368,19 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
 		n.tok1 = q.Tok().id
 		q.NextTok()
-		n.node2, err = parseExprAdd(q)
-		if err != nil { return n,err }
+		if n.tok1 == KW_LIKE {
+			var like interface{}
+			re := regexp.MustCompile("%")
+			like = re.ReplaceAllString(q.Tok().val, ".*")
+			re = regexp.MustCompile("_")
+			like = re.ReplaceAllString(q.Tok().val, ".")
+			like,err = regexp.Compile("(?i)^"+like.(string)+"$")
+			n.node2 = &Node{label: N_VALUE, tok1: like.(*regexp.Regexp), tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
+			q.NextTok()
+		} else {
+			n.node2, err = parseExprAdd(q)
+			if err != nil { return n,err }
+		}
 		if n.tok1 == KW_BETWEEN {
 			q.NextTok()
 			n.node3, err = parseExprAdd(q)
