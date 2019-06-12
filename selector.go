@@ -1,4 +1,9 @@
 package main
+import (
+	. "fmt"
+	"regexp"
+	"time"
+)
 
 func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
 	q.toRow = make([]interface{}, q.colSpec.NewWidth)
@@ -86,7 +91,7 @@ func execCasePredList(q *QuerySpecs, n *Node) (int,interface{}) {
 		if typ == -1 { return execCasePredList(q, n.node2) }
 		return typ,v1
 	case N_CPRED:
-		if evalPredicates(q, n.node1) { return execExpression(q, n.node2) }
+		if evalPredicates(q,n.node1) { return execExpression(q, n.node2) }
 	}
 	return -1,nil
 }
@@ -105,5 +110,60 @@ func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interfac
 }
 
 func evalPredicates(q *QuerySpecs, n *Node) bool {
-	return false
+	var negate int
+	var match bool
+	if _,ok := n.tok2.(int);ok { negate ^= 1 }
+	switch n.label {
+	case N_PREDICATES:
+		match = evalPredicates(q,n.node1)
+		if n.node2 != nil {
+			switch n.tok1.(int) {
+			case KW_AND: if match  { match = evalPredicates(q,n.node2) }
+			case KW_OR:  if !match { match = evalPredicates(q,n.node2) }
+			}
+		}
+		if negate==1 { return !match }
+		return match
+
+	//may need special handling of nulls
+	case N_PREDCOMP:
+		_,expr1 := execExpression(q, n.node1)
+		_,expr2 := execExpression(q, n.node2)
+		typ := n.tok3.(int)
+		switch n.tok1.(int) {
+		case KW_LIKE:  match = expr2.(*regexp.Regexp).MatchString(Sprint(expr1))
+
+		case SP_NOEQ: negate ^= 1; fallthrough
+		case SP_EQ:
+			switch typ {
+			case T_DATE:   match = expr1.(time.Time).Equal(expr2.(time.Time))
+			default:	   match = expr1 == expr2
+			}
+
+		case SP_LESSEQ: negate ^= 1; fallthrough
+		case SP_GREAT:
+			switch typ {
+			case T_NULL:   match = Sprint(expr1)  > Sprint(expr2)
+			case T_STRING: match = expr1.(string)        > expr2.(string)
+			case T_INT:    match = expr1.(int)           > expr2.(int)
+			case T_FLOAT:  match = expr1.(float64)       > expr2.(float64)
+			case T_DATE:   match = expr1.(time.Time).After(expr2.(time.Time))
+			}
+
+		case SP_GREATEQ: negate ^= 1; fallthrough
+		case SP_LESS:
+			switch typ {
+			case T_NULL:   match = Sprint(expr1)   < Sprint(expr2)
+			case T_STRING: match = expr1.(string)         < expr2.(string)
+			case T_INT:    match = expr1.(int)            < expr2.(int)
+			case T_FLOAT:  match = expr1.(float64)        < expr2.(float64)
+			case T_DATE:   match = expr1.(time.Time).Before(expr2.(time.Time))
+			}
+
+		case KW_BETWEEN:
+			println("this might get ugly")
+		}
+	}
+	if negate==1 { return !match }
+	return match
 }

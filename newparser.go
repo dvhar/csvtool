@@ -320,11 +320,13 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is logop
+//tok2 is negation
 //node1 is predicate comparison
 //node2 is next predicates node
 func parsePredicates(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_PREDICATES}
 	var err error
+	if q.Tok().id == SP_NEGATE { n.tok2 = SP_NEGATE; q.NextTok() }
 	n.node1,err = parsePredCompare(q)
 	if err != nil { return n,err }
 	if (q.Tok().id & LOGOP) != 0 {

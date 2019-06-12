@@ -330,7 +330,7 @@ func enforceType(n *Node, t int) error {
 	case N_VALUE:
 		n.tok3 = t
 		if n.tok2 == 0 {
-			if _,ok := n.tok1.(*regexp.Regexp); ok { return err }
+			if _,ok := n.tok1.(*regexp.Regexp); ok { return err } //don't retype regex
 			Println("typing tok",n.tok1,"as",t)
 			switch t {
 			case T_INT:
