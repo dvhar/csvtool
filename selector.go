@@ -9,6 +9,7 @@ func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
 	q.toRow = make([]interface{}, q.colSpec.NewWidth)
 	exec2Selections(q, q.tree.node1.node1)
 	if q.quantityRetrieved <= q.showLimit {
+		Println("retrieving row:",q.toRow)
 		res.Vals = append(res.Vals, q.toRow)
 		q.quantityRetrieved++
 	}
@@ -17,7 +18,8 @@ func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
 
 func exec2Selections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	_,val := execExpression(q, n.node1)
+	Println("selecting from node",treeMap[n.label])
+	_,val := execExpression(q, n.node1.node1)
 	q.toRow[n.tok1.(int)] = val
 	exec2Selections(q, n.node2)
 }
@@ -29,7 +31,11 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	switch n.label {
 	case N_VALUE:
 		if n.tok2.(int) == 0 { return n.tok3.(int), n.tok1
-		} else { return n.tok3.(int), q.fromRow[n.tok1.(int)] }
+		} else {
+			//Println("trying to retrieve item at index",n.tok1.(int))
+			//Println("row retrieving from is",q.fromRow)
+			return n.tok3.(int), q.fromRow[n.tok1.(int)]
+		}
 
 	case N_EXPRNEG:
 		typ,v1 := execExpression(q, n.node1)
@@ -85,6 +91,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 }
 
 func execCasePredList(q *QuerySpecs, n *Node) (int,interface{}) {
+	if n==nil { return -1,nil }
 	switch n.label {
 	case N_CPREDLIST:
 		typ, v1 := execCasePredList(q, n.node1)
@@ -97,6 +104,7 @@ func execCasePredList(q *QuerySpecs, n *Node) (int,interface{}) {
 }
 
 func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interface{}) {
+	if n==nil { return -1,nil }
 	switch n.label {
 	case N_CWEXPRLIST:
 		typ, v1 := execCaseExprList(q, n.node1, testVal)

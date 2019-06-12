@@ -121,6 +121,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
 //retrieve results on first pass
 func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
+	var err error
 	rowsChecked := 0
 	stop = 0
 	distinctCheck := make(map[interface{}]bool)
@@ -128,14 +129,16 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 		if stop == 1 { stop = 0; messager <- "query cancelled"; break }
 
 		//read line from csv file
-		fromRow,err := reader.Read()
+		q.fromRow,err = reader.Read()
 		if err != nil {break}
 
 		//find matches and retrieve results
-		match,err := evalWhere(q, &fromRow)
+		//modified to use new fromrow, new version won't need that param
+		match,err := evalWhere(q, &q.fromRow)
 		if err != nil {return err}
-		if match && evalDistinct(q, &fromRow, distinctCheck) {
-			execSelect(q, res, &fromRow)
+		if match && evalDistinct(q, &q.fromRow, distinctCheck) {
+			exec2Select(q, res)
+			//execSelect(q, res, &fromRow)
 			res.Numrows++;
 		}
 
