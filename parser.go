@@ -1,178 +1,37 @@
-//file provides the parseQuery function
-// _fmk0# is file map key designed to avoid collisions with aliases and file names
+//new expression parsing - under construction
+/*
+<Select>            -> {c|n} Select { <top> } <Selections>
+<Selections>        -> * <Selections> | <columnItem> <Selections> | ε
+<columnItem>        -> <exprAdd> | <exprAdd> as <alias> | <alias> = <exprAdd>
+<exprAdd>           -> <exprMult> + <exprAdd> | <exprMult> - <exprAdd> | <exprMult>
+<exprMult>          -> <exprNeg> * <exprMult> | <exprNeg> / <exprMult> | <exprNeg>
+<exprNeg>           -> - <exprCase> | <exprCase>
+<exprCase>          -> case <caseWhenPredList> end
+                     | case <caseWhenPredList> else <exprAdd> end
+                     | case <exprAdd> <caseWhenExprList> end
+                     | case <exprAdd> <caseWhenExprList> else <exprAdd> end
+                     | <value>
+<value>             -> column | literal | ( expression )
+<caseWhenExprList>  -> <caseWhenExpr> <caseWhenExprList> | <caseWhenExpr>
+<caseWhenExpr>      -> when <exprAdd> then <exprAdd>
+<caseWhenPredList>  -> <casePredicate> <caseWhenPredList> | <casePredicate>
+<casePredicate>     -> when <predicates> then <exprAdd>
+<predicates>        -> <predicateCompare> <logop> <predicates> | <predicateCompare>
+<predicateCompare>  -> {not} <exprAdd> {not} <relop> <exprAdd> 
+                     | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
+                     | {not} ( predicates )
+
+ints: column unless c2 present, overridden by c or n before select
+*/
+
+
 package main
 import (
-  "regexp"
-  "encoding/csv"
-  "path/filepath"
-  "os"
-  "errors"
-  s "strings"
-  d "github.com/araddon/dateparse"
-  . "strconv"
-  . "fmt"
+	"errors"
+	"regexp"
+	. "strconv"
+	. "fmt"
 )
-
-type QuerySpecs struct {
-	colSpec Columns
-	queryString string
-	tokArray []Token
-	tokIdx int
-	quantityLimit int
-	quantityRetrieved int
-	distinctIdx int
-	sortCol int
-	sortWay int
-	save bool
-	like bool
-	showLimit int
-	tree *Node
-	files map[string]*FileData
-	numfiles int
-	fromRow []interface{}
-	toRow []interface{}
-	intColumn bool
-}
-func (q *QuerySpecs) NextTok() *Token {
-	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
-	return &q.tokArray[q.tokIdx]
-}
-func (q QuerySpecs) PeekTok() *Token {
-	if q.tokIdx < len(q.tokArray)-1 { return &q.tokArray[q.tokIdx+1] }
-	return &q.tokArray[q.tokIdx]
-}
-func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
-func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
-const (
-	//parse tree node types
-	N_QUERY = iota
-	N_SELECT = iota
-	N_TOP = iota
-	N_SELECTIONS = iota
-	N_FROM = iota
-	N_WHERE = iota
-	N_ORDER = iota
-	N_COLITEM = iota
-    N_EXPRADD = iota
-    N_EXPRMULT = iota
-    N_EXPRNEG = iota
-    N_EXPRCASE = iota
-	N_CPREDLIST = iota
-	N_CPRED = iota
-	N_CWEXPRLIST = iota
-	N_CWEXPR = iota
-	N_PREDICATES = iota
-	N_PREDCOMP = iota
-	N_VALUE = iota
-)
-type FileData struct {
-	fname string
-	names []string
-	types []int
-	width int
-}
-type Node struct {
-	label int
-	tok1 interface{}
-	tok2 interface{}
-	tok3 interface{}
-	node1 *Node
-	node2 *Node
-	node3 *Node
-}
-type Columns struct {
-	NewNames []string
-	NewTypes []int
-	NewPos []int
-	NewWidth int
-}
-const (
-	T_NULL = iota
-	T_INT = iota
-	T_FLOAT = iota
-	T_DATE = iota
-	T_STRING = iota
-)
-func max(a int, b int) int {
-	if a>b { return a }
-	return b
-}
-func getColumnIdx(colNames []string, column string) (int, error) {
-	for i,col := range colNames {
-		if s.ToLower(col) == s.ToLower(column) { return i, nil }
-	}
-	return 0, errors.New("Column " + column + " not found")
-}
-var countSelected int
-
-//infer type of single string value
-var LeadingZeroString *regexp.Regexp
-func getNarrowestType(value string, startType int) int {
-	entry := s.TrimSpace(value)
-	if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
-	  startType = max(T_NULL, startType)
-	} else if LeadingZeroString.MatchString(entry) {
-	  startType = T_STRING
-	} else if _, err := Atoi(entry); err == nil {
-	  startType = max(T_INT, startType)
-	} else if _, err := ParseFloat(entry,64); err == nil {
-	  startType = max(T_FLOAT, startType)
-	} else if _,err := d.ParseAny(entry); err == nil{
-	  startType = max(T_DATE, startType)
-	} else {
-	  startType = T_STRING
-	}
-	return startType
-}
-//infer types of all infile columns
-func inferTypes(q *QuerySpecs, f string) error {
-	LeadingZeroString = regexp.MustCompile(`^0\d+$`)
-	//open file
-	fp,err := os.Open(q.files[f].fname)
-	if err != nil { return errors.New("problem opening input file") }
-	defer func(){ fp.Seek(0,0); fp.Close() }()
-	cread := csv.NewReader(fp)
-	line, err := cread.Read()
-	if err != nil { return errors.New("problem reading input file") }
-	//get col names and initialize blank types
-	for i,entry := range line {
-		q.files[f].names = append(q.files[f].names, entry)
-		q.files[f].types = append(q.files[f].types, 0)
-		q.files[f].width = i+1
-	}
-	//get samples and infer types from them
-	for j:=0;j<10000;j++ {
-		line, err := cread.Read()
-		if err != nil { break }
-		for i,cell := range line {
-			q.files[f].types[i] = getNarrowestType(cell, q.files[f].types[i])
-		}
-	}
-	return  err
-}
-//find files and open them
-func openFiles(q *QuerySpecs) error {
-	extension := regexp.MustCompile(`\.csv$`)
-	q.files = make(map[string]*FileData)
-	q.numfiles = 0
-	for ; q.Tok().id != EOS ; q.NextTok() {
-		_,err := os.Stat(q.Tok().val)
-		//open file and add to file map
-		if err == nil && extension.MatchString(q.Tok().val) {
-			file := &FileData{fname : q.Tok().val}
-			filename := filepath.Base(file.fname)
-			q.numfiles++
-			key := "_fmk0" + Sprint(q.numfiles)
-			q.files[key] = file
-			q.files[filename[:len(filename)-4]] = file
-			if q.NextTok().id == WORD { q.files[q.Tok().val] = file }
-			if q.Tok().id == KW_AS && q.NextTok().id == WORD { q.files[q.Tok().val] = file }
-			if inferTypes(q, key) != nil {return err}
-		}
-	}
-	q.Reset()
-	return nil
-}
 
 //recursive descent parser builds parse tree and QuerySpecs
 func parseQuery(q* QuerySpecs) (*Node,error) {
@@ -191,7 +50,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	treePrint(n.node1,0)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -204,6 +62,421 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
 	return n,err
+}
+
+//node1 is selections
+func parse2Select(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_SELECT}
+	var err error
+	if q.Tok().val == "c" { q.intColumn = true; q.NextTok() }
+	if q.Tok().val == "n" { q.intColumn = false; q.NextTok() }
+	if q.Tok().id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().val) }
+	q.NextTok()
+	err = parseTop(q)
+	if err != nil { return n,err }
+	countSelected = 0
+	n.node1,err = parse2Selections(q)
+	return n,err
+}
+
+//node2 is chain of selections for all infile columns
+func selectAll2(q* QuerySpecs) (*Node,error) {
+	var err error
+	n := &Node{label:N_SELECTIONS}
+	file := q.files["_fmk01"]
+	firstSelection := n
+	var lastSelection *Node
+	for i:= range file.names {
+		n.tok1 = countSelected
+		n.tok2  = file.names[i]
+		n.node2 = &Node{label:N_SELECTIONS}
+		n.node1 = &Node{
+			label: N_COLITEM,
+			tok1: file.names[i],
+			tok3: file.types[i],
+			node1: &Node{
+				label: N_VALUE,
+				tok1: i,
+				tok2: 1,
+				tok3: file.types[i],
+			},
+		}
+		countSelected++
+		lastSelection = n
+		n = n.node2
+	}
+	q.NextTok()
+	lastSelection.node2,err = parse2Selections(q)
+	return firstSelection,err
+}
+
+//node1 is column item
+//node2 is next selection
+//tok1 is destination column index
+//tok2 will be destination column name
+func parse2Selections(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_SELECTIONS}
+	var err error
+	switch q.Tok().id {
+	case SP_STAR:
+		return selectAll2(q)
+	//expression
+	case KW_DISTINCT:
+		if q.Tok().id == KW_DISTINCT {
+			q.NextTok()
+			var hidden bool
+			if q.Tok().val == "hidden" { hidden = true; q.NextTok() }
+			dexp,err := parseExprAdd(q)
+			if err != nil { return n,err }
+			_, d1, _, err := typeCheck(n.node1)
+			if err != nil { return n,err }
+			enforceType(dexp, d1)
+			branchShortener(q,dexp)
+			q.distinctExpr = dexp
+			if !hidden {
+				n.tok1 = countSelected
+				countSelected++
+				n.node1 = &Node{
+					label:N_COLITEM,
+					node1: dexp,
+					tok2: KW_DISTINCT,
+				}
+				if q.Tok().id == KW_AS {
+					n.node1.tok1 = q.NextTok().val
+					q.NextTok()
+				}
+				n.node2,err = parse2Selections(q)
+				return n,err
+			}
+			n,err = parse2Selections(q)
+		}
+	case KW_CASE:     fallthrough
+	case WORD:        fallthrough
+	case SP_MINUS:        fallthrough
+	case SP_LPAREN:
+		n.tok1 = countSelected
+		countSelected++
+		n.node1,err = parseColumnItem(q)
+		if err != nil { return n,err }
+		n.node2,err = parse2Selections(q)
+		return n,err
+	//done with selections
+	case KW_FROM:
+		if countSelected == 0 { selectAll2(q) }
+		return nil,nil
+	}
+	return n,err
+}
+
+//tok1 is alias
+//tok2 is external usage of expression
+//tok3 will be type
+//node1 is expression
+func parseColumnItem(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_COLITEM}
+	var err error
+	//alias = expression
+	if q.PeekTok().id == SP_EQ {
+		if q.Tok().id != WORD { return n,errors.New("Alias must be a word. Found "+q.Tok().val) }
+		n.tok1 = q.Tok().val
+		q.NextTok()
+		q.NextTok()
+		n.node1,err = parseExprAdd(q)
+	//expression
+	} else {
+		n.node1,err = parseExprAdd(q)
+		if q.Tok().id == KW_AS {
+			n.tok1 = q.NextTok().val
+			q.NextTok()
+		}
+	}
+	return n, err
+}
+
+//node1 is exprMult
+//node2 is exprAdd
+//tok1 is add/minus operator
+//tok3 will be type
+func parseExprAdd(q* QuerySpecs) (*Node,error) {
+	var err error
+	n := &Node{label:N_EXPRADD}
+	n.node1,err = parseExprMult(q)
+	if err != nil { return n,err }
+	switch q.Tok().id {
+	case SP_MINUS: fallthrough
+	case SP_PLUS:
+		n.tok1 = q.Tok().id
+		q.NextTok()
+		n.node2,err = parseExprAdd(q)
+	}
+	return n, err
+}
+
+//node1 is exprNeg
+//node2 is exprMult
+//tok1 is mult/div operator
+//tok3 will be type
+func parseExprMult(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_EXPRMULT}
+	var err error
+	n.node1,err = parseExprNeg(q)
+	if err != nil { return n,err }
+	switch q.Tok().id {
+	case SP_STAR: fallthrough
+	case SP_DIV:
+		if q.PeekTok().id == KW_FROM { break }
+		n.tok1 = q.Tok().id
+		q.NextTok()
+		n.node2,err = parseExprMult(q)
+	}
+	return n, err
+}
+
+//tok1 is minus operator
+//tok3 will be type
+//node1 is exprCase
+func parseExprNeg(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_EXPRNEG}
+	var err error
+	if q.Tok().id == SP_MINUS {
+		n.tok1 = q.Tok().id
+		q.NextTok()
+	}
+	n.node1, err = parseExprCase(q)
+	return n, err
+}
+
+//tok1 is [case, word, expr] token - tells if case, terminal value, or (expr)
+//tok2 is [when, expr] token - tells what kind of case. predlist, or expr exprlist respectively
+//tok3 will be type
+//node2.tok3 will be initial 'when' expression type
+//node1 is (expression), when predicate list, expression for exprlist
+//node2 is expression list to compare to initial expression
+//node3 is else expression
+func parseExprCase(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_EXPRCASE}
+	var err error
+	switch q.Tok().id {
+	case KW_CASE:
+		n.tok1 = KW_CASE
+
+		switch q.NextTok().id {
+		//when predicates are true
+		case KW_WHEN:
+			n.tok2 = KW_WHEN
+			n.node1,err = parseCaseWhenPredList(q)
+			if err != nil { return n,err }
+		//expression matches expression list
+		case WORD: fallthrough
+		case SP_LPAREN:
+			Println("case starts with expression:", q.Tok())
+			n.tok2 = N_EXPRADD
+			n.node1,err = parseExprAdd(q)
+			if err != nil { return n,err }
+			if q.Tok().id != KW_WHEN { return n,errors.New("Expected 'when' after case expression. Found "+q.Tok().val) }
+			n.node2,err = parseCaseWhenExprList(q)
+			if err != nil { return n,err }
+		}
+
+		switch q.Tok().id {
+		case KW_END:
+			q.NextTok()
+		case KW_ELSE:
+			q.NextTok()
+			n.node3,err = parseExprAdd(q)
+			if err != nil { return n,err }
+			if q.Tok().id != KW_END { return n,errors.New("Expected 'end' after 'else' expression. Found "+q.Tok().val) }
+			q.NextTok()
+		default:
+			return n,errors.New("Expected 'end' or 'else' after case expression. Found "+q.Tok().val)
+		}
+
+	case WORD:
+		n.tok1 = WORD
+		n.node1,err = parseValue(q)
+	case SP_LPAREN:
+		n.tok1 = N_EXPRADD
+		q.NextTok()
+		n.node1,err = parseExprAdd(q)
+		if err != nil { return n,err }
+		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis. Found "+q.Tok().val) }
+		q.NextTok()
+	}
+	return n, err
+}
+
+//if implement dot notation, put parser here
+//tok1 is [value, column index]
+//tok2 is [0,1] for literal/col
+//tok3 is type
+func parseValue(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_VALUE}
+	var err error
+	cInt := regexp.MustCompile(`^c\d+$`)
+	fdata := q.files["_fmk01"]
+	tok := q.Tok()
+	errCheck := func(col int) error {
+		if col < 1 { return errors.New("Column number too small: "+Sprint(col)) }
+		if col > fdata.width { return errors.New("Column number too big: "+Sprint(col)+". Max is "+Itoa(fdata.width)) }
+		return nil
+	}
+	//given a column number
+	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
+		if err := errCheck(num); err != nil { return n,err }
+		n.tok1 = num-1
+		n.tok2 = 1
+		n.tok3 = fdata.types[num-1]
+	} else if !q.intColumn && !tok.quoted && cInt.MatchString(tok.val) {
+		num,_ := Atoi(tok.val[1:])
+		if err := errCheck(num); err != nil { return n,err }
+		n.tok1 = num - 1
+		n.tok2 = 1
+		n.tok3 = fdata.types[num-1]
+	//else try column name
+	} else if n.tok1, err = getColumnIdx(fdata.names, tok.val); err == nil {
+		n.tok2 = 1
+		n.tok3 = fdata.types[n.tok1.(int)]
+	//else must be literal
+	} else {
+		err = nil
+		n.tok1 = tok.val
+		n.tok2 = 0
+		n.tok3 = getNarrowestType(tok.val,0)
+	}
+	q.NextTok()
+	if n.tok2.(int)==1 { n.tok3 = fdata.types[n.tok1.(int)] }
+	return n, err
+}
+
+//tok1 says if more predicates
+//tok3 of case node will be type
+//node1 is case predicate
+//node2 is next case predicate list node
+func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_CPREDLIST}
+	var err error
+	n.node1,err = parseCasePredicate(q)
+	if err != nil { return n,err }
+	if q.Tok().id == KW_WHEN {
+		n.tok1 = 1
+		n.node2,err = parseCaseWhenPredList(q)
+	}
+	return n, err
+}
+
+//tok3 of case node will be type
+//node1 is predicates
+//node2 is expression if true
+func parseCasePredicate(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_CPRED}
+	var err error
+	q.NextTok() //eat when token
+	n.node1,err = parsePredicates(q)
+	if err != nil { return n,err }
+	if q.Tok().id != KW_THEN { return n,errors.New("Expected 'then' after predicate. Found: "+q.Tok().val) }
+	q.NextTok() //eat then token
+	n.node2,err = parseExprAdd(q)
+	return n, err
+}
+
+//tok1 is logop
+//tok2 is negation
+//node1 is predicate comparison
+//node2 is next predicates node
+func parsePredicates(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_PREDICATES}
+	var err error
+	if q.Tok().id == SP_NEGATE { n.tok2 = SP_NEGATE; q.NextTok() }
+	n.node1,err = parsePredCompare(q)
+	if err != nil { return n,err }
+	if (q.Tok().id & LOGOP) != 0 {
+		n.tok1 = q.Tok().id
+		q.NextTok()
+		n.node2, err = parsePredicates(q)
+	}
+	return n, err
+}
+
+//modify this to immediatly compile a regular expression for 'like' relop
+//tok1 is [relop, paren] for comparison or more predicates
+//tok2 is negation
+//tok3 will be independant type
+//node1 is [expr, predicates]
+//node2 is second expr
+//node3 is third expr for betweens
+func parsePredCompare(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_PREDCOMP}
+	var err error
+	var negate int
+	var expression bool
+	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
+	if q.Tok().id == SP_LPAREN {
+		pos := q.tokIdx
+		//try parsing as predicate
+		q.NextTok()
+		n.node1, err = parsePredicates(q)
+		q.NextTok()
+		//if failed, reparse as expression
+		if err != nil {
+			q.tokIdx = pos
+			expression = true
+		}
+	}
+	if q.Tok().id == WORD || expression {
+		n.node1, err = parseExprAdd(q)
+		if err != nil { return n,err }
+		if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
+		if negate == 1 { n.tok2 = SP_NEGATE }
+		if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
+		n.tok1 = q.Tok().id
+		q.NextTok()
+		if n.tok1 == KW_LIKE {
+			var like interface{}
+			re := regexp.MustCompile("%")
+			like = re.ReplaceAllString(q.Tok().val, ".*")
+			re = regexp.MustCompile("_")
+			like = re.ReplaceAllString(like.(string), ".")
+			like,err = regexp.Compile("(?i)^"+like.(string)+"$")
+			n.node2 = &Node{label: N_VALUE, tok1: like.(*regexp.Regexp), tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
+			q.NextTok()
+		} else {
+			n.node2, err = parseExprAdd(q)
+			if err != nil { return n,err }
+		}
+		if n.tok1 == KW_BETWEEN {
+			q.NextTok()
+			n.node3, err = parseExprAdd(q)
+		}
+	}
+	return n, err
+}
+
+//tok1 int tells that there's another
+//node1 is case expression
+//node2 is next exprlist node
+func parseCaseWhenExprList(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_CWEXPRLIST}
+	var err error
+	n.node1, err = parseCaseWhenExpr(q)
+	if err != nil { return n,err }
+	if q.Tok().id == KW_WHEN {
+		n.tok1 = 1
+		n.node2, err = parseCaseWhenExprList(q)
+	}
+	return n, err
+}
+
+//node1 is comparison expression
+//node2 is result expression
+func parseCaseWhenExpr(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_CWEXPR}
+	var err error
+	q.NextTok() //eat when token
+	n.node1,err = parseExprAdd(q)
+	if err != nil { return n,err }
+	q.NextTok() //eat then token
+	n.node2,err = parseExprAdd(q)
+	return n, err
 }
 
 //row limit

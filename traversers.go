@@ -45,11 +45,12 @@ func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
 //predicate typing and enforcing needs work
 //type checker
 //only return val interface if can be precomputed
+//var it int
 var caseWhenExprType int
-var it int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
 
+	/*
 	//printer for debugging
 	it++
 	for j:=0;j<it;j++ { Print("  ") }
@@ -57,6 +58,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	for j:=0;j<it;j++ { Print("  ") }
 	Println("toks:",n.tok1, n.tok2, n.tok3)
 	defer func(){ it-- }()
+	*/
 
 	var val interface{}
 	switch n.label {
@@ -111,10 +113,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT {
 				Println("minus error");
 				err = errors.New("Minus sign does not work with type "+typeMap[d1]) }
-		case N_COLITEM:
-			n.tok3 = d1
-			Println("n_colitem is type",d1," value ",v1)
-			fallthrough
+		case N_COLITEM: n.tok3 = d1; fallthrough
 		case N_WHERE:
 			err = enforceType(n.node1, d1)
 		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)

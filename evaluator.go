@@ -137,7 +137,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 		match := eval2Where(q)
 		//match,err := evalWhere(q, &q.fromRow)
 		//if err != nil {return err}
-		if match && evalDistinct(q, &q.fromRow, distinctCheck) {
+		if match && evalDistinct(q, distinctCheck) {
 			exec2Select(q, res)
 			//execSelect(q, res, &fromRow)
 			res.Numrows++;
@@ -151,9 +151,9 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 }
 
 //see if row has distinct value if looking for one
-func evalDistinct(q *QuerySpecs, fromRow *[]interface{}, distinctCheck map[interface{}]bool) bool {
-	if q.distinctIdx < 0 { return true }
-	compVal := (*fromRow)[q.distinctIdx]
+func evalDistinct(q *QuerySpecs, distinctCheck map[interface{}]bool) bool {
+	if q.distinctExpr == nil { return true }
+	_,compVal := execExpression(q, q.distinctExpr)
 	//ok means not distinct
 	_,ok := distinctCheck[compVal]
 	if ok {
@@ -205,9 +205,9 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	reader.PrepareReRead()
 	for i := range reader.valPositions {
 		if stop == 1 { stop = 0; messager <- "query cancelled"; break }
-		fromRow,err := reader.ReadAt(i)
+		q.fromRow,err = reader.ReadAt(i)
 		if err != nil { break }
-		if evalDistinct(q, &fromRow, distinctCheck) {
+		if evalDistinct(q, distinctCheck) {
 			exec2Select(q, res)
 			res.Numrows++;
 			if res.Numrows >= reader.limit { break }
