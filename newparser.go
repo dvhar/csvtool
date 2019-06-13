@@ -248,6 +248,11 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
+func errCheck(col, width int) error {
+	if col < 1 { return errors.New("Column number too small: "+Sprint(col)) }
+	if col > width { return errors.New("Column number too big: "+Sprint(col)+". Max is "+Itoa(width)) }
+	return nil
+}
 //if implement dot notation, put parser here
 //tok1 is [value, column index]
 //tok2 is [0,1] for literal/col
@@ -260,10 +265,12 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	tok := q.Tok()
 	//given a column number
 	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
+		if err := errCheck(num, fdata.width); err != nil { return n,err }
 		n.tok1 = num-1
 		n.tok2 = 1
 		n.tok3 = fdata.types[num-1]
 	} else if !q.intColumn && !tok.quoted && cInt.MatchString(tok.val) {
+		if err := errCheck(num, fdata.width); err != nil { return n,err }
 		num,_ := Atoi(tok.val[1:])
 		n.tok1 = num - 1
 		n.tok2 = 1
@@ -280,10 +287,6 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.tok3 = getNarrowestType(tok.val,0)
 	}
 	q.NextTok()
-	//check column number bounds
-	if n.tok2.(int)==1 && n.tok1.(int) > fdata.width {
-		return n,errors.New("Column number too big: "+Sprint(n.tok1.(int)+1)+". Max is "+Itoa(fdata.width)) }
-	if n.tok2.(int)==1 && n.tok1.(int) < 0 { return n,errors.New("Column number too small: "+Sprint(n.tok1)) }
 	if n.tok2.(int)==1 { n.tok3 = fdata.types[n.tok1.(int)] }
 	return n, err
 }
@@ -375,7 +378,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 			re := regexp.MustCompile("%")
 			like = re.ReplaceAllString(q.Tok().val, ".*")
 			re = regexp.MustCompile("_")
-			like = re.ReplaceAllString(q.Tok().val, ".")
+			like = re.ReplaceAllString(like.(string), ".")
 			like,err = regexp.Compile("(?i)^"+like.(string)+"$")
 			n.node2 = &Node{label: N_VALUE, tok1: like.(*regexp.Regexp), tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
 			q.NextTok()

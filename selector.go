@@ -136,7 +136,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		_,expr2 := execExpression(q, n.node2)
 		typ := n.tok3.(int)
 		switch n.tok1.(int) {
-		case KW_LIKE:  match = expr2.(*regexp.Regexp).MatchString(Sprint(expr1))
+		case KW_LIKE: match = expr2.(*regexp.Regexp).MatchString(Sprint(expr1))
 
 		case SP_NOEQ: negate ^= 1; fallthrough
 		case SP_EQ:
