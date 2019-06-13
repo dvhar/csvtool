@@ -170,15 +170,15 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	distinctCheck := make(map[interface{}]bool)
 	rowsChecked := 0
 	var match bool
+	var err error
 	//initial scan to find line positions
 	for {
 		if stop == 1 { break }
 		rowsChecked++
 		if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked) }
-		fromRow,err := reader.Read()
+		q.fromRow,err = reader.Read()
 		if err != nil {break}
-		match,err = evalWhere(q, &fromRow)
-		if err != nil {return err}
+		match = eval2Where(q)
 		if match { reader.SavePos(q.sortCol) }
 	}
 
@@ -208,7 +208,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		fromRow,err := reader.ReadAt(i)
 		if err != nil { break }
 		if evalDistinct(q, &fromRow, distinctCheck) {
-			execSelect(q, res, &fromRow)
+			exec2Select(q, res)
 			res.Numrows++;
 			if res.Numrows >= reader.limit { break }
 			if res.Numrows % 1000 == 0 { messager <- "Retrieving line "+Itoa(res.Numrows) }
