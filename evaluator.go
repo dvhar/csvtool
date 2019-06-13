@@ -134,8 +134,9 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 
 		//find matches and retrieve results
 		//modified to use new fromrow, new version won't need that param
-		match,err := evalWhere(q, &q.fromRow)
-		if err != nil {return err}
+		match := eval2Where(q)
+		//match,err := evalWhere(q, &q.fromRow)
+		//if err != nil {return err}
 		if match && evalDistinct(q, &q.fromRow, distinctCheck) {
 			exec2Select(q, res)
 			//execSelect(q, res, &fromRow)

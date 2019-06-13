@@ -230,7 +230,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
 	treePrint(n.node1,0)
-	//Println("newparser finished with",q.Tok())
 	//q.Reset()
 
 	//n.node1,err =  parseSelect(q)
@@ -239,6 +238,9 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	n.node3,err =  parseWhere(q)
 	if err != nil { return n,err }
+	_,_,_,err = typeCheck(n.node3)
+	if err != nil {Println("err:",err); return n,err }
+	branchShortener(q, n.node3.node1)
 	err =  parseOrder(q)
 	if err != nil { return n,err }
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
@@ -381,7 +383,8 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 	var err error
 	if q.Tok().id != KW_WHERE { return n,nil }
 	q.NextTok()
-	n.node1,err = parseConditions(q)
+	//n.node1,err = parseConditions(q)
+	n.node1,err = parsePredicates(q)
 	return n,err
 }
 

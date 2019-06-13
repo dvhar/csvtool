@@ -248,11 +248,6 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
-func errCheck(col, width int) error {
-	if col < 1 { return errors.New("Column number too small: "+Sprint(col)) }
-	if col > width { return errors.New("Column number too big: "+Sprint(col)+". Max is "+Itoa(width)) }
-	return nil
-}
 //if implement dot notation, put parser here
 //tok1 is [value, column index]
 //tok2 is [0,1] for literal/col
@@ -263,15 +258,20 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	cInt := regexp.MustCompile(`^c\d+$`)
 	fdata := q.files["_fmk01"]
 	tok := q.Tok()
+	errCheck := func(col int) error {
+		if col < 1 { return errors.New("Column number too small: "+Sprint(col)) }
+		if col > fdata.width { return errors.New("Column number too big: "+Sprint(col)+". Max is "+Itoa(fdata.width)) }
+		return nil
+	}
 	//given a column number
 	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
-		if err := errCheck(num, fdata.width); err != nil { return n,err }
+		if err := errCheck(num); err != nil { return n,err }
 		n.tok1 = num-1
 		n.tok2 = 1
 		n.tok3 = fdata.types[num-1]
 	} else if !q.intColumn && !tok.quoted && cInt.MatchString(tok.val) {
-		if err := errCheck(num, fdata.width); err != nil { return n,err }
 		num,_ := Atoi(tok.val[1:])
+		if err := errCheck(num); err != nil { return n,err }
 		n.tok1 = num - 1
 		n.tok2 = 1
 		n.tok3 = fdata.types[num-1]

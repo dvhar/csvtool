@@ -8,6 +8,12 @@ import (
   "errors"
 )
 
+func eval2Where(q *QuerySpecs) bool {
+	node := q.tree.node3
+	if node.node1 == nil { return true }
+	return evalPredicates(q, node.node1)
+}
+
 //traverse where branch of parse tree
 func evalWhere(q *QuerySpecs, fromRow *[]interface{}) (bool, error) {
 	node := q.tree.node3
@@ -237,6 +243,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	//1 or 2 type-independant nodes
 	case N_EXPRNEG:   fallthrough
 	case N_COLITEM:   fallthrough
+	case N_WHERE:     fallthrough
 	case N_SELECTIONS:
 		_, d1, v1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
@@ -248,6 +255,8 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		case N_COLITEM:
 			n.tok3 = d1
 			Println("n_colitem is type",d1," value ",v1)
+			fallthrough
+		case N_WHERE:
 			err = enforceType(n.node1, d1)
 		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)
 		}
