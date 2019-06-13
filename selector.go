@@ -18,6 +18,7 @@ func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
 func exec2Selections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	_,val := execExpression(q, n.node1.node1)
+	Println("selecting",val,"into row",q.toRow,"at index",n.tok1.(int),"when length is",len(q.toRow))
 	q.toRow[n.tok1.(int)] = val
 	exec2Selections(q, n.node2)
 }

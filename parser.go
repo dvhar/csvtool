@@ -50,6 +50,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
+	treePrint(n.node1,0)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -87,7 +88,6 @@ func selectAll2(q* QuerySpecs) (*Node,error) {
 	firstSelection := n
 	var lastSelection *Node
 	for i:= range file.names {
-		n.tok1 = countSelected
 		n.tok2  = file.names[i]
 		n.node2 = &Node{label:N_SELECTIONS}
 		n.node1 = &Node{
@@ -105,7 +105,6 @@ func selectAll2(q* QuerySpecs) (*Node,error) {
 		lastSelection = n
 		n = n.node2
 	}
-	q.NextTok()
 	lastSelection.node2,err = parse2Selections(q)
 	return firstSelection,err
 }
@@ -114,55 +113,34 @@ func selectAll2(q* QuerySpecs) (*Node,error) {
 //node2 is next selection
 //tok1 is destination column index
 //tok2 will be destination column name
+//tok3 is external use of subtree
 func parse2Selections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
+	var hidden bool
 	switch q.Tok().id {
 	case SP_STAR:
+		q.NextTok()
 		return selectAll2(q)
 	//expression
 	case KW_DISTINCT:
-		if q.Tok().id == KW_DISTINCT {
-			q.NextTok()
-			var hidden bool
-			if q.Tok().val == "hidden" { hidden = true; q.NextTok() }
-			dexp,err := parseExprAdd(q)
-			if err != nil { return n,err }
-			_, d1, _, err := typeCheck(n.node1)
-			if err != nil { return n,err }
-			enforceType(dexp, d1)
-			branchShortener(q,dexp)
-			q.distinctExpr = dexp
-			if !hidden {
-				n.tok1 = countSelected
-				countSelected++
-				n.node1 = &Node{
-					label:N_COLITEM,
-					node1: dexp,
-					tok2: KW_DISTINCT,
-				}
-				if q.Tok().id == KW_AS {
-					n.node1.tok1 = q.NextTok().val
-					q.NextTok()
-				}
-				n.node2,err = parse2Selections(q)
-				return n,err
-			}
-			n,err = parse2Selections(q)
-		}
+		n.tok3 = 1
+		q.NextTok()
+		if q.Tok().val == "hidden" && !q.Tok().quoted { hidden = true; n.tok3=3; q.NextTok() }
+		fallthrough
 	case KW_CASE:     fallthrough
 	case WORD:        fallthrough
 	case SP_MINUS:        fallthrough
 	case SP_LPAREN:
-		n.tok1 = countSelected
-		countSelected++
+		Println("colitem starts with",q.Tok())
+		if !hidden { countSelected++ }
 		n.node1,err = parseColumnItem(q)
 		if err != nil { return n,err }
 		n.node2,err = parse2Selections(q)
 		return n,err
 	//done with selections
 	case KW_FROM:
-		if countSelected == 0 { selectAll2(q) }
+		if countSelected == 0 { return selectAll2(q) }
 		return nil,nil
 	}
 	return n,err

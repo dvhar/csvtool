@@ -250,6 +250,7 @@ func enforceType(n *Node, t int) error {
 
 //remove useless nodes from parse tree
 func branchShortener(q *QuerySpecs, n *Node) *Node {
+	colIdx=0
 	if n == nil { return n }
 	n.node1 = branchShortener(q, n.node1)
 	n.node2 = branchShortener(q, n.node2)
@@ -270,14 +271,21 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 		n.tok1 == nil &&
 		n.node1.label == N_VALUE &&
 		n.node1.tok2.(int) == 1 { n.tok1 = q.files["_fmk01"].names[n.node1.tok1.(int)] }
+	if t,ok := n.tok3.(int); ok && t&1==1 && n.label==N_SELECTIONS {
+		q.distinctExpr = n.node1.node1
+		if t&2!=0 { return n.node2 }
+	}
 	return n
 }
 
 //get column names and put in array
+var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	if n.label == N_SELECTIONS &&
 		n.node1.label == N_COLITEM {
+			n.tok1 = colIdx
+			colIdx++
 			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
 			} else { n.tok2 = Sprintf("col%d",n.tok1.(int)) }
 			newColItem(q, n.tok1.(int), n.node1.tok3.(int), n.tok2.(string))
