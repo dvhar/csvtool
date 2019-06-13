@@ -38,6 +38,9 @@ type ValPos struct {
 func (l*LineReader) SavePos(colNo int) {
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, l.results[colNo]})
 }
+func (l*LineReader) SavePos2(value interface{}) {
+	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
+}
 func (l*LineReader) PrepareReRead() {
 	l.lineBytes = make([]byte, l.maxLineSize)
 	l.byteReader = bytes.NewReader(l.lineBytes)
@@ -110,7 +113,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	var reader LineReader
 	reader.Init(q, "_fmk01")
 	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.fp.Close() }()
-	if q.sortWay == 0 {
+	if q.sortExpr == nil {
 		err = normalQuery(q, &res, &reader)
 	} else {
 		err = orderedQuery(q, &res, &reader)
@@ -133,13 +136,9 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 		if err != nil {break}
 
 		//find matches and retrieve results
-		//modified to use new fromrow, new version won't need that param
-		match := eval2Where(q)
-		//match,err := evalWhere(q, &q.fromRow)
-		//if err != nil {return err}
+		match := evalWhere(q)
 		if match && evalDistinct(q, distinctCheck) {
-			exec2Select(q, res)
-			//execSelect(q, res, &fromRow)
+			execSelect(q, res)
 			res.Numrows++;
 		}
 
@@ -154,9 +153,8 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 func evalDistinct(q *QuerySpecs, distinctCheck map[interface{}]bool) bool {
 	if q.distinctExpr == nil { return true }
 	_,compVal := execExpression(q, q.distinctExpr)
-	//ok means not distinct
-	_,ok := distinctCheck[compVal]
-	if ok {
+	_,duplicate := distinctCheck[compVal]
+	if duplicate {
 		return false
 	} else {
 		distinctCheck[compVal] = true
@@ -171,6 +169,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	rowsChecked := 0
 	var match bool
 	var err error
+	var sexp interface{}
 	//initial scan to find line positions
 	for {
 		if stop == 1 { break }
@@ -178,19 +177,22 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked) }
 		q.fromRow,err = reader.Read()
 		if err != nil {break}
-		match = eval2Where(q)
-		if match { reader.SavePos(q.sortCol) }
+		match = evalWhere(q)
+		//if match { reader.SavePos(q.sortCol) }
+		if match {
+			_,sexp = execExpression(q, q.sortExpr)
+			reader.SavePos2(sexp)
+		}
 	}
 
 	//sort matching line positions
 	messager <- "Sorting Rows..."
-	colType := reader.types[q.sortCol]
 	sort.Slice(reader.valPositions, func(i, j int) bool {
 		if reader.valPositions[i].val == nil && reader.valPositions[j].val == nil { return false
 		} else if reader.valPositions[i].val == nil { return false
 		} else if reader.valPositions[j].val == nil { return true }
 		ret := false
-		switch colType {
+		switch q.sortType {
 			case T_NULL:   fallthrough
 			case T_STRING: ret = reader.valPositions[i].val.(string)        > reader.valPositions[j].val.(string)
 			case T_INT:	ret = reader.valPositions[i].val.(int)              > reader.valPositions[j].val.(int)
@@ -208,7 +210,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		q.fromRow,err = reader.ReadAt(i)
 		if err != nil { break }
 		if evalDistinct(q, distinctCheck) {
-			exec2Select(q, res)
+			execSelect(q, res)
 			res.Numrows++;
 			if res.Numrows >= reader.limit { break }
 			if res.Numrows % 1000 == 0 { messager <- "Retrieving line "+Itoa(res.Numrows) }

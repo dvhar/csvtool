@@ -43,14 +43,14 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	err = openFiles(q)
 	if err != nil { return n,err }
 
-	//new expression parser test
-	n.node1,err =  parse2Select(q)
+	//new expression parser
+	n.node1,err =  parseSelect(q)
 	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	treePrint(n.node1,0)
+	//treePrint(n.node1,0)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -66,7 +66,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 }
 
 //node1 is selections
-func parse2Select(q* QuerySpecs) (*Node,error) {
+func parseSelect(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
 	if q.Tok().val == "c" { q.intColumn = true; q.NextTok() }
@@ -76,12 +76,12 @@ func parse2Select(q* QuerySpecs) (*Node,error) {
 	err = parseTop(q)
 	if err != nil { return n,err }
 	countSelected = 0
-	n.node1,err = parse2Selections(q)
+	n.node1,err = parseSelections(q)
 	return n,err
 }
 
 //node2 is chain of selections for all infile columns
-func selectAll2(q* QuerySpecs) (*Node,error) {
+func selectAll(q* QuerySpecs) (*Node,error) {
 	var err error
 	n := &Node{label:N_SELECTIONS}
 	file := q.files["_fmk01"]
@@ -105,7 +105,7 @@ func selectAll2(q* QuerySpecs) (*Node,error) {
 		lastSelection = n
 		n = n.node2
 	}
-	lastSelection.node2,err = parse2Selections(q)
+	lastSelection.node2,err = parseSelections(q)
 	return firstSelection,err
 }
 
@@ -114,20 +114,21 @@ func selectAll2(q* QuerySpecs) (*Node,error) {
 //tok1 is destination column index
 //tok2 will be destination column name
 //tok3 is external use of subtree
-func parse2Selections(q* QuerySpecs) (*Node,error) {
+func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
 	var hidden bool
 	switch q.Tok().id {
 	case SP_STAR:
 		q.NextTok()
-		return selectAll2(q)
-	//expression
+		return selectAll(q)
+	//tok3 bit 1 means distinct, bit 2 means hidden
 	case KW_DISTINCT:
 		n.tok3 = 1
 		q.NextTok()
 		if q.Tok().val == "hidden" && !q.Tok().quoted { hidden = true; n.tok3=3; q.NextTok() }
 		fallthrough
+	//expression
 	case KW_CASE:     fallthrough
 	case WORD:        fallthrough
 	case SP_MINUS:        fallthrough
@@ -136,11 +137,11 @@ func parse2Selections(q* QuerySpecs) (*Node,error) {
 		if !hidden { countSelected++ }
 		n.node1,err = parseColumnItem(q)
 		if err != nil { return n,err }
-		n.node2,err = parse2Selections(q)
+		n.node2,err = parseSelections(q)
 		return n,err
 	//done with selections
 	case KW_FROM:
-		if countSelected == 0 { return selectAll2(q) }
+		if countSelected == 0 { return selectAll(q) }
 		return nil,nil
 	}
 	return n,err
@@ -499,10 +500,19 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 
 //currently order is only thing after where
 func parseOrder(q* QuerySpecs) error {
+	var err error
 	if q.Tok().id == EOS { return nil }
 	if q.Tok().id == KW_ORDER {
 		if q.NextTok().id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.Tok().val) }
 		q.NextTok()
+		q.sortExpr,err = parseExprAdd(q)
+		if err != nil { return err }
+		_,q.sortType,_,err = typeCheck(q.sortExpr)
+		if err != nil { return err }
+		err = enforceType(q.sortExpr, q.sortType)
+		branchShortener(q,q.sortExpr)
+		treePrint(q.sortExpr,0)
+		if q.Tok().id == KW_ORDHOW { q.NextTok(); q.sortWay = 2 }
 	}
-	return nil
+	return err
 }

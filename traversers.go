@@ -7,7 +7,7 @@ import (
   "errors"
 )
 
-func eval2Where(q *QuerySpecs) bool {
+func evalWhere(q *QuerySpecs) bool {
 	node := q.tree.node3
 	if node.node1 == nil { return true }
 	return evalPredicates(q, node.node1)
@@ -324,7 +324,6 @@ func treePrint(n *Node, i int){
 var treeMap = map[int]string {
 	N_QUERY:      "N_QUERY",
 	N_SELECT:     "N_SELECT",
-	N_TOP:        "N_TOP",
 	N_SELECTIONS: "N_SELECTIONS",
 	N_FROM:       "N_FROM",
 	N_WHERE:      "N_WHERE",

@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
+func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 	q.toRow = make([]interface{}, q.colSpec.NewWidth)
-	exec2Selections(q, q.tree.node1.node1)
+	execSelections(q, q.tree.node1.node1)
 	if q.quantityRetrieved <= q.showLimit {
 		res.Vals = append(res.Vals, q.toRow)
 		q.quantityRetrieved++
@@ -15,12 +15,11 @@ func exec2Select(q *QuerySpecs, res*SingleQueryResult) {
 	if q.save { saver <- saveData{Type : CH_ROW, Row : &q.toRow} ; <-savedLine}
 }
 
-func exec2Selections(q *QuerySpecs, n *Node) {
+func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	_,val := execExpression(q, n.node1.node1)
-	Println("selecting",val,"into row",q.toRow,"at index",n.tok1.(int),"when length is",len(q.toRow))
 	q.toRow[n.tok1.(int)] = val
-	exec2Selections(q, n.node2)
+	execSelections(q, n.node2)
 }
 
 //returns type and value

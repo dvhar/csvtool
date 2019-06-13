@@ -158,10 +158,7 @@ func main() {
 
 //wrapper for csvQuery
 func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
-	q := QuerySpecs{
-		queryString : query,
-		distinctIdx : -1,
-	}
+	q := QuerySpecs{ queryString : query, }
 	if (req.FileIO & F_CSV) != 0 { q.save = true }
 	println("attempting csv query from gui program")
 	res, err := csvQuery(&q)

@@ -154,7 +154,7 @@ class Main extends React.Component {
 		}
 		this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 
 	}
-	componentWillMount() { document.title = 'CSV Giant' }
+	componentWillMount() { document.title = 'CSV Query Tool' }
 }
 
 ReactDOM.render(
