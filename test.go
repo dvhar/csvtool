@@ -5,16 +5,18 @@ import (
 )
 
 type DebugPrint struct {
-	active bool
+	verbose1 bool
+	verbose2 bool
+	verbose3 bool
 }
-func (d DebugPrint) Print(args ...interface{}) {
-	if d.active { Println(args...) }
-}
+func (d DebugPrint) Print1(args ...interface{}) { if d.verbose1 { Println(args...) } }
+func (d DebugPrint) Print2(args ...interface{}) { if d.verbose2 { Println(args...) } }
+func (d DebugPrint) Print3(args ...interface{}) { if d.verbose3 { Println(args...) } }
 var db DebugPrint
 
 func runTests(doTest bool){
 	if !doTest { return }
-	db.active = true
+	db.verbose1 = true
 
 	dir1 := "/home/dave/Documents/work/"
 	file1 := "parkingTruncated.csv"
@@ -22,11 +24,11 @@ func runTests(doTest bool){
 
 	var testQs = []string {
 		// 1
-		"select top 10 from"+f1+"where 'Issue Date' < 6/1/17",
+		"select top 10 from"+f1+"where 'Issue Date' between 6/1/16 and 1/1/17",
 		// 2
-		"select top 10 from"+f1+"where 'Issue Date' between 6/1/16 and 7/1/16",
+		"select top 10 from"+f1+"where 'Issue Date' between 6/1/16 and '234324'",
 	}
-	var testNums = []int{ 2, }
+	var testNums = []int{ 1,2, }
 
 	for _,ii := range testNums {
 		if err := runOneTestQuery(testQs[ii-1]); err != nil { return }

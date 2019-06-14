@@ -171,7 +171,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			}
 
 		case KW_BETWEEN:
-			_,expr3 := execExpression(q, n.node2)
+			_,expr3 := execExpression(q, n.node3)
 			var biggerThanFirst bool
 			switch typ {
 			case T_NULL:   biggerThanFirst = expr1!=nil             && expr2==nil
@@ -182,11 +182,11 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			}
 			if biggerThanFirst {
 				switch typ {
-				case T_NULL:   match = expr1==nil            && expr2!=nil
-				case T_STRING: match = expr1.(string)         < expr2.(string)
-				case T_INT:    match = expr1.(int)            < expr2.(int)
-				case T_FLOAT:  match = expr1.(float64)        < expr2.(float64)
-				case T_DATE:   match = expr1.(time.Time).Before(expr2.(time.Time))
+				case T_NULL:   match = expr1==nil            && expr3!=nil
+				case T_STRING: match = expr1.(string)         < expr3.(string)
+				case T_INT:    match = expr1.(int)            < expr3.(int)
+				case T_FLOAT:  match = expr1.(float64)        < expr3.(float64)
+				case T_DATE:   match = expr1.(time.Time).Before(expr3.(time.Time))
 				}
 			} else {
 				switch typ {

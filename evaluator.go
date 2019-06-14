@@ -109,6 +109,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 		ShowLimit : q.showLimit,
 	}
 
+	db.Print1("parsing complete")
 	//prepare reader and run query
 	var reader LineReader
 	reader.Init(q, "_fmk01")

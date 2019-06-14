@@ -54,7 +54,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	if n == nil { return 0,0,nil,nil }
 
 	//printer for debugging
-	if db.active {
+	if db.verbose3 {
 		it++
 		for j:=0;j<it;j++ { Print("  ") }
 		Println(treeMap[n.label])
@@ -158,7 +158,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,v3,d1,d2,d3,3)
-			db.Print("combine vals",val,v2,v3,"types",d1,d2,d3,"to get",thisType)
+			db.Print1("combine vals",val,v2,v3,"types",d1,d2,d3,"to get",thisType)
 			if v2==nil&&v3==nil {val = nil} //TODO: precompute if possible
 		}
 		//predicate comparisions are typed independantly, so leave type in node3
@@ -195,6 +195,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 //modify this to handle 'like' with regular expressions
 func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
+	db.Print2("enforcer at node",treeMap[n.label])
 	var err error
 	var val interface{}
 	switch n.label {
@@ -256,6 +257,7 @@ func enforceType(n *Node, t int) error {
 func branchShortener(q *QuerySpecs, n *Node) *Node {
 	colIdx=0
 	if n == nil { return n }
+	db.Print2("optimizer at node",treeMap[n.label])
 	n.node1 = branchShortener(q, n.node1)
 	n.node2 = branchShortener(q, n.node2)
 	n.node3 = branchShortener(q, n.node3)
