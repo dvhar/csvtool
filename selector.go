@@ -134,7 +134,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		if negate==1 { return !match }
 		return match
 
-	//may need special handling of nulls
+	//maybe find a less repetetive way to write this
 	case N_PREDCOMP:
 		_,expr1 := execExpression(q, n.node1)
 		_,expr2 := execExpression(q, n.node2)
@@ -171,7 +171,32 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			}
 
 		case KW_BETWEEN:
-			println("this might get ugly")
+			_,expr3 := execExpression(q, n.node2)
+			var biggerThanFirst bool
+			switch typ {
+			case T_NULL:   biggerThanFirst = expr1!=nil             && expr2==nil
+			case T_STRING: biggerThanFirst = expr1.(string)         >= expr2.(string)
+			case T_INT:    biggerThanFirst = expr1.(int)            >= expr2.(int)
+			case T_FLOAT:  biggerThanFirst = expr1.(float64)        >= expr2.(float64)
+			case T_DATE:   biggerThanFirst = !expr1.(time.Time).Before(expr2.(time.Time))
+			}
+			if biggerThanFirst {
+				switch typ {
+				case T_NULL:   match = expr1==nil            && expr2!=nil
+				case T_STRING: match = expr1.(string)         < expr2.(string)
+				case T_INT:    match = expr1.(int)            < expr2.(int)
+				case T_FLOAT:  match = expr1.(float64)        < expr2.(float64)
+				case T_DATE:   match = expr1.(time.Time).Before(expr2.(time.Time))
+				}
+			} else {
+				switch typ {
+				case T_NULL:   match = expr1!=nil             && expr3==nil
+				case T_STRING: match = expr1.(string)         >= expr3.(string)
+				case T_INT:    match = expr1.(int)            >= expr3.(int)
+				case T_FLOAT:  match = expr1.(float64)        >= expr3.(float64)
+				case T_DATE:   match = !expr1.(time.Time).Before(expr3.(time.Time))
+				}
+			}
 		}
 	}
 	if negate==1 { return !match }
