@@ -33,32 +33,35 @@ var typeChart = [10][10]int {
 func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
 	i1 := 2*d1
 	i2 := 2*d2
-	i3 := 2*d3
 	if v1 != nil { i1++ }
 	if v2 != nil { i2++ }
-	if v3 != nil { i3++ }
 	resultType := typeChart[i1][i2]
-	if howmany == 3 { resultType = typeChart[resultType][i3] }
+	if howmany == 3 {
+		i3 := 2*d3
+		if v3 != nil { i3++ }
+		resultType *= 2
+		if v1!=nil && v2!=nil { resultType++ }
+		resultType = typeChart[resultType][i3]
+	}
 	return resultType
 }
 
-//predicate typing and enforcing needs work
 //type checker
 //only return val interface if can be precomputed
-//var it int
+var it int
 var caseWhenExprType int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
 
-	/*
 	//printer for debugging
-	it++
-	for j:=0;j<it;j++ { Print("  ") }
-	Println(treeMap[n.label])
-	for j:=0;j<it;j++ { Print("  ") }
-	Println("toks:",n.tok1, n.tok2, n.tok3)
-	defer func(){ it-- }()
-	*/
+	if db.active {
+		it++
+		for j:=0;j<it;j++ { Print("  ") }
+		Println(treeMap[n.label])
+		for j:=0;j<it;j++ { Print("  ") }
+		Println("toks:",n.tok1, n.tok2, n.tok3)
+		defer func(){ it-- }()
+	}
 
 	var val interface{}
 	switch n.label {
@@ -155,6 +158,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,v3,d1,d2,d3,3)
+			db.Print("combine vals",val,v2,v3,"types",d1,d2,d3,"to get",thisType)
 			if v2==nil&&v3==nil {val = nil} //TODO: precompute if possible
 		}
 		//predicate comparisions are typed independantly, so leave type in node3

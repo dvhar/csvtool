@@ -96,6 +96,7 @@ var browsersOpen = 0
 var slash string
 
 func main() {
+	runTests(true)
 	println("version 0.26 - 6/2/2019")
 	//get password and other flags
 	flag.Parse()
