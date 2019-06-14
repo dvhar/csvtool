@@ -172,5 +172,6 @@ func openFiles(q *QuerySpecs) error {
 		}
 	}
 	q.Reset()
+	if q.numfiles == 0 { return errors.New("Could not find file") }
 	return nil
 }

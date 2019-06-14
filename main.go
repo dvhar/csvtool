@@ -14,6 +14,7 @@ import (
 //command line flags
 var localPort = flag.String("port", "8060", "Change localhost port")
 var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
+var testing = flag.Bool("test",false, "run tests and then exit")
 
 
 //one SingleQueryResult struct holds the results of one query
@@ -96,10 +97,11 @@ var browsersOpen = 0
 var slash string
 
 func main() {
-	runTests(true)
+	flag.Parse()
+	Println("testing:",*testing)
+	runTests(*testing)
 	println("version 0.26 - 6/2/2019")
 	//get password and other flags
-	flag.Parse()
 	messager = make(chan string)
 	fileclick = make(chan string)
 	directory = make(chan Directory)
