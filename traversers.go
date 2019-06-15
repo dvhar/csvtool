@@ -266,7 +266,8 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 		n.tok2 == nil &&
 		n.tok3 == nil &&
 		n.node2 == nil &&
-		n.node3 == nil { return n.node1 }
+		n.node3 == nil &&
+		n.label != N_SELECTIONS{ return n.node1 }
 	//predicates has no logical operator so it's just one predicate
 	if n.label == N_PREDICATES && n.tok1 == nil { return n.node1 }
 	//case node just links to next node
@@ -288,8 +289,10 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
+	db.Print2("colnamer with node",treeMap[n.label])
 	if n.label == N_SELECTIONS &&
 		n.node1.label == N_COLITEM {
+			db.Print2("should be adding column")
 			n.tok1 = colIdx
 			colIdx++
 			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
@@ -302,6 +305,7 @@ func columnNamer(q *QuerySpecs, n *Node) {
 }
 
 func newColItem(q* QuerySpecs, idx, typ int, name string) {
+	db.Print2("adding new column",name)
 	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
 	q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
 	q.colSpec.NewPos = append(q.colSpec.NewPos, idx+1)
