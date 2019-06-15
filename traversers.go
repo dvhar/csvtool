@@ -139,9 +139,10 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
+			db.Print1("combine vals",val,v2,"types",d1,d2,"to get",thisType)
 
 			//check addition semantics
-			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(d1==T_STRING && d2==T_STRING){
+			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) {
 				Println("add error");
 				return 0,0,nil, errors.New("Cannot add or subtract types "+typeMap[d1]+" and "+typeMap[d2]) }
 			//check multiplication semantics

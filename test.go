@@ -31,12 +31,12 @@ func runTests(doTest bool){
 	f1 := " " + dir1 + file1 + " "
 
 	var tests = []Test {
-		Test{"select top 2 from"+f1, "select all", true},
-		Test{"select top 2 * from"+f1, "select all star", true},
-		Test{`select top 2 c4 'Issue Date' c8+c12+10 as int-sum 'c8-int'=c8 c12 as 'c12-int' 
+		Test{"select top 20 from"+f1, "select all", true},
+		Test{"select top 20 * from"+f1, "select all star", true},
+		Test{`select top 20 c4 'Issue Date' c8+c12+10 as int-sum 'c8-int'=c8 c12 as 'c12-int' 
 			c1+c2+10.2 as flt-add c1*c2*10.2 as flt-mult c2 / c1 / 10.2 as flt-div c2 - c1 - 10.2 as flt-sub
 			from`+f1, "simple expressions and aliases", true},
-		Test{` select top 2
+		Test{` select top 20
 				floaty = case c8
 				when 7 then 7.12 when 40 then 40.23 when 47 then 47.234 when 36 then 30.32
 				else 12.3 end
@@ -44,7 +44,7 @@ func runTests(doTest bool){
 				when 5 then 72.12 when 69 then 140.23 when 47 then 427.234 when 36 then 310.32 when 321 then 210.98
 				else 612.3 end as floaty2
 				from`+f1, "2 cases", true},
-		Test{` select top 2
+		Test{` select top 20
 				case c8
 				when 7 then 7.12 when 40 then 40.23 when 47 then 47.234 when 36 then 30.32
 				else 12.3 end as floaty +
@@ -53,6 +53,12 @@ func runTests(doTest bool){
 				else 612.3 end as addy
 				from`+f1,
 				"add 2 cases - malformed because alias in the middle", false},
+		Test{`select top 20 c1+c3 as f-i-sum c1*c3 as f-i-mult c1 - c3 as f-i-sub c1 / c3 as f-i-div c4+'1/12/1999' as c_str-l_date
+				c3+c4 as i-t-add
+				from`+f1, "good mixing types", true},
+		Test{`select top 20 c7+c8 from`+f1, "add date", false},
+		Test{`select top 20 c7*c8 from`+f1, "mult date", false},
+		Test{`select top 20 c4*8 from`+f1, "mult string", false},
 	}
 
 	for _,t := range tests {
@@ -61,8 +67,8 @@ func runTests(doTest bool){
 		Println("testing query:",t.query)
 		Println("-------------------------------------------------------------------------------------------------------")
 		err := runOneTestQuery(t.query)
-		if t.good && err != nil { return }
-		if !t.good && err == nil { return }
+		if t.good && err != nil { os.Exit(0) }
+		if !t.good && err == nil { os.Exit(0) }
 		Println("Test successful\n\n")
 	}
 	os.Exit(0)

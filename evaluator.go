@@ -55,10 +55,11 @@ func (l*LineReader) Init(q *QuerySpecs, f string) {
 	if q.quantityLimit == 0 { l.limit = 1<<62 } else { l.limit = q.quantityLimit }
 	l.Read()
 }
+//maybe remove this part - typing now happens at value node evaluation
 func (l*LineReader) convertLine(inline *[]string) {
 	for i,cell := range (*inline) {
 		cell = s.TrimSpace(cell)
-		if s.ToLower(cell) == "null" || cell == "" { l.results[i] = nil
+		if s.ToLower(cell) == "null" { l.results[i] = nil
 		} else {
 			switch l.types[i] {
 				case T_INT:	l.results[i],_ = Atoi(cell)
@@ -70,23 +71,25 @@ func (l*LineReader) convertLine(inline *[]string) {
 		}
 	}
 }
-func (l*LineReader) Read() ([]interface{},error) {
+func (l*LineReader) Read() ([]string,error) {
 	line, err := l.csvReader.Read()
 	l.lineBytes, _ = l.lineBuffer.ReadBytes('\n')
 	size := len(l.lineBytes)
 	if l.maxLineSize < size { l.maxLineSize = size }
 	l.prevPos = l.pos
 	l.pos += int64(size)
-	l.convertLine(&line)
-	return l.results, err
+	//l.convertLine(&line)
+	//return l.results, err
+	return line, err
 }
-func (l*LineReader) ReadAt(lineNo int) ([]interface{},error) {
+func (l*LineReader) ReadAt(lineNo int) ([]string,error) {
 	l.fp.ReadAt(l.lineBytes, l.valPositions[lineNo].pos)
 	l.byteReader.Seek(0,0)
 	l.csvReader = csv.NewReader(l.byteReader)
 	line, err := l.csvReader.Read()
-	l.convertLine(&line)
-	return l.results, err
+	//l.convertLine(&line)
+	//return l.results, err
+	return line, err
 }
 
 //run csv query

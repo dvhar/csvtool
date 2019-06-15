@@ -1,6 +1,9 @@
 package main
 import (
 	. "fmt"
+  . "strconv"
+  d "github.com/araddon/dateparse"
+  s "strings"
 	"regexp"
 	"time"
 )
@@ -29,38 +32,56 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 
 	switch n.label {
 	case N_VALUE:
-		if n.tok2.(int) == 0 { return n.tok3.(int), n.tok1
+		//literal
+		if n.tok2.(int) == 0 {
+			//Printf("literal %+V being retrieved as %d\n",n.tok1,n.tok3.(int))
+			return n.tok3.(int), n.tok1
 		} else {
-			return n.tok3.(int), q.fromRow[n.tok1.(int)]
+			//column
+			var val interface{}
+			cell := q.fromRow[n.tok1.(int)]
+			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
+			switch n.tok3.(int) {
+				case T_INT:	   val,_ = Atoi(cell)
+				case T_FLOAT:  val,_ = ParseFloat(cell,64)
+				case T_DATE:   val,_ = d.ParseAny(cell)
+				case T_NULL:   val = nil
+				case T_STRING: val = cell
+			}
+			//Printf("column %+V being retrieved as %d\n",val,n.tok3.(int))
+			return n.tok3.(int), val
 		}
 
 	case N_EXPRNEG:
-		typ,v1 := execExpression(q, n.node1)
+		t1,v1 := execExpression(q, n.node1)
 		if _,ok := n.tok1.(int); ok && v1 != nil {
-			switch typ {
+			switch t1 {
 			case T_INT:   v1 = v1.(int) * -1
 			case T_FLOAT: v1 = v1.(float64) * -1.0
 			}
 		}
-		return typ,v1
+		return t1,v1
 
 	case N_EXPRMULT:
-		typ,v1 := execExpression(q, n.node1)
+		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
-			if v1 == nil { return typ,v1 }
-			_,v2 := execExpression(q, n.node2)
-			if v2 == nil { return typ,v2 }
-			switch typ {
+			if v1 == nil { return t1,v1 }
+			t2,v2 := execExpression(q, n.node2)
+			if t1 != t2 { db.Print1(v2,v2,"have different type:",t1,t2) }
+			if v2 == nil { return t1,v2 }
+			switch t1 {
 			case T_INT:   if op==SP_STAR { v1=v1.(int)*v2.(int) } else { v1=v1.(int)/v2.(int) }
 			case T_FLOAT: if op==SP_STAR { v1=v1.(float64)*v2.(float64) } else { v1=v1.(float64)/v2.(float64) }
 			}
 		}
-		return typ,v1
+		return t1,v1
 
 	case N_EXPRADD:
 		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
-			_,v2 := execExpression(q, n.node2)
+			t2,v2 := execExpression(q, n.node2)
+			db.Print1(v1,v2,"have types:",t1,t2)
+			//Printf("%+V %+V\n", v1, v2)
 			if v1==nil || v2==nil { return t1,nil }
 			switch t1 {
 			case T_INT:   if op==SP_PLUS { v1=v1.(int)+v2.(int) } else { v1=v1.(int)-v2.(int) }
@@ -75,10 +96,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		switch n.tok2.(int) {
 		//case predicate list
 		case KW_WHEN:
-			typ,v1 := execCasePredList(q, n.node1)
-			if typ==-1 && n.node3!=nil { return execExpression(q, n.node3) }
-			if typ==-1 { return 0,nil }
-			return typ,v1
+			t1,v1 := execCasePredList(q, n.node1)
+			if t1==-1 && n.node3!=nil { return execExpression(q, n.node3) }
+			if t1==-1 { return 0,nil }
+			return t1,v1
 		//case expression list
 		case N_EXPRADD:
 			_,v1 := execExpression(q, n.node1)

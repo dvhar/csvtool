@@ -31,7 +31,7 @@ type QuerySpecs struct {
 	tree *Node
 	files map[string]*FileData
 	numfiles int
-	fromRow []interface{}
+	fromRow []string
 	toRow []interface{}
 	intColumn bool
 }
