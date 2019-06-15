@@ -54,11 +54,23 @@ func runTests(doTest bool){
 				from`+f1,
 				"add 2 cases - malformed because alias in the middle", false},
 		Test{`select top 20 c1+c3 as f-i-sum c1*c3 as f-i-mult c1 - c3 as f-i-sub c1 / c3 as f-i-div c4+'1/12/1999' as c_str-l_date
-				c3+c4 as i-t-add
+				c3+c4 as i-t-add c16+c17 as s_i_add
 				from`+f1, "good mixing types", true},
 		Test{`select top 20 c7+c8 from`+f1, "add date", false},
 		Test{`select top 20 c7*c8 from`+f1, "mult date", false},
 		Test{`select top 20 c4*8 from`+f1, "mult string", false},
+		Test{`select top 20 c16*c17 from`+f1, "mult string", false},
+		Test{`select top 20 mixpred=case
+				when c5 like ny then likey when c1+c8 < 20 then int-flt when c7 < 2017 then datecomp
+				when c8+c17 < 20 then int-int end from`+f1, "case with multiple predicate types", true},
+		Test{`select top 20 casexpr=case c1+c8*c12
+				when 23 then inty
+				when 24.45 then floaty
+				when 23*24.54 then combo
+				when c2 then fcol
+				when c19 then icol
+				when c2+c19 then ficol
+				else 234 end from`+f1, "case with mixed int/float comparision expressions", true},
 	}
 
 	for _,t := range tests {

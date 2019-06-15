@@ -222,10 +222,12 @@ func enforceType(n *Node, t int) error {
 		return err
 
 	case N_EXPRCASE:
-		if tk2,ok := n.tok2.(int); ok && tk2 == N_EXPRADD {
-			err = enforceType(n.node1, n.node2.tok3.(int))  //initial when expression
+		if tk2,ok := n.tok2.(int); ok && tk2 == N_EXPRADD { //initial when expression
+			db.Print2("case with expression compare")
+			err = enforceType(n.node1, n.node2.tok3.(int))
 			if err != nil { return err }
-			for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {  //when expression list
+			for whenNode := n.node2; whenNode != nil; whenNode = whenNode.node2 {  //when expression list
+				db.Print2("giving exprcase type",n.node2.tok3)
 				err = enforceType(whenNode.node1.node1, n.node2.tok3.(int))
 				if err != nil { return err }
 			}
@@ -290,7 +292,7 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	db.Print2("colnamer node",treeMap[n.label],n)
+	//db.Print2("colnamer node",treeMap[n.label],n)
 	if n.label == N_SELECTIONS &&
 		n.node1.label == N_COLITEM {
 			n.tok1 = colIdx
