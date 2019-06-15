@@ -195,7 +195,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 //modify this to handle 'like' with regular expressions
 func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
-	db.Print2("enforcer at node",treeMap[n.label])
+	//db.Print2("enforcer at node",treeMap[n.label])
 	var err error
 	var val interface{}
 	switch n.label {
@@ -257,7 +257,7 @@ func enforceType(n *Node, t int) error {
 func branchShortener(q *QuerySpecs, n *Node) *Node {
 	colIdx=0
 	if n == nil { return n }
-	db.Print2("optimizer at node",treeMap[n.label])
+	//db.Print2("optimizer at node",treeMap[n.label])
 	n.node1 = branchShortener(q, n.node1)
 	n.node2 = branchShortener(q, n.node2)
 	n.node3 = branchShortener(q, n.node3)
@@ -289,10 +289,9 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	db.Print2("colnamer with node",treeMap[n.label])
+	db.Print2("colnamer node",treeMap[n.label],n)
 	if n.label == N_SELECTIONS &&
 		n.node1.label == N_COLITEM {
-			db.Print2("should be adding column")
 			n.tok1 = colIdx
 			colIdx++
 			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
@@ -305,7 +304,7 @@ func columnNamer(q *QuerySpecs, n *Node) {
 }
 
 func newColItem(q* QuerySpecs, idx, typ int, name string) {
-	db.Print2("adding new column",name)
+	//db.Print2("adding new column",name)
 	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
 	q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
 	q.colSpec.NewPos = append(q.colSpec.NewPos, idx+1)

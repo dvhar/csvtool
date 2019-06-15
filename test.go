@@ -21,8 +21,8 @@ type Test struct {
 }
 
 func runTests(doTest bool){
-	//db.verbose1 = true
-	//db.verbose2 = true
+	db.verbose1 = true
+	db.verbose2 = true
 	//db.verbose3 = true
 	if !doTest { return }
 
@@ -36,7 +36,24 @@ func runTests(doTest bool){
 		Test{`select top 2 c4 'Issue Date' c8+c12+10 as int-sum 'c8-int'=c8 c12 as 'c12-int' 
 			c1+c2+10.2 as flt-add c1*c2*10.2 as flt-mult c2 / c1 / 10.2 as flt-div c2 - c1 - 10.2 as flt-sub
 			from`+f1, "simple expressions and aliases", true},
-		Test{"select top 2 c4*c5 from"+f1, "multipy 2 strings", false},
+		Test{` select top 2
+				floaty = case c8
+				when 7 then 7.12 when 40 then 40.23 when 47 then 47.234 when 36 then 30.32
+				else 12.3 end
+				floaty2 = case c8
+				when 5 then 72.12 when 69 then 140.23 when 47 then 427.234 when 36 then 310.32 when 321 then 210.98
+				else 612.3 end
+				from /home/dave/Documents/work/parkingTest.csv
+		`, "2 cases", true},
+		Test{` select top 2
+				case c8
+				when 7 then 7.12 when 40 then 40.23 when 47 then 47.234 when 36 then 30.32
+				else 12.3 end as floaty +
+				case c8
+				when 5 then 72.12 when 69 then 140.23 when 47 then 427.234 when 36 then 310.32 when 321 then 210.98
+				else 612.3 end as addy
+				from /home/dave/Documents/work/parkingTest.csv
+		`, "add 2 cases - malformed because alias in the middle", false},
 	}
 
 	for _,t := range tests {

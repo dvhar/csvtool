@@ -50,7 +50,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	if db.verbose3 { treePrint(n.node1,0) }
+	if db.verbose2 { treePrint(n.node1,0) }
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -116,6 +116,7 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 //tok3 is external use of subtree
 func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
+	db.Print2("selections parser got token",q.Tok())
 	var err error
 	var hidden bool
 	switch q.Tok().id {
@@ -133,7 +134,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case WORD:        fallthrough
 	case SP_MINUS:        fallthrough
 	case SP_LPAREN:
-		Println("colitem starts with",q.Tok())
+		db.Print2("colitem starts with",q.Tok())
 		if !hidden { countSelected++ }
 		n.node1,err = parseColumnItem(q)
 		if err != nil { return n,err }
@@ -143,6 +144,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case KW_FROM:
 		if countSelected == 0 { return selectAll(q) }
 		return nil,nil
+	default: return n,errors.New("Expected a new selection, found "+q.Tok().val)
 	}
 	return n,err
 }
@@ -248,7 +250,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		//expression matches expression list
 		case WORD: fallthrough
 		case SP_LPAREN:
-			Println("case starts with expression:", q.Tok())
+			db.Print2("case starts with expression:", q.Tok())
 			n.tok2 = N_EXPRADD
 			n.node1,err = parseExprAdd(q)
 			if err != nil { return n,err }
