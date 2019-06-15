@@ -9,6 +9,7 @@ import * as help from './help.js';
 import * as topbar from './topbar.js';
 import * as serviceWorker from './serviceWorker';
 
+var bugtimer = window.performance.now() + 30000
 
 class Main extends React.Component {
 	constructor(props) {
@@ -139,6 +140,9 @@ class Main extends React.Component {
 			var dat = JSON.parse(e.data);
 			//console.log(dat);
 			switch (dat.Type) {
+				case bit.SK_PING:
+					bugtimer = window.performance.now() + 5000
+					break;
 				case bit.SK_MSG:
 					that.setState({ topMessage : dat.Text }); 
 					break;
@@ -153,6 +157,10 @@ class Main extends React.Component {
 			}
 		}
 		this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 
+		window.setInterval(()=>{
+			if (window.performance.now() > bugtimer)
+				that.setState({ topMessage : "Query Engine Disconnected!"})
+		},2000);
 	}
 	componentWillMount() { document.title = 'CSV Query Tool' }
 }

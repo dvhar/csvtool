@@ -97,10 +97,9 @@ var browsersOpen = 0
 var slash string
 
 func main() {
+	println("version 0.30 - 6/15/2019")
 	flag.Parse()
-	Println("testing:",*testing)
 	runTests(*testing)
-	println("version 0.26 - 6/2/2019")
 	//get password and other flags
 	messager = make(chan string)
 	fileclick = make(chan string)

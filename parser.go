@@ -257,6 +257,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 			if q.Tok().id != KW_WHEN { return n,errors.New("Expected 'when' after case expression. Found "+q.Tok().val) }
 			n.node2,err = parseCaseWhenExprList(q)
 			if err != nil { return n,err }
+		default: return n,errors.New("Expected expression or 'when'. Found "+q.Tok().val)
 		}
 
 		switch q.Tok().id {
@@ -282,6 +283,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		if err != nil { return n,err }
 		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis. Found "+q.Tok().val) }
 		q.NextTok()
+	default: return n,errors.New("Expected case, value, or expression. Found "+q.Tok().val)
 	}
 	return n, err
 }

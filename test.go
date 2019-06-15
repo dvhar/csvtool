@@ -40,11 +40,10 @@ func runTests(doTest bool){
 				floaty = case c8
 				when 7 then 7.12 when 40 then 40.23 when 47 then 47.234 when 36 then 30.32
 				else 12.3 end
-				floaty2 = case c8
+				case c8
 				when 5 then 72.12 when 69 then 140.23 when 47 then 427.234 when 36 then 310.32 when 321 then 210.98
-				else 612.3 end
-				from /home/dave/Documents/work/parkingTest.csv
-		`, "2 cases", true},
+				else 612.3 end as floaty2
+				from`+f1, "2 cases", true},
 		Test{` select top 2
 				case c8
 				when 7 then 7.12 when 40 then 40.23 when 47 then 47.234 when 36 then 30.32
@@ -52,8 +51,8 @@ func runTests(doTest bool){
 				case c8
 				when 5 then 72.12 when 69 then 140.23 when 47 then 427.234 when 36 then 310.32 when 321 then 210.98
 				else 612.3 end as addy
-				from /home/dave/Documents/work/parkingTest.csv
-		`, "add 2 cases - malformed because alias in the middle", false},
+				from`+f1,
+				"add 2 cases - malformed because alias in the middle", false},
 	}
 
 	for _,t := range tests {
