@@ -23,10 +23,8 @@ type QuerySpecs struct {
 	distinctExpr *Node
 	sortExpr *Node
 	sortType int
-	sortCol int
 	sortWay int
 	save bool
-	like bool
 	showLimit int
 	tree *Node
 	files map[string]*FileData

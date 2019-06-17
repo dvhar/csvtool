@@ -166,8 +166,10 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 
 		case SP_NOEQ: negate ^= 1; fallthrough
 		case SP_EQ:
+			db.Print3("pred type:",typ)
 			switch typ {
 			case T_DATE:   match = expr1.(time.Time).Equal(expr2.(time.Time))
+			case T_NULL:   match = true //only happens when both expression are typed as null
 			default:	   match = expr1 == expr2
 			}
 

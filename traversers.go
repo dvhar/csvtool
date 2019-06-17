@@ -59,7 +59,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		for j:=0;j<it;j++ { Print("  ") }
 		Println(treeMap[n.label])
 		for j:=0;j<it;j++ { Print("  ") }
-		Println("toks:",n.tok1, n.tok2, n.tok3)
+		Println("toks:","'"+Sprint(n.tok1)+"'","'"+Sprint(n.tok2)+"'","'"+Sprint(n.tok3)+"'")
 		defer func(){ it-- }()
 	}
 
@@ -148,7 +148,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			//check multiplication semantics
 			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
 				Println("mult error");
-				return 0,0,nil, errors.New("Cannot multiply or divide type "+typeMap[thisType]) }
+				return 0,0,nil, errors.New("Cannot multiply or divide types "+typeMap[d1]+" and "+typeMap[d2]) }
 			if v2==nil {val = nil} //TODO: precompute if possible
 		}
 

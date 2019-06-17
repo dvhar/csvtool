@@ -56,7 +56,7 @@ const (
 	SP_COMMA =     SPECIAL|iota
 	SP_LPAREN =    SPECIAL|iota
 	SP_RPAREN =    SPECIAL|iota
-	SP_STAR =       SPECIAL|iota
+	SP_STAR =      SPECIAL|iota
 	SP_DIV =       SPECIAL|iota
 	SP_MINUS =     SPECIAL|iota
 	SP_PLUS =      SPECIAL|iota

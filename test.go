@@ -36,7 +36,7 @@ func runTests(doTest bool){
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
-	thisTest := whereSet | selectSet | fromSet
+	thisTest := whereSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -110,6 +110,8 @@ func runTests(doTest bool){
 		Test{`select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# default", true, selectSet},
 		Test{`n select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# n", true, selectSet},
 		Test{`c select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# c", true, selectSet},
+		Test{`c select top 2000 42 26 from`+f1+`where 42=null and 26<>null and 42='' and 26!=''`, "select where null and not null", true, whereSet},
+		Test{`c select top 2000 42 26 from`+f1+`where 42=null*2`, "cant multiply null", false, whereSet},
 	}
 
 	for _,t := range tests {
@@ -129,7 +131,7 @@ func runTests(doTest bool){
 func runOneTestQuery(query string) error {
 	q := QuerySpecs{ queryString : query, }
 	res, err := csvQuery(&q)
-	if err != nil { Println("err:",err); return err }
+	if err != nil { return err }
 	Println("number of colums:",res.Numcols)
 	Println("number of rows:",res.Numrows)
 	Println("types:",res.Types)
