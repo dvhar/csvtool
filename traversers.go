@@ -204,7 +204,7 @@ func enforceType(n *Node, t int) error {
 		n.tok3 = t
 		if n.tok2 == 0 {
 			if _,ok := n.tok1.(*regexp.Regexp); ok { return err } //don't retype regex
-			Println("typing tok",n.tok1,"as",t)
+			db.Print2("typing tok",n.tok1,"as",t)
 			switch t {
 			case T_INT:
 				val,err = Atoi(n.tok1.(string))

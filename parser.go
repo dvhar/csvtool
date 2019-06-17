@@ -391,45 +391,49 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_PREDCOMP}
 	var err error
 	var negate int
-	var expression bool
+	var comparison bool
+	var olderr error
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
+	//more predicates in parentheses
 	if q.Tok().id == SP_LPAREN {
 		pos := q.tokIdx
 		//try parsing as predicate
 		q.NextTok()
 		n.node1, err = parsePredicates(q)
+		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected cosing parenthesis. Found:"+q.Tok().val) }
 		q.NextTok()
 		//if failed, reparse as expression
 		if err != nil {
 			q.tokIdx = pos
-			expression = true
-		}
+			comparison = true
+			olderr = err
+		} else { return n,err }
 	}
-	if q.Tok().id == WORD || expression {
-		n.node1, err = parseExprAdd(q)
-		if err != nil { return n,err }
-		if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
-		if negate == 1 { n.tok2 = SP_NEGATE }
-		if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
-		n.tok1 = q.Tok().id
+	//comparison
+	n.node1, err = parseExprAdd(q)
+	if err != nil && comparison { return n,olderr }
+	if err != nil { return n,err }
+	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
+	if negate == 1 { n.tok2 = SP_NEGATE }
+	if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
+	n.tok1 = q.Tok().id
+	q.NextTok()
+	if n.tok1 == KW_LIKE {
+		var like interface{}
+		re := regexp.MustCompile("%")
+		like = re.ReplaceAllString(q.Tok().val, ".*")
+		re = regexp.MustCompile("_")
+		like = re.ReplaceAllString(like.(string), ".")
+		like,err = regexp.Compile("(?i)^"+like.(string)+"$")
+		n.node2 = &Node{label: N_VALUE, tok1: like.(*regexp.Regexp), tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
 		q.NextTok()
-		if n.tok1 == KW_LIKE {
-			var like interface{}
-			re := regexp.MustCompile("%")
-			like = re.ReplaceAllString(q.Tok().val, ".*")
-			re = regexp.MustCompile("_")
-			like = re.ReplaceAllString(like.(string), ".")
-			like,err = regexp.Compile("(?i)^"+like.(string)+"$")
-			n.node2 = &Node{label: N_VALUE, tok1: like.(*regexp.Regexp), tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
-			q.NextTok()
-		} else {
-			n.node2, err = parseExprAdd(q)
-			if err != nil { return n,err }
-		}
-		if n.tok1 == KW_BETWEEN {
-			q.NextTok()
-			n.node3, err = parseExprAdd(q)
-		}
+	} else {
+		n.node2, err = parseExprAdd(q)
+		if err != nil { return n,err }
+	}
+	if n.tok1 == KW_BETWEEN {
+		q.NextTok()
+		n.node3, err = parseExprAdd(q)
 	}
 	return n, err
 }
