@@ -35,7 +35,8 @@ func runTests(doTest bool){
 	f2 := " " + dir1 + file2 + " "
 	selectSet := 1
 	whereSet := 1<<1
-	thisTest := whereSet | selectSet //can be bit | combo of sets
+	fromSet := 1<<2
+	thisTest := whereSet | selectSet | fromSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -71,18 +72,10 @@ func runTests(doTest bool){
 			when c5 like ny then likey when c1+c8 < 20 then int-flt when c7 < 2017 then datecomp
 			when c8+c17 < 20 then int-int end from`+f1, "case with multiple predicate types", true, selectSet},
 		Test{`select top 20 casexpr=case c1+c8*c12
-			when 23 then inty
-			when 24.45 then floaty
-			when 23*24.54 then combo
-			when c2 then fcol
-			when c19 then icol
-			when c2+c19 then ficol
+			when 23 then inty when 24.45 then floaty when 23*24.54 then combo when c2 then fcol when c19 then icol when c2+c19 then ficol
 			else 234 end from`+f1, "case with mixed int/float comparision expressions", true, selectSet},
 		Test{`select top 20 caseexpr=case c5
-			when NY then new+york
-			when MA then massechuestsskjsdlkj
-			when VA then virginia
-			when NJ then Jersy
+			when NY then new+york when MA then massechuestsskjsdlkj when VA then virginia when NJ then Jersy
 			else flyover end from`+f1, "expression case with actual results", true, selectSet},
 		Test{`select top 20 - c1 - c2 as confusing - c8 (- c2)+c8 from`+f1, "negations", true, selectSet},
 		Test{`select top 20 c1 c2 from`+f1+`where c2 < 10*c1`, "compare floats, mix with int", true, whereSet},
@@ -107,6 +100,16 @@ func runTests(doTest bool){
 			case c10 when TOYOT then 1 when FORD then 2 when BMW then 3 else 4 end 
 			from`+f1+`where case c6 when COM then 1 when OMT then 2 when PAS then 3 else 4 end =
 			case c10 when TOYOT then 1 when FORD then 2 when BMW then 3 else 4 end `, "cases in predicates", true, whereSet},
+		Test{`select top 10 c10 c8 c1 c7 case when c10=TOYOT then 1.2 when c8=36 or c1=30.32 then 48 when c7 > 'june 1 1017' then horse end
+			from`+f1+`where case when c10=TOYOT then 1.2 when c8=36 or c1=30.32 then 48 when c7 > 'june 1 1017' then horse end = 48`,
+			"predicate case with mixed types", true, whereSet},
+		Test{`select from /home/bort/file.csv`, "no file", false, fromSet},
+		Test{`select top 5 1 2 3 '1' '2' '3' from`+f1, "select numbers default", true, selectSet},
+		Test{`n select top 5 1 2 3 '1' '2' '3' from`+f1, "select numbers n", true, selectSet},
+		Test{`c select top 5 1 2 3 '1' '2' '3' from`+f1, "select numbers c", true, selectSet},
+		Test{`select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# default", true, selectSet},
+		Test{`n select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# n", true, selectSet},
+		Test{`c select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# c", true, selectSet},
 	}
 
 	for _,t := range tests {

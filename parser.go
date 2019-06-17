@@ -309,7 +309,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.tok1 = num-1
 		n.tok2 = 1
 		n.tok3 = fdata.types[num-1]
-	} else if !q.intColumn && !tok.quoted && cInt.MatchString(tok.val) {
+	} else if !tok.quoted && cInt.MatchString(tok.val) {
 		num,_ := Atoi(tok.val[1:])
 		if err := errCheck(num); err != nil { return n,err }
 		n.tok1 = num - 1
@@ -391,7 +391,6 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_PREDCOMP}
 	var err error
 	var negate int
-	var comparison bool
 	var olderr error
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 	//more predicates in parentheses
@@ -405,13 +404,12 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		//if failed, reparse as expression
 		if err != nil {
 			q.tokIdx = pos
-			comparison = true
 			olderr = err
 		} else { return n,err }
 	}
 	//comparison
 	n.node1, err = parseExprAdd(q)
-	if err != nil && comparison { return n,olderr }
+	if err != nil && olderr != nil { return n,olderr }
 	if err != nil { return n,err }
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 	if negate == 1 { n.tok2 = SP_NEGATE }

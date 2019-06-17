@@ -298,7 +298,7 @@ func columnNamer(q *QuerySpecs, n *Node) {
 			n.tok1 = colIdx
 			colIdx++
 			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
-			} else { n.tok2 = Sprintf("col%d",n.tok1.(int)) }
+			} else { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
 			newColItem(q, n.tok1.(int), n.node1.tok3.(int), n.tok2.(string))
 		}
 	columnNamer(q, n.node1)

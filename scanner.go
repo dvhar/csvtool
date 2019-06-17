@@ -327,7 +327,7 @@ func scanTokens(q *QuerySpecs) error {
 	input := &StringLookahead{Str:q.queryString}
 	//used to see if ints are num or col
 	cIntRe := regexp.MustCompile(`^c\d+$`)
-	q.intColumn = true
+	//q.intColumn = true
 	for {
 		t := scanner(input)
 		//turn tokens inside quotes into single token
