@@ -112,6 +112,11 @@ func runTests(doTest bool){
 		Test{`c select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# c", true, selectSet},
 		Test{`c select top 2000 42 26 from`+f1+`where 42=null and 26<>null and 42='' and 26!=''`, "select where null and not null", true, whereSet},
 		Test{`c select top 2000 42 26 from`+f1+`where 42=null*2`, "cant multiply null", false, whereSet},
+		Test{`select top 20 c37 from`+f1+`where c37 = null`, "where int = null", true, whereSet},
+		Test{`select top 20 c1 c2 from`+f1+`where c1 = null and c2 <> null`, "where float = null and not null", true, whereSet},
+		Test{`select top 20 c1 c2 c37 c40 from`+f1+`where c1 = c2 or c37 = c40`, "where cols = each other", true, whereSet},
+		Test{`select top 20 c38 from`+f1+`where c38 % 2 = 0`, "modulus", true, whereSet},
+		Test{`select top 20 c38 from`+f1+`where c38 % 2.1 = 0`, "bad modulus", false, whereSet},
 	}
 
 	for _,t := range tests {

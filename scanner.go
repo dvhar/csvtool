@@ -58,6 +58,7 @@ const (
 	SP_RPAREN =    SPECIAL|iota
 	SP_STAR =      SPECIAL|iota
 	SP_DIV =       SPECIAL|iota
+	SP_MOD =       SPECIAL|iota
 	SP_MINUS =     SPECIAL|iota
 	SP_PLUS =      SPECIAL|iota
 	//non-final states
@@ -109,6 +110,7 @@ var enumMap = map[int]string {
 	SP_RPAREN :     "SP_RPAREN",
 	SP_STAR :       "SP_STAR",
 	SP_DIV :        "SP_DIV",
+	SP_MOD :        "SP_MOD",
 	SP_MINUS :      "SP_MINUS",
 	SP_PLUS :       "SP_PLUS",
 	STATE_INITAL :  "STATE_INITAL",
@@ -142,6 +144,7 @@ var keywordMap = map[string]int {
 	"end" :       KW_END,
 	"not" :       SP_NEGATE,
 	"-" :         SP_MINUS,
+	"%" :         SP_MOD,
 	"/" :         SP_DIV,
 }
 var specialMap = map[string]int {

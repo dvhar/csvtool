@@ -70,7 +70,12 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 			if t1 != t2 { db.Print1(v2,v2,"have different type:",t1,t2) }
 			if v2 == nil { return t1,v2 }
 			switch t1 {
-			case T_INT:   if op==SP_STAR { v1=v1.(int)*v2.(int) } else { v1=v1.(int)/v2.(int) }
+			case T_INT:
+				switch op {
+				case SP_STAR: v1=v1.(int)*v2.(int)
+				case SP_DIV:  v1=v1.(int)/v2.(int)
+				case SP_MOD:  v1=v1.(int)%v2.(int)
+				}
 			case T_FLOAT: if op==SP_STAR { v1=v1.(float64)*v2.(float64) } else { v1=v1.(float64)/v2.(float64) }
 			}
 		}
@@ -157,8 +162,8 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 
 	//maybe find a less repetetive way to write this
 	case N_PREDCOMP:
-		_,expr1 := execExpression(q, n.node1)
-		_,expr2 := execExpression(q, n.node2)
+		t1,expr1 := execExpression(q, n.node1)
+		t2,expr2 := execExpression(q, n.node2)
 		typ := n.tok3.(int)
 		if expr1==nil || expr2==nil { typ = T_NULL }
 		switch n.tok1.(int) {
@@ -166,10 +171,9 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 
 		case SP_NOEQ: negate ^= 1; fallthrough
 		case SP_EQ:
-			db.Print3("pred type:",typ)
+				db.Print3("ex1, ex3:",expr1, expr2, t1,t2)
 			switch typ {
 			case T_DATE:   match = expr1.(time.Time).Equal(expr2.(time.Time))
-			case T_NULL:   match = true //only happens when both expression are typed as null
 			default:	   match = expr1 == expr2
 			}
 

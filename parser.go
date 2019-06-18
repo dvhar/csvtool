@@ -204,6 +204,7 @@ func parseExprMult(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	switch q.Tok().id {
 	case SP_STAR: fallthrough
+	case SP_MOD: fallthrough
 	case SP_DIV:
 		if q.PeekTok().id == KW_FROM { break }
 		n.tok1 = q.Tok().id
@@ -322,9 +323,9 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	//else must be literal
 	} else {
 		err = nil
-		n.tok1 = tok.val
 		n.tok2 = 0
 		n.tok3 = getNarrowestType(tok.val,0)
+		if n.tok3.(int) != T_NULL { n.tok1 = tok.val } else { n.tok1 = nil }
 	}
 	q.NextTok()
 	if n.tok2.(int)==1 { n.tok3 = fdata.types[n.tok1.(int)] }

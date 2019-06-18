@@ -18,10 +18,10 @@ func evalWhere(q *QuerySpecs) bool {
 var typeChart = [10][10]int {
 	{4,4,4,4,4,4,4,4,4,4},
 	{4,4,1,1,2,2,3,3,4,4},
-	{4,1,1,1,2,1,3,1,4,1},
+	{4,1,1,1,2,2,3,1,4,1},
 	{4,1,1,1,2,2,3,1,4,4},
 	{4,2,2,2,2,2,3,2,4,2},
-	{4,2,1,2,2,2,3,2,4,4},
+	{4,2,2,2,2,2,3,2,4,4},
 	{4,3,3,3,3,3,3,3,3,3},
 	{4,3,1,1,2,2,3,3,4,4},
 	{4,4,4,4,4,4,3,4,4,4},
@@ -149,6 +149,9 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
 				Println("mult error");
 				return 0,0,nil, errors.New("Cannot multiply or divide types "+typeMap[d1]+" and "+typeMap[d2]) }
+			if n.label==N_EXPRMULT && operator == SP_MOD && (d1!=T_INT || d2!=T_INT) {
+				Println("mod error");
+				return 0,0,nil, errors.New("Modulus operator requires integers") }
 			if v2==nil {val = nil} //TODO: precompute if possible
 		}
 
@@ -201,6 +204,7 @@ func enforceType(n *Node, t int) error {
 	var val interface{}
 	switch n.label {
 	case N_VALUE:
+		if n.tok1 == nil { return nil }
 		n.tok3 = t
 		if n.tok2 == 0 {
 			if _,ok := n.tok1.(*regexp.Regexp); ok { return err } //don't retype regex
