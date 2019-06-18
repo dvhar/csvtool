@@ -119,6 +119,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	db.Print2("selections parser got token",q.Tok())
 	var err error
 	var hidden bool
+	if q.Tok().id == SP_COMMA { q.NextTok() }
 	switch q.Tok().id {
 	case SP_STAR:
 		q.NextTok()

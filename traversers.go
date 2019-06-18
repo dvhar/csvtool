@@ -145,14 +145,15 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) {
 				Println("add error");
 				return 0,0,nil, errors.New("Cannot add or subtract types "+typeMap[d1]+" and "+typeMap[d2]) }
+			//check modulus semantics
+			if n.label==N_EXPRMULT && operator == SP_MOD && (d1!=T_INT || d2!=T_INT) {
+				Println("mod error");
+				return 0,0,nil, errors.New("Modulus operator requires integers") }
 			//check multiplication semantics
 			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
 				Println("mult error");
 				return 0,0,nil, errors.New("Cannot multiply or divide types "+typeMap[d1]+" and "+typeMap[d2]) }
-			if n.label==N_EXPRMULT && operator == SP_MOD && (d1!=T_INT || d2!=T_INT) {
-				Println("mod error");
-				return 0,0,nil, errors.New("Modulus operator requires integers") }
-			if v2==nil {val = nil} //TODO: precompute if possible
+			if v2==nil {val = nil}
 		}
 
 		//there is third part because between
@@ -163,7 +164,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(val,v2,v3,d1,d2,d3,3)
 			db.Print1("combine vals",val,v2,v3,"types",d1,d2,d3,"to get",thisType)
-			if v2==nil&&v3==nil {val = nil} //TODO: precompute if possible
+			if v2==nil&&v3==nil {val = nil}
 		}
 		//predicate comparisions are typed independantly, so leave type in node3
 		if n.label == N_PREDCOMP { n.tok3 = thisType }

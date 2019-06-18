@@ -117,6 +117,7 @@ func runTests(doTest bool){
 		Test{`select top 20 c1 c2 c37 c40 from`+f1+`where c1 = c2 or c37 = c40`, "where cols = each other", true, whereSet},
 		Test{`select top 20 c38 from`+f1+`where c38 % 2 = 0`, "modulus", true, whereSet},
 		Test{`select top 20 c38 from`+f1+`where c38 % 2.1 = 0`, "bad modulus", false, whereSet},
+		Test{`select top 20 c38`+f1+`where c38 % 2.1 = 0`, "missing from", false, whereSet},
 	}
 
 	for _,t := range tests {
