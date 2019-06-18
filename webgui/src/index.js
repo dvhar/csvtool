@@ -141,7 +141,7 @@ class Main extends React.Component {
 			//console.log(dat);
 			switch (dat.Type) {
 				case bit.SK_PING:
-					bugtimer = window.performance.now() + 5000
+					bugtimer = window.performance.now() + 20000
 					break;
 				case bit.SK_MSG:
 					that.setState({ topMessage : dat.Text }); 
@@ -158,7 +158,7 @@ class Main extends React.Component {
 		}
 		this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 
 		window.setInterval(()=>{
-			if (window.performance.now() > bugtimer)
+			if (window.performance.now() > bugtimer+20000)
 				that.setState({ topMessage : "Query Engine Disconnected!"})
 		},2000);
 	}
