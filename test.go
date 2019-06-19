@@ -36,7 +36,7 @@ func runTests(doTest bool){
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
-	thisTest := whereSet
+	thisTest := whereSet | selectSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -118,6 +118,7 @@ func runTests(doTest bool){
 		Test{`select top 20 c38 from`+f1+`where c38 % 2 = 0`, "modulus", true, whereSet},
 		Test{`select top 20 c38 from`+f1+`where c38 % 2.1 = 0`, "bad modulus", false, whereSet},
 		Test{`select top 20 c38`+f1+`where c38 % 2.1 = 0`, "missing from", false, whereSet},
+		Test{`select top 20 c3 c3 % 2 case when c3 % 2 = 1 then odd when not c3 % 2 = 1 then even end from`+f1, "case predicate negation", true, selectSet},
 	}
 
 	for _,t := range tests {

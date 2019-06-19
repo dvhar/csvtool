@@ -50,7 +50,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	if db.verbose2 { treePrint(n.node1,0) }
+	if db.verbose3 { treePrint(n.node1,0) }
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
