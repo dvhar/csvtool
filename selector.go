@@ -66,8 +66,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
 			if v1 == nil { return t1,v1 }
-			t2,v2 := execExpression(q, n.node2)
-			if t1 != t2 { db.Print1(v2,v2,"have different type:",t1,t2) }
+			_,v2 := execExpression(q, n.node2)
 			if v2 == nil { return t1,v2 }
 			switch t1 {
 			case T_INT:
@@ -84,8 +83,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_EXPRADD:
 		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
-			t2,v2 := execExpression(q, n.node2)
-			db.Print1(v1,v2,"have types:",t1,t2)
+			_,v2 := execExpression(q, n.node2)
 			//Printf("%+V %+V\n", v1, v2)
 			if v1==nil || v2==nil { return t1,nil }
 			switch t1 {

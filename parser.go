@@ -145,7 +145,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case KW_FROM:
 		if countSelected == 0 { return selectAll(q) }
 		return nil,nil
-	default: return n,errors.New("Expected a new selection, found "+q.Tok().val)
+	default: return n,errors.New("Expected a new selection or 'from' clause. Found "+q.Tok().val)
 	}
 	return n,err
 }
