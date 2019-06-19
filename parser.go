@@ -371,7 +371,8 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 func parsePredicates(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_PREDICATES}
 	var err error
-	if q.Tok().id == SP_NEGATE { n.tok2 = SP_NEGATE; q.NextTok() }
+	n.tok2 = 0
+	if q.Tok().id == SP_NEGATE { n.tok2 = 1; q.NextTok() }
 	n.node1,err = parsePredCompare(q)
 	if err != nil { return n,err }
 	if (q.Tok().id & LOGOP) != 0 {
@@ -414,7 +415,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	if err != nil && olderr != nil { return n,olderr }
 	if err != nil { return n,err }
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
-	if negate == 1 { n.tok2 = SP_NEGATE }
+	n.tok2 = negate
 	if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
 	n.tok1 = q.Tok().id
 	q.NextTok()

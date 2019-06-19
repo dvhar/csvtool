@@ -147,7 +147,7 @@ func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interfac
 func evalPredicates(q *QuerySpecs, n *Node) bool {
 	var negate int
 	var match bool
-	if _,ok := n.tok2.(int);ok { negate ^= 1 }
+	if n.tok2.(int) == 1 { negate ^= 1 }
 	switch n.label {
 	case N_PREDICATES:
 		match = evalPredicates(q,n.node1)
@@ -162,8 +162,8 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 
 	//maybe find a less repetetive way to write this
 	case N_PREDCOMP:
-		t1,expr1 := execExpression(q, n.node1)
-		t2,expr2 := execExpression(q, n.node2)
+		_,expr1 := execExpression(q, n.node1)
+		_,expr2 := execExpression(q, n.node2)
 		typ := n.tok3.(int)
 		if expr1==nil || expr2==nil { typ = T_NULL }
 		switch n.tok1.(int) {
@@ -171,7 +171,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 
 		case SP_NOEQ: negate ^= 1; fallthrough
 		case SP_EQ:
-				db.Print3("ex1, ex3:",expr1, expr2, t1,t2)
+		//db.Print2("ex1, ex3:",expr1, expr2, t1,t2)
 			switch typ {
 			case T_DATE:   match = expr1.(time.Time).Equal(expr2.(time.Time))
 			default:	   match = expr1 == expr2
