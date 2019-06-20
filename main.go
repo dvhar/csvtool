@@ -17,75 +17,6 @@ var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Da
 var testing = flag.Bool("test",false, "run tests and then exit")
 
 
-//one SingleQueryResult struct holds the results of one query
-type SingleQueryResult struct {
-	Numrows int
-	ShowLimit int
-	Numcols int
-	Types []int
-	Colnames []string
-	Pos []int
-	Vals [][]interface{}
-	Status int
-	Query string
-}
-
-//channel data
-const (
-	CH_HEADER = iota
-	CH_ROW = iota
-	CH_DONE = iota
-	CH_NEXT = iota
-	CH_SAVPREP = iota
-)
-type saveData struct {
-	Message string
-	Number int
-	Type int
-	Header []string
-	Row *[]interface{}
-}
-
-//query return data struct and codes
-const (
-	DAT_ERROR = 1 << iota
-	DAT_GOOD = 1 << iota
-	DAT_BADPATH = 1 << iota
-	DAT_IOERR = 1 << iota
-	DAT_BLANK = 0
-)
-type ReturnData struct {
-	Entries []SingleQueryResult
-	Status int
-	OriginalQuery string
-	Clipped bool
-	Message string
-}
-
-//file io struct and codes
-const (
-	FP_SERROR = 1 << iota
-	FP_SCHANGED = 1 << iota
-	FP_OERROR = 1 << iota
-	FP_OCHANGED = 1 << iota
-	FP_CWD = 0
-	F_CSV = 1 << iota
-	F_JSON = 1 << iota
-	F_OPEN = 1 << iota
-	F_SAVE = 1 << iota
-)
-type FilePaths struct {
-	SavePath string
-	OpenPath string
-	Status int
-}
-//struct that matches incoming json requests
-type Qrequest struct {
-	Query string
-	Qamount int
-	FileIO int
-	SavePath string
-}
 
 var FPaths FilePaths
 var messager chan string
@@ -111,13 +42,7 @@ func main() {
 	//initialize file paths
 	cwd, err := os.Getwd()
 	if err == nil {
-		switch runtime.GOOS {
-			case "windows":
-				slash = "\\"
-			case "darwin": fallthrough
-			default:
-				slash = "/"
-		}
+		if runtime.GOOS == "windows" { slash = "\\" } else { slash = "/" }
 		FPaths.OpenPath = cwd + slash
 		FPaths.SavePath  = cwd + slash
 		FPaths.Status = 0
@@ -162,7 +87,6 @@ func main() {
 func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
 	q := QuerySpecs{ queryString : query, }
 	if (req.FileIO & F_CSV) != 0 { q.save = true }
-	println("attempting csv query from gui program")
 	res, err := csvQuery(&q)
 	res.Query = query;
 	return res, err

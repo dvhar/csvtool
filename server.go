@@ -12,30 +12,6 @@ import (
 	. "strconv"
 	"github.com/gorilla/websocket"
 )
-
-//websockets
-const (
-	SK_MSG = iota
-	SK_PING = iota
-	SK_PONG = iota
-	SK_STOP = iota
-	SK_DIRLIST = iota
-	SK_FILECLICK = iota
-)
-type Client struct {
-	conn *websocket.Conn
-	w http.ResponseWriter
-	r *http.Request
-}
-type sockMessage struct {
-	Type int
-	Text string
-	Mode string
-}
-type sockDirMessage struct {
-	Type int
-	Dir Directory
-}
 //write loop for each websocket client
 func (c* Client) writer(){
 	ticker := time.NewTicker(time.Second)

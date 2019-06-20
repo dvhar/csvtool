@@ -166,7 +166,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			db.Print1("combine vals",val,v2,v3,"types",d1,d2,d3,"to get",thisType)
 			if v2==nil&&v3==nil {val = nil}
 		}
-		//predicate comparisions are typed independantly, so leave type in node3
+		//predicate comparisions are typed independantly, so leave type in tok3
 		if n.label == N_PREDCOMP { n.tok3 = thisType }
 		//Println(treeMap[n.label],"returning val",val)
 		return n.label, thisType, val, err
@@ -262,6 +262,7 @@ func enforceType(n *Node, t int) error {
 }
 
 //remove useless nodes from parse tree
+//would like to eventually use bytecode engince, but for now just optimizes the tree a little for the traversers
 func branchShortener(q *QuerySpecs, n *Node) *Node {
 	colIdx=0
 	if n == nil { return n }
@@ -334,38 +335,8 @@ func treePrint(n *Node, i int){
 	Println(treeMap[n.label])
 	for j:=0;j<i;j++ { Print("  ") }
 	Println("toks:",n.tok1, n.tok2, n.tok3)
-	//for j:=0;j<i;j++ { Print("  ") }
-	//Println("nodes:",n.node1, n.node2, n.node3)
 	treePrint(n.node1,i+1)
 	treePrint(n.node2,i+1)
 	treePrint(n.node3,i+1)
 }
 
-//tree node labels for debugging
-var treeMap = map[int]string {
-	N_QUERY:      "N_QUERY",
-	N_SELECT:     "N_SELECT",
-	N_SELECTIONS: "N_SELECTIONS",
-	N_FROM:       "N_FROM",
-	N_WHERE:      "N_WHERE",
-	N_ORDER:      "N_ORDER",
-	N_COLITEM:    "N_COLITEM",
-	N_EXPRADD:    "N_EXPRADD",
-	N_EXPRMULT:   "N_EXPRMULT",
-	N_EXPRNEG:    "N_EXPRNEG",
-	N_CPREDLIST:  "N_CPREDLIST",
-	N_CPRED:      "N_CPRED",
-	N_PREDICATES: "N_PREDICATES",
-	N_PREDCOMP:   "N_PREDCOMP",
-	N_CWEXPRLIST: "N_CWEXPRLIST",
-	N_CWEXPR:     "N_CWEXPR",
-	N_EXPRCASE:   "N_EXPRCASE",
-	N_VALUE:      "N_VALUE",
-}
-var typeMap = map[int]string {
-	T_NULL:      "null",
-	T_INT:       "integer",
-	T_FLOAT:     "float",
-	T_DATE:      "date",
-	T_STRING:    "string",
-}

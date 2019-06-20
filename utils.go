@@ -1,16 +1,18 @@
-//file provides the parseQuery function
+//data structures, constants, and whatnot
 // _fmk0# is file map key designed to avoid collisions with aliases and file names
 package main
 import (
-  "regexp"
-  "encoding/csv"
-  "path/filepath"
-  "os"
-  "errors"
-  s "strings"
-  d "github.com/araddon/dateparse"
-  . "strconv"
-  . "fmt"
+	"regexp"
+	"net/http"
+	"github.com/gorilla/websocket"
+	"encoding/csv"
+	"path/filepath"
+	"os"
+	"errors"
+	s "strings"
+	d "github.com/araddon/dateparse"
+	. "strconv"
+	. "fmt"
 )
 
 type QuerySpecs struct {
@@ -52,10 +54,10 @@ const (
 	N_WHERE = iota
 	N_ORDER = iota
 	N_COLITEM = iota
-    N_EXPRADD = iota
-    N_EXPRMULT = iota
-    N_EXPRNEG = iota
-    N_EXPRCASE = iota
+	N_EXPRADD = iota
+	N_EXPRMULT = iota
+	N_EXPRNEG = iota
+	N_EXPRCASE = iota
 	N_CPREDLIST = iota
 	N_CPRED = iota
 	N_CWEXPRLIST = iota
@@ -64,6 +66,34 @@ const (
 	N_PREDCOMP = iota
 	N_VALUE = iota
 )
+//tree node labels for debugging
+var treeMap = map[int]string {
+	N_QUERY:      "N_QUERY",
+	N_SELECT:     "N_SELECT",
+	N_SELECTIONS: "N_SELECTIONS",
+	N_FROM:       "N_FROM",
+	N_WHERE:      "N_WHERE",
+	N_ORDER:      "N_ORDER",
+	N_COLITEM:    "N_COLITEM",
+	N_EXPRADD:    "N_EXPRADD",
+	N_EXPRMULT:   "N_EXPRMULT",
+	N_EXPRNEG:    "N_EXPRNEG",
+	N_CPREDLIST:  "N_CPREDLIST",
+	N_CPRED:      "N_CPRED",
+	N_PREDICATES: "N_PREDICATES",
+	N_PREDCOMP:   "N_PREDCOMP",
+	N_CWEXPRLIST: "N_CWEXPRLIST",
+	N_CWEXPR:     "N_CWEXPR",
+	N_EXPRCASE:   "N_EXPRCASE",
+	N_VALUE:      "N_VALUE",
+}
+var typeMap = map[int]string {
+	T_NULL:      "null",
+	T_INT:       "integer",
+	T_FLOAT:     "float",
+	T_DATE:      "date",
+	T_STRING:    "string",
+}
 type FileData struct {
 	fname string
 	names []string
@@ -166,10 +196,103 @@ func openFiles(q *QuerySpecs) error {
 			q.files[filename[:len(filename)-4]] = file
 			if q.NextTok().id == WORD { q.files[q.Tok().val] = file }
 			if q.Tok().id == KW_AS && q.NextTok().id == WORD { q.files[q.Tok().val] = file }
-			if inferTypes(q, key) != nil {return err}
+			if err = inferTypes(q, key); err != nil {return err}
 		}
 	}
 	q.Reset()
 	if q.numfiles == 0 { return errors.New("Could not find file") }
 	return nil
+}
+
+//channel data
+const (
+	CH_HEADER = iota
+	CH_ROW = iota
+	CH_DONE = iota
+	CH_NEXT = iota
+	CH_SAVPREP = iota
+)
+type saveData struct {
+	Message string
+	Number int
+	Type int
+	Header []string
+	Row *[]interface{}
+}
+//one SingleQueryResult struct holds the results of one query
+type SingleQueryResult struct {
+	Numrows int
+	ShowLimit int
+	Numcols int
+	Types []int
+	Colnames []string
+	Pos []int
+	Vals [][]interface{}
+	Status int
+	Query string
+}
+
+//query return data struct and codes
+const (
+	DAT_ERROR = 1 << iota
+	DAT_GOOD = 1 << iota
+	DAT_BADPATH = 1 << iota
+	DAT_IOERR = 1 << iota
+	DAT_BLANK = 0
+)
+type ReturnData struct {
+	Entries []SingleQueryResult
+	Status int
+	OriginalQuery string
+	Clipped bool
+	Message string
+}
+
+//file io struct and codes
+const (
+	FP_SERROR = 1 << iota
+	FP_SCHANGED = 1 << iota
+	FP_OERROR = 1 << iota
+	FP_OCHANGED = 1 << iota
+	FP_CWD = 0
+	F_CSV = 1 << iota
+	F_JSON = 1 << iota
+	F_OPEN = 1 << iota
+	F_SAVE = 1 << iota
+)
+type FilePaths struct {
+	SavePath string
+	OpenPath string
+	Status int
+}
+//struct that matches incoming json requests
+type Qrequest struct {
+	Query string
+	Qamount int
+	FileIO int
+	SavePath string
+}
+
+//websockets
+const (
+	SK_MSG = iota
+	SK_PING = iota
+	SK_PONG = iota
+	SK_STOP = iota
+	SK_DIRLIST = iota
+	SK_FILECLICK = iota
+)
+type Client struct {
+	conn *websocket.Conn
+	w http.ResponseWriter
+	r *http.Request
+}
+type sockMessage struct {
+	Type int
+	Text string
+	Mode string
+}
+type sockDirMessage struct {
+	Type int
+	Dir Directory
 }
