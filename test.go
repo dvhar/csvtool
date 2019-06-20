@@ -119,6 +119,7 @@ func runTests(doTest bool){
 		Test{`select top 20 c38 from`+f1+`where c38 % 2.1 = 0`, "bad modulus", false, whereSet},
 		Test{`select top 20 c38`+f1+`where c38 % 2.1 = 0`, "missing from", false, whereSet},
 		Test{`select top 20 c3 c3 % 2 case when c3 % 2 = 1 then odd when not c3 % 2 = 1 then even end from`+f1, "case predicate negation", true, selectSet},
+		Test{`select c1 c8 c13 'and' c6 'and' c9 c6 c12 from`+f1+`where c1 between c8 and c13 and c6 between COM and PAS and c9 between c6 and c12`, "between various types", true, selectSet},
 	}
 
 	for _,t := range tests {

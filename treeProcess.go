@@ -30,20 +30,12 @@ var typeChart = [10][10]int {
 
 //figure out what type to give subtreee given its expression types
 //value being null or not depends on csv column value or literal
-func typeCompute(v1, v2, v3 interface{}, d1, d2, d3, howmany int) int {
+func typeCompute(v1, v2 interface{}, d1, d2 int) int {
 	i1 := 2*d1
 	i2 := 2*d2
 	if v1 != nil { i1++ }
 	if v2 != nil { i2++ }
-	resultType := typeChart[i1][i2]
-	if howmany == 3 {
-		i3 := 2*d3
-		if v3 != nil { i3++ }
-		resultType *= 2
-		if v1!=nil && v2!=nil { resultType++ }
-		resultType = typeChart[resultType][i3]
-	}
-	return resultType
+	return typeChart[i1][i2]
 }
 
 //type checker
@@ -90,15 +82,15 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 				for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {  //when expression list
 					_,whentype,_,err := typeCheck(whenNode.node1.node1)
 					if err != nil { return 0,0,nil,err }
-					caseWhenExprType = typeCompute(nil,nil,nil,caseWhenExprType,whentype,0,2)
+					caseWhenExprType = typeCompute(nil,nil,caseWhenExprType,whentype)
 				}
 				n.node2.tok3 = caseWhenExprType
 				thisType = d2
-				if n3>0 { thisType = typeCompute(v2,v3,nil,d2,d3,0,2) }
+				if n3>0 { thisType = typeCompute(v2,v3,d2,d3) }
 			//when using predicates
 			} else {
 				thisType = d1
-				if n3>0 { thisType = typeCompute(v1,v3,nil,d1,d3,0,2) }
+				if n3>0 { thisType = typeCompute(v1,v3,d1,d3) }
 			}
 			if n1 == N_VALUE { val = v1 }
 			return N_EXPRCASE, thisType, val, nil
@@ -129,7 +121,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	case N_CWEXPRLIST:fallthrough
 	case N_CPREDLIST: fallthrough
 	case N_PREDCOMP:
-		n1, d1, val, err := typeCheck(n.node1)
+		n1, d1, v1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
 		if n.label == N_PREDCOMP && n1 == N_PREDICATES { return n.label, 0, nil,err }
 		thisType := d1
@@ -138,8 +130,8 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		if operator,ok := n.tok1.(int); ok && operator!=KW_BETWEEN {
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
-			thisType = typeCompute(val,v2,nil,d1,d2,0,2)
-			db.Print1("combine vals",val,v2,"types",d1,d2,"to get",thisType)
+			thisType = typeCompute(v1,v2,d1,d2)
+			db.Print1("combine vals",v1,v2,"types",d1,d2,"to get",thisType)
 
 			//check addition semantics
 			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) {
@@ -162,14 +154,16 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if err != nil { return 0,0,nil,err }
 			_, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
-			thisType = typeCompute(val,v2,v3,d1,d2,d3,3)
-			db.Print1("combine vals",val,v2,v3,"types",d1,d2,d3,"to get",thisType)
-			if v2==nil&&v3==nil {val = nil}
+			thisType = typeCompute(v1,v2,d1,d2)
+			v12 := v1; if v2 == nil { v12 = nil }
+			thisType = typeCompute(v12,v3,thisType,d3)
+			db.Print1("combine vals",v1,v2,v3,"types",d1,d2,d3,"to get",thisType)
+			if v3==nil {v1 = nil}
 		}
 		//predicate comparisions are typed independantly, so leave type in tok3
 		if n.label == N_PREDCOMP { n.tok3 = thisType }
 		//Println(treeMap[n.label],"returning val",val)
-		return n.label, thisType, val, err
+		return n.label, thisType, v1, err
 
 	//case 'when' expression needs to match others but isn't node's return type
 	case N_CWEXPR:
