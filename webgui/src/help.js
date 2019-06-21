@@ -20,7 +20,7 @@ export class Help extends React.Component {
 				<h4>Specifying a file</h4>
 				{"Click 'Browse Files' to find files, and double click one to add it to the query. You can query different files at the same time by separating queries with a semicolon."}
 				<h4>Selecting some columns</h4>
-				{"Columns can be specified by name or number. Select column numbers be prefacing the number with 'c', or by using a plain unquoted number if putting a 'c' in front of the whole query. Commas between selections are optional."}
+				{"Columns can be specified by name or number. Select column numbers by prefacing the number with 'c', or by using a plain unquoted number if putting a 'c' in front of the whole query. Commas between selections are optional."}
 				<br/><br/>
 				Example: selecting columns 1-3, dogs, and cats from a file<br/>
 				<blockquote>
@@ -48,12 +48,10 @@ export class Help extends React.Component {
 				<br/>
 				{"select case when c1*2<10 then dog when c1*10>=10.2 then cat else monkey end from /home/user/pets.csv"}
 				<br/>
-				{"select case c1 / c4 when (c3+c3)*2 then dog when c1*10 then cat else monkey end from /home/user/pets.csv"}
-				<br/>
 				{"select case c1 / c4 when (c3+c3)*2 then dog when c1*10 then cat end from /home/user/pets.csv"}
 				</blockquote>
 				<h4>selecting rows with a distinct value</h4>
-				{"Put the 'distinct' keyword in front of the expression that you want to be distinct. Put 'hidden' after distinct to effect the results without displaying that value."}
+				{"Put the 'distinct' keyword in front of the expression that you want to be distinct. Put 'hidden' after 'distinct' to effect the results without displaying that value."}
 				<br/><br/>
 				Examples:
 				<blockquote>
@@ -66,11 +64,9 @@ export class Help extends React.Component {
 				<h4>Selecting a number of rows</h4>
 				{"Use the 'top' keyword after 'select'. Be careful not to confuse the number after 'top' for part of an expression."}
 				<br/><br/>
-				Examples: selecting columns 1-3, dogs, and cats from a file, but only fetch 100 results. Then select all columns.<br/>
+				Examples: selecting columns 1-3, dogs, and cats from a file, but only fetch 100 results.<br/>
 				<blockquote>
-					{"c select top 100 1 2 3 dogs cats from /home/user/pets.csv"}
-					<br/>
-					{"select top 100 from /home/user/pets.csv"}
+					{"select top 100 c1 c2 c3 dogs cats from /home/user/pets.csv"}
 				</blockquote>
 				<h4>Selecting rows that match a certain condition</h4>
 				 {"Use any combinatin of '[expression] [relational operator] [expression]', parentheses, 'and', 'or', 'not', and 'between'. Dates are handled nicely, so 'May 18 1955' is the same as 5/18/1955. Empty entries evaluate to 'null'."}
@@ -79,14 +75,12 @@ export class Help extends React.Component {
 				<br/><br/>
 				Examples:
 				<blockquote>
-				{"select from /home/user/pets.csv where name = \"fuzzy wuzzy\" or c3*3 > fuzziness"}
-				<br/>
 				{"select from /home/user/pets.csv where dateOfBirth < 'april 10 1980' or age between (c3 - 19)*1.2 and 30"}
 				<br/>
-				{"select from /home/user/pets.csv where (1 < 13 or fuzzy = very) and not (3 = null or weight >= 50 or name not like a_b%)"}
+				{"select from /home/user/pets.csv where (c1 < c13 or fuzzy = very) and not (c3 = null or weight >= 50 or name not like a_b%)"}
 				</blockquote>
 				<h4>Sorting results</h4>
-				{"Use 'order by', followed by one column name or number, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified."}
+				{"Use 'order by', followed by one column or expression, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified."}
 				<br/><br/>
 				Examples:
 				<blockquote>
@@ -109,7 +103,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.30 - 6/17/2019
+			version 0.30 - 6/20/2019
 			<hr/>
 			<br/><br/>
 			</div>

@@ -502,7 +502,6 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 	var err error
 	if q.Tok().id != KW_WHERE { return n,nil }
 	q.NextTok()
-	//n.node1,err = parseConditions(q)
 	n.node1,err = parsePredicates(q)
 	return n,err
 }

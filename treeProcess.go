@@ -7,12 +7,6 @@ import (
   "errors"
 )
 
-func evalWhere(q *QuerySpecs) bool {
-	node := q.tree.node3
-	if node.node1 == nil { return true }
-	return evalPredicates(q, node.node1)
-}
-
 //what type results from operation with 2 expressions with various data types and column/literal source
 //null[c,l], int[c,l], float[c,l], date[c,l], string[c,l] in both dimensions
 var typeChart = [10][10]int {
@@ -27,9 +21,6 @@ var typeChart = [10][10]int {
 	{4,4,4,4,4,4,3,4,4,4},
 	{4,4,1,4,2,4,3,4,4,4},
 }
-
-//figure out what type to give subtreee given its expression types
-//value being null or not depends on csv column value or literal
 func typeCompute(v1, v2 interface{}, d1, d2 int) int {
 	i1 := 2*d1
 	i2 := 2*d2
@@ -39,7 +30,7 @@ func typeCompute(v1, v2 interface{}, d1, d2 int) int {
 }
 
 //type checker
-//only return val interface if can be precomputed
+//only return val if expression is a literal
 var it int
 var caseWhenExprType int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
@@ -243,9 +234,11 @@ func enforceType(n *Node, t int) error {
 	case N_CWEXPR:
 		err = enforceType(n.node2,t)
 
+	//each predicate comparison has its own independant type
+	case N_PREDCOMP:
+		if tt, ok := n.tok3.(int); ok { t = tt }
+		fallthrough
 	default:
-		//predicate comparisons are typed independantly by node3
-		if n.label==N_PREDCOMP {if tt, ok := n.tok3.(int); ok { t = tt }}
 		err = enforceType(n.node1,t)
 		if err != nil { return err }
 		err = enforceType(n.node2,t)
@@ -260,7 +253,6 @@ func enforceType(n *Node, t int) error {
 func branchShortener(q *QuerySpecs, n *Node) *Node {
 	colIdx=0
 	if n == nil { return n }
-	//db.Print2("optimizer at node",treeMap[n.label])
 	n.node1 = branchShortener(q, n.node1)
 	n.node2 = branchShortener(q, n.node2)
 	n.node3 = branchShortener(q, n.node3)
@@ -296,7 +288,6 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	//db.Print2("colnamer node",treeMap[n.label],n)
 	if n.label == N_SELECTIONS &&
 		n.node1.label == N_COLITEM {
 			n.tok1 = colIdx
@@ -311,7 +302,6 @@ func columnNamer(q *QuerySpecs, n *Node) {
 }
 
 func newColItem(q* QuerySpecs, idx, typ int, name string) {
-	//db.Print2("adding new column",name)
 	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
 	q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
 	q.colSpec.NewPos = append(q.colSpec.NewPos, idx+1)

@@ -25,6 +25,12 @@ func execSelections(q *QuerySpecs, n *Node) {
 	execSelections(q, n.node2)
 }
 
+func evalWhere(q *QuerySpecs) bool {
+	node := q.tree.node3
+	if node.node1 == nil { return true }
+	return evalPredicates(q, node.node1)
+}
+
 //returns type and value
 //need to handle null values
 func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
