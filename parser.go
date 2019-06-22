@@ -50,7 +50,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil {Println("err:",err); return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	if db.verbose3 { treePrint(n.node1,0) }
+	//treePrint(n.node1,0)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -58,7 +58,9 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node3)
 	if err != nil {Println("err:",err); return n,err }
+	treePrint(n.node3,0)
 	branchShortener(q, n.node3.node1)
+	treePrint(n.node3,0)
 	err =  parseOrder(q)
 	if err != nil { return n,err }
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }

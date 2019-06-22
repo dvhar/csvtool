@@ -159,6 +159,9 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			switch n.tok1.(int) {
 			case KW_AND: if match  { match = evalPredicates(q,n.node2) }
 			case KW_OR:  if !match { match = evalPredicates(q,n.node2) }
+			case KW_XOR:
+				match2 := evalPredicates(q,n.node2)
+				match = (match && !match2) || (!match && match2)
 			}
 		}
 		if negate==1 { return !match }

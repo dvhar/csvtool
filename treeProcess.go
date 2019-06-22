@@ -264,9 +264,9 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 		n.node3 == nil &&
 		n.label != N_SELECTIONS{ return n.node1 }
 	//predicates has no logical operator so it's just one predicate
-	if n.label == N_PREDICATES && n.tok1 == nil {
+	if n.label == N_PREDICATES && n.tok1 == nil && n.tok2 == nil {
 		//pass negator to the replacement node
-		n.node1.tok2 = n.node1.tok2.(int) ^ n.tok2.(int)
+		//n.node1.tok2 = n.node1.tok2.(int) ^ n.tok2.(int)
 		return n.node1
 	}
 	//case node just links to next node

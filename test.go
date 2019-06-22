@@ -36,7 +36,7 @@ func runTests(doTest bool){
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
-	thisTest := whereSet | selectSet
+	thisTest := whereSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -120,6 +120,12 @@ func runTests(doTest bool){
 		Test{`select top 20 c38`+f1+`where c38 % 2.1 = 0`, "missing from", false, whereSet},
 		Test{`select top 20 c3 c3 % 2 case when c3 % 2 = 1 then odd when not c3 % 2 = 1 then even end from`+f1, "case predicate negation", true, selectSet},
 		Test{`select c1 c8 c13 'and' c6 'and' c9 c6 c12 from`+f1+`where c1 between c8 and c13 and c6 between COM and PAS and c9 between c6 and c12`, "between various types", true, selectSet},
+		Test{`select top 10 c18 c19 from /home/dave/sync/classes/artificiali/h/aiproject/weatherAUS.csv where c18 = null and c19 = null`,"and",true,whereSet},
+		Test{`select top 10 c18 c19 from /home/dave/sync/classes/artificiali/h/aiproject/weatherAUS.csv where c18 = null or c19 = null`,"or",true,whereSet},
+		Test{`select top 10 c18 c19 from /home/dave/sync/classes/artificiali/h/aiproject/weatherAUS.csv where c18 = null xor c19 = null`,"xor",true,whereSet},
+		Test{`select top 10 c18 c19 from /home/dave/sync/classes/artificiali/h/aiproject/weatherAUS.csv where not (c18 = null and c19 = null)`,"not and",true,whereSet},
+		Test{`select top 10 c18 c19 from /home/dave/sync/classes/artificiali/h/aiproject/weatherAUS.csv where not (c18 = null or c19 = null)`,"not or",true,whereSet},
+		Test{`select top 10 c18 c19 from /home/dave/sync/classes/artificiali/h/aiproject/weatherAUS.csv where not (c18 = null xor c19 = null)`,"not xor",true,whereSet},
 	}
 
 	for _,t := range tests {

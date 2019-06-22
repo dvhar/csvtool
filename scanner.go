@@ -24,6 +24,7 @@ const (
 	//keywords
 	KW_AND =      LOGOP|KEYWORD|iota
 	KW_OR  =      LOGOP|KEYWORD|iota
+	KW_XOR =      LOGOP|KEYWORD|iota
 	KW_SELECT =   KEYWORD|iota
 	KW_FROM  =    KEYWORD|iota
 	KW_AS  =      KEYWORD|iota
@@ -80,6 +81,7 @@ var enumMap = map[int]string {
 	KEYWORD :       "KEYWORD",
 	KW_AND :        "KW_AND",
 	KW_OR  :        "KW_OR",
+	KW_XOR  :       "KW_XOR",
 	KW_SELECT :     "KW_SELECT",
 	KW_FROM  :      "KW_FROM",
 	KW_AS  :        "KW_AS",
@@ -126,6 +128,7 @@ var others = []int{ '/','\\',':','-','_','.','%','[',']','^' }
 var keywordMap = map[string]int {
 	"and" :       KW_AND,
 	"or" :        KW_OR,
+	"xor" :       KW_XOR,
 	"select" :    KW_SELECT,
 	"from" :      KW_FROM,
 	"as" :        KW_AS,
