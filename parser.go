@@ -1,4 +1,5 @@
 /*
+<query>             -> <Select> <from> <where> <groupby> <orderby>
 <Select>            -> {c|n} Select { <top> } <Selections>
 <Selections>        -> * <Selections> | <columnItem> <Selections> | ε
 <columnItem>        -> <exprAdd> | <exprAdd> as <alias> | <alias> = <exprAdd>
@@ -18,6 +19,12 @@
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
 <function>          -> (sum|avg|min|max|format|coalesce) ( <exprAdd> )
+
+<from>              -> from filename { TODO: joins }
+<where>             -> where <predicates> | ε
+<groupby>           -> group by <expressions> | ε
+<expressions>       -> <exprAdd> { <expressions> }
+<orderby>           -> order by <exprAdd> | ε
 */
 
 
@@ -43,20 +50,25 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	n.node1,err =  parseSelect(q)
 	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node1)
-	if err != nil {Println("err:",err); return n,err }
+	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	//treePrint(n.node1,0)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
+
 	n.node3,err =  parseWhere(q)
 	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node3)
-	if err != nil {Println("err:",err); return n,err }
-	//treePrint(n.node3,0)
+	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
-	//treePrint(n.node3,0)
+
+	n.node4,err =  parseGroupby(q)
+	if err != nil { return n,err }
+	_,_,_,err = typeCheck(n.node4)
+	if err != nil { return n,err }
+	branchShortener(q, n.node4)
+
 	err =  parseOrder(q)
 	if err != nil { return n,err }
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
@@ -494,10 +506,6 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	if q.Tok().id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().val) }
 	n.tok1 = q.NextTok()
 	q.NextTok()
-	if q.Tok().id == WORD {
-		n.tok2 = q.Tok()
-		q.NextTok()
-	}
 	if q.Tok().id == KW_AS {
 		n.tok2 = q.NextTok()
 		q.NextTok()
@@ -542,5 +550,33 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	var err error
 	n.tok1 = functionMap[q.Tok().val]
 	n.node1, err = parseExprAdd(q)
+	return n,err
+}
+
+//node1 is expressions
+func parseGroupby(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_GROUPBY}
+	var err error
+	if q.Tok().val != "group" && q.PeekTok().val != "by" { return n,err }
+	q.NextTok()
+	q.NextTok()
+	n.node1, err = parseExpressions(q)
+	return n,err
+}
+
+//node1 is expression
+//node2 is expressions
+func parseExpressions(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_EXPRESSIONS}
+	var err error
+	n.node1, err = parseExprAdd(q)
+	if err != nil { return n,err }
+	switch q.Tok().id {
+		case WORD:
+		case KW_CASE:
+		case SP_LPAREN:
+		default: return n,err
+	}
+	n.node2, err = parseExpressions(q)
 	return n,err
 }

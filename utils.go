@@ -66,6 +66,8 @@ const (
 	N_PREDCOMP = iota
 	N_VALUE = iota
 	N_FUNCTION = iota
+	N_GROUPBY = iota
+	N_EXPRESSIONS = iota
 )
 //tree node labels for debugging
 var treeMap = map[int]string {
@@ -88,6 +90,8 @@ var treeMap = map[int]string {
 	N_EXPRCASE:   "N_EXPRCASE",
 	N_VALUE:      "N_VALUE",
 	N_FUNCTION:   "N_FUNCTION",
+	N_GROUPBY:    "N_GROUPBY",
+	N_EXPRESSIONS:"N_EXPRESSIONS",
 }
 var typeMap = map[int]string {
 	T_NULL:      "null",
@@ -110,6 +114,7 @@ type Node struct {
 	node1 *Node
 	node2 *Node
 	node3 *Node
+	node4 *Node
 }
 type Columns struct {
 	NewNames []string

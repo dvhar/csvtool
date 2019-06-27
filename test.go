@@ -22,7 +22,7 @@ type Test struct {
 }
 
 func runTests(doTest bool){
-	//db.verbose1 = true
+	db.verbose1 = true
 	//db.verbose2 = true
 	//db.verbose3 = true
 	if !doTest { return }
@@ -126,7 +126,7 @@ func runTests(doTest bool){
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null and c33 = null)`,"not and",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null or c33 = null)`,"not or",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null xor c33 = null)`,"not xor",true,whereSet},
-		Test{`select top 10 max(c32) from`+f1,"not xor",true,selectSet},
+		Test{`select top 10 max(c32) from`+f1+`group by c1`,"not xor",true,selectSet},
 	}
 
 	for _,t := range tests {

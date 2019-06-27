@@ -40,13 +40,12 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_VALUE:
 		//literal
 		if n.tok2.(int) == 0 {
-			//Printf("literal %+V being retrieved as %d\n",n.tok1,n.tok3.(int))
 			return n.tok3.(int), n.tok1
+		//TODO: evaluate function
 		} else if n.tok2.(int) == 2 {
-			//TODO: evaluate function
 			return 0,nil
+		//column
 		} else {
-			//column
 			var val interface{}
 			cell := q.fromRow[n.tok1.(int)]
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
