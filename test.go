@@ -126,7 +126,7 @@ func runTests(doTest bool){
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null and c33 = null)`,"not and",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null or c33 = null)`,"not or",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null xor c33 = null)`,"not xor",true,whereSet},
-		Test{`select top 10 max(c32) from`+f1+`group by c1`,"not xor",true,selectSet},
+		Test{`select top 10 max(c32) c32 from`+f1+`group by c1`,"aggregate",true,selectSet},
 	}
 
 	for _,t := range tests {

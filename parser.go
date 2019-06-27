@@ -53,6 +53,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
+	treePrint(n.node1,0)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -330,14 +331,11 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.tok3 = fdata.types[num-1]
 	//see if it's a function
 	} else if  _,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
-		n.tok1 = tok.val
 		n.tok2 = 2
 		n.tok3 = 0 //might not need this - made it zero just in case
-		q.NextTok()
-		q.NextTok()
 		n.node1, err = parseFunction(q)
 		if err != nil { return n,err }
-		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
+		return n, err
 	//try column name
 	} else if n.tok1, err = getColumnIdx(fdata.names, tok.val); err == nil {
 		n.tok2 = 1
@@ -549,7 +547,11 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
 	var err error
 	n.tok1 = functionMap[q.Tok().val]
+	q.NextTok()
+	q.NextTok()
 	n.node1, err = parseExprAdd(q)
+	if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
+	q.NextTok()
 	return n,err
 }
 

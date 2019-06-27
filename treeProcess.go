@@ -50,7 +50,12 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	switch n.label {
 
 	case N_VALUE:
-		if n.tok2.(int)==0 { val = n.tok1 }
+		if n.tok2.(int)==2 { //function
+			_, d1, _, err := typeCheck(n.node1)
+			if err != nil { return 0,0,nil,err }
+			n.tok3 = d1
+		}
+		if n.tok2.(int)==0 { val = n.tok1 } //literal
 		return N_VALUE, n.tok3.(int), val, nil
 
 	case N_EXPRCASE:
@@ -91,6 +96,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	case N_EXPRNEG:   fallthrough
 	case N_COLITEM:   fallthrough
 	case N_WHERE:     fallthrough
+	case N_FUNCTION:  fallthrough
 	case N_SELECTIONS:
 		_, d1, v1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
@@ -192,7 +198,7 @@ func enforceType(n *Node, t int) error {
 	case N_VALUE:
 		if n.tok1 == nil { return nil }
 		n.tok3 = t
-		if n.tok2 == 0 {
+		if n.tok2.(int) == 0 {
 			if _,ok := n.tok1.(*regexp.Regexp); ok { return err } //don't retype regex
 			db.Print2("typing tok",n.tok1,"as",t)
 			switch t {
@@ -208,6 +214,9 @@ func enforceType(n *Node, t int) error {
 			default: val = n.tok1
 			}
 			n.tok1 = val
+		}
+		if n.tok2.(int) == 2 {
+			err = enforceType(n.node1, n.tok3.(int))
 		}
 		return err
 
@@ -268,6 +277,8 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 	//case node just links to next node
 	if n.label == N_EXPRCASE &&
 		(n.tok1.(int) == WORD || n.tok1.(int) == N_EXPRADD) { return n.node1 }
+	//value node leads to function
+	if n.label == N_VALUE && n.tok2.(int) == 2 { return n.node1 }
 	//give node its name if just a column
 	if n.label == N_COLITEM &&
 		n.tok1 == nil &&
