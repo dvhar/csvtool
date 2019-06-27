@@ -39,6 +39,7 @@ const (
 	KW_THEN =     KEYWORD|iota
 	KW_ELSE =     KEYWORD|iota
 	KW_END =      KEYWORD|iota
+	KW_JOIN=      KEYWORD|iota
 	KW_BETWEEN =  RELOP|KEYWORD|iota
 	KW_LIKE =     RELOP|KEYWORD|iota
 	//special bits
@@ -145,6 +146,7 @@ var keywordMap = map[string]int {
 	"then" :      KW_THEN,
 	"else" :      KW_ELSE,
 	"end" :       KW_END,
+	"join" :      KW_JOIN,
 	"not" :       SP_NEGATE,
 	"-" :         SP_MINUS,
 	"%" :         SP_MOD,

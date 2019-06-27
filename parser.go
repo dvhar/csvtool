@@ -3,23 +3,22 @@
 <Select>            -> {c|n} Select { <top> } <Selections>
 <Selections>        -> * <Selections> | <columnItem> <Selections> | ε
 <columnItem>        -> <exprAdd> | <exprAdd> as <alias> | <alias> = <exprAdd>
-<exprAdd>           -> <exprMult> + <exprAdd> | <exprMult> - <exprAdd> | <exprMult>
-<exprMult>          -> <exprNeg> * <exprMult> | <exprNeg> / <exprMult> | <exprNeg>
-<exprNeg>           -> - <exprCase> | <exprCase>
-<exprCase>          -> case <caseWhenPredList> end
-                     | case <caseWhenPredList> else <exprAdd> end
-                     | case <exprAdd> <caseWhenExprList> end
-                     | case <exprAdd> <caseWhenExprList> else <exprAdd> end
+<exprAdd>           -> <exprMult> ( + | - ) <exprAdd> | <exprMult>
+<exprMult>          -> <exprNeg> ( * | / | % ) <exprMult> | <exprNeg>
+<exprNeg>           -> { - } <exprCase>
+<exprCase>          -> case <caseWhenPredList> { else <exprAdd> } end
+                     | case <exprAdd> <caseWhenExprList> { else <exprAdd> } end
                      | <value>
-<value>             -> column | literal | ( expression )
+<value>             -> column | literal | ( <exprAdd> ) | <function>
 <caseWhenExprList>  -> <caseWhenExpr> <caseWhenExprList> | <caseWhenExpr>
 <caseWhenExpr>      -> when <exprAdd> then <exprAdd>
 <caseWhenPredList>  -> <casePredicate> <caseWhenPredList> | <casePredicate>
 <casePredicate>     -> when <predicates> then <exprAdd>
-<predicates>        -> <predicateCompare> <logop> <predicates> | <predicateCompare>
+<predicates>        -> <predicateCompare> { <logop> <predicates> }
 <predicateCompare>  -> {not} <exprAdd> {not} <relop> <exprAdd> 
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
+<function>          -> (sum|avg|min|max|format|coalesce) ( <exprAdd> )
 
 ints: column unless c2 present, overridden by c or n before select
 */

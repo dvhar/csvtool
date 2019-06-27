@@ -81,7 +81,11 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 				case SP_DIV:  v1=v1.(int)/v2.(int)
 				case SP_MOD:  v1=v1.(int)%v2.(int)
 				}
-			case T_FLOAT: if op==SP_STAR { v1=v1.(float64)*v2.(float64) } else { v1=v1.(float64)/v2.(float64) }
+			case T_FLOAT:
+				switch op {
+				case SP_STAR: v1=v1.(float64)*v2.(float64)
+				case SP_DIV:  v1=v1.(float64)/v2.(float64)
+				}
 			}
 		}
 		return t1,v1
