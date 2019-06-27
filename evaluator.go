@@ -94,7 +94,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	db.Print1("parsing complete")
 	//prepare reader and run query
 	var reader LineReader
-	reader.Init(q, "_fmk01")
+	reader.Init(q, "_f1")
 	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.fp.Close() }()
 	if q.sortExpr == nil {
 		err = normalQuery(q, &res, &reader)

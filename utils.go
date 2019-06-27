@@ -1,5 +1,5 @@
 //data structures, constants, and whatnot
-// _fmk0# is file map key designed to avoid collisions with aliases and file names
+// _f# is file map key designed to avoid collisions with aliases and file names
 package main
 import (
 	"regexp"
@@ -65,6 +65,7 @@ const (
 	N_PREDICATES = iota
 	N_PREDCOMP = iota
 	N_VALUE = iota
+	N_FUNCTION = iota
 )
 //tree node labels for debugging
 var treeMap = map[int]string {
@@ -86,6 +87,7 @@ var treeMap = map[int]string {
 	N_CWEXPR:     "N_CWEXPR",
 	N_EXPRCASE:   "N_EXPRCASE",
 	N_VALUE:      "N_VALUE",
+	N_FUNCTION:   "N_FUNCTION",
 }
 var typeMap = map[int]string {
 	T_NULL:      "null",
@@ -191,7 +193,7 @@ func openFiles(q *QuerySpecs) error {
 			file := &FileData{fname : q.Tok().val}
 			filename := filepath.Base(file.fname)
 			q.numfiles++
-			key := "_fmk0" + Sprint(q.numfiles)
+			key := "_f" + Sprint(q.numfiles)
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
 			if q.NextTok().id == WORD { q.files[q.Tok().val] = file }

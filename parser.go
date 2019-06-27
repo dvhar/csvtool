@@ -1,4 +1,3 @@
-//new expression parsing - under construction
 /*
 <Select>            -> {c|n} Select { <top> } <Selections>
 <Selections>        -> * <Selections> | <columnItem> <Selections> | ε
@@ -19,8 +18,6 @@
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
 <function>          -> (sum|avg|min|max|format|coalesce) ( <exprAdd> )
-
-ints: column unless c2 present, overridden by c or n before select
 */
 
 
@@ -85,7 +82,7 @@ func parseSelect(q* QuerySpecs) (*Node,error) {
 func selectAll(q* QuerySpecs) (*Node,error) {
 	var err error
 	n := &Node{label:N_SELECTIONS}
-	file := q.files["_fmk01"]
+	file := q.files["_f1"]
 	firstSelection := n
 	var lastSelection *Node
 	for i:= range file.names {
@@ -293,13 +290,14 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 
 //if implement dot notation, put parser here
 //tok1 is [value, column index]
-//tok2 is [0,1] for literal/col
+//tok2 is [0,1,2] for literal/column/function
 //tok3 is type
+//node1 is function if doing that
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
 	cInt := regexp.MustCompile(`^c\d+$`)
-	fdata := q.files["_fmk01"]
+	fdata := q.files["_f1"]
 	tok := q.Tok()
 	errCheck := func(col int) error {
 		if col < 1 { return errors.New("Column number too small: "+Sprint(col)) }
@@ -318,7 +316,17 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.tok1 = num - 1
 		n.tok2 = 1
 		n.tok3 = fdata.types[num-1]
-	//else try column name
+	//see if it's a function
+	} else if  _,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
+		n.tok1 = tok.val
+		n.tok2 = 2
+		n.tok3 = 0 //might not need this - made it zero just in case
+		q.NextTok()
+		q.NextTok()
+		n.node1, err = parseFunction(q)
+		if err != nil { return n,err }
+		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
+	//try column name
 	} else if n.tok1, err = getColumnIdx(fdata.names, tok.val); err == nil {
 		n.tok2 = 1
 		n.tok3 = fdata.types[n.tok1.(int)]
@@ -507,7 +515,7 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 	return n,err
 }
 
-//currently order is only thing after where
+//doesn't add to parse tree yet, juset sets q member
 func parseOrder(q* QuerySpecs) error {
 	var err error
 	if q.Tok().id == EOS { return nil }
@@ -524,4 +532,15 @@ func parseOrder(q* QuerySpecs) error {
 		if q.Tok().id == KW_ORDHOW { q.NextTok(); q.sortWay = 2 }
 	}
 	return err
+}
+
+
+//tok1 is function id
+//node1 is expression in parens
+func parseFunction(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_FUNCTION}
+	var err error
+	n.tok1 = functionMap[q.Tok().val]
+	n.node1, err = parseExprAdd(q)
+	return n,err
 }

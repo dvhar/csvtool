@@ -27,8 +27,8 @@ func runTests(doTest bool){
 	//db.verbose3 = true
 	if !doTest { return }
 
-	//dir1 := "/home/dave/Documents/work/"
-	dir1 := "/home/dave/testing/ram/"
+	dir1 := "/home/dave/Documents/work/"
+	//dir1 := "/home/dave/testing/ram/"
 	file1 := "parkingTest.csv"
 	file2 := "parkingTestShort.csv"
 	f1 := " " + dir1 + file1 + " "
@@ -36,7 +36,7 @@ func runTests(doTest bool){
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
-	thisTest := whereSet
+	thisTest := selectSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -126,6 +126,7 @@ func runTests(doTest bool){
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null and c33 = null)`,"not and",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null or c33 = null)`,"not or",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null xor c33 = null)`,"not xor",true,whereSet},
+		Test{`select top 10 max(c32) from`+f1,"not xor",true,selectSet},
 	}
 
 	for _,t := range tests {

@@ -42,6 +42,13 @@ const (
 	KW_JOIN=      KEYWORD|iota
 	KW_BETWEEN =  RELOP|KEYWORD|iota
 	KW_LIKE =     RELOP|KEYWORD|iota
+	//not scanned as keywords but still need unique vals
+	FN_SUM =      KEYWORD|iota
+	FN_AVG =      KEYWORD|iota
+	FN_MIN =      KEYWORD|iota
+	FN_MAX =      KEYWORD|iota
+	FN_FORMAT =   KEYWORD|iota
+	FN_COALESCE = KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
 	SPECIAL =      FINAL|SPECIALBIT
@@ -151,6 +158,16 @@ var keywordMap = map[string]int {
 	"-" :         SP_MINUS,
 	"%" :         SP_MOD,
 	"/" :         SP_DIV,
+}
+//functions are normal words to avoid taking up too many words
+//use map when parsing not scanning
+var functionMap = map[string]int {
+	"sum" :      FN_SUM,
+	"avg" :      FN_AVG,
+	"min" :      FN_MIN,
+	"max" :      FN_MAX,
+	"format" :   FN_FORMAT,
+	"coalesce" : FN_COALESCE,
 }
 var specialMap = map[string]int {
 	"=" :  SP_EQ,
