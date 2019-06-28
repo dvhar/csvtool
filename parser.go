@@ -53,7 +53,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	treePrint(n.node1,0)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -332,7 +331,6 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	//see if it's a function
 	} else if  _,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
 		n.tok2 = 2
-		n.tok3 = 0 //might not need this - made it zero just in case
 		n.node1, err = parseFunction(q)
 		if err != nil { return n,err }
 		return n, err
@@ -555,30 +553,38 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	return n,err
 }
 
-//node1 is expressions
+//node1 is groupExpressions
+//tok1 is groups if no explicit groupby TODO: create when first find aggregate function
 func parseGroupby(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_GROUPBY}
 	var err error
-	if q.Tok().val != "group" && q.PeekTok().val != "by" { return n,err }
+	if q.Tok().val != "group" && q.PeekTok().val != "by" { return nil,err }
 	q.NextTok()
 	q.NextTok()
-	n.node1, err = parseExpressions(q)
+	n.node1, err = parseGroupExpressions(q)
+	n.tok1 = make(map[interface{}]interface{})
+	q.groupby = true
 	return n,err
 }
 
 //node1 is expression
 //node2 is expressions
-func parseExpressions(q* QuerySpecs) (*Node,error) {
+//tok1 [0,1] for map returns row or next map
+func parseGroupExpressions(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_EXPRESSIONS}
 	var err error
 	n.node1, err = parseExprAdd(q)
 	if err != nil { return n,err }
 	switch q.Tok().id {
+		case SP_COMMA: q.NextTok()
 		case WORD:
 		case KW_CASE:
 		case SP_LPAREN:
-		default: return n,err
+		default:
+			n.tok1 = 0
+			return n,err
 	}
-	n.node2, err = parseExpressions(q)
+	n.tok1 = 1
+	n.node2, err = parseGroupExpressions(q)
 	return n,err
 }

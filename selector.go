@@ -9,10 +9,19 @@ import (
 )
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
-	q.toRow = make([]interface{}, q.colSpec.NewWidth)
+	//row is target of aggregate function
+	if q.groupby {
+		q.toRow = execGroupBy(q,q.tree.node4).([]interface{})
+	//normal target row
+	} else {
+		q.toRow = make([]interface{}, q.colSpec.NewWidth)
+	}
 	execSelections(q, q.tree.node1.node1)
 	if q.quantityRetrieved <= q.showLimit {
-		res.Vals = append(res.Vals, q.toRow)
+		//normal target
+		if !q.groupby {
+			res.Vals = append(res.Vals, q.toRow)
+		} //grouped rows will be sent from map to 2D array later
 		q.quantityRetrieved++
 	}
 	if q.save { saver <- saveData{Type : CH_ROW, Row : &q.toRow} ; <-savedLine}
@@ -29,6 +38,40 @@ func evalWhere(q *QuerySpecs) bool {
 	node := q.tree.node3
 	if node.node1 == nil { return true }
 	return evalPredicates(q, node.node1)
+}
+
+//return target array
+func execGroupBy(q *QuerySpecs, n *Node) interface{} {
+	if !q.groupby || n == nil { return nil }
+	if n.node1 == nil { return n.tok1 }
+	return execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
+}
+func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) interface{} {
+	_, key := execExpression(q,n.node1)
+	switch n.tok1.(int) {
+	case 0:
+		db.Print1("at zero node")
+		row,ok := m[key]
+		if ok {
+			return row
+		} else {
+			row = make([]interface{}, q.colSpec.NewWidth)
+			m[key] = row
+			return row
+		}
+	case 1:
+		db.Print1("at one node")
+		nextMap,ok := m[key]
+		if ok {
+			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))
+		} else {
+			nextMap = make(map[interface{}]interface{})
+			m[key] = nextMap
+			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))
+		}
+	}
+	db.Print1("got past switch")
+	return nil
 }
 
 //returns type and value

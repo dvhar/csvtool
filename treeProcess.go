@@ -52,11 +52,10 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	case N_VALUE:
 		if n.tok2.(int)==2 { //function
 			_, d1, _, err := typeCheck(n.node1)
-			if err != nil { return 0,0,nil,err }
-			n.tok3 = d1
+			return n.label,d1,nil,err
 		}
 		if n.tok2.(int)==0 { val = n.tok1 } //literal
-		return N_VALUE, n.tok3.(int), val, nil
+		return n.label, n.tok3.(int), val, nil
 
 	case N_EXPRCASE:
 		switch n.tok1.(int) {
@@ -128,7 +127,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(v1,v2,d1,d2)
-			db.Print1("combine vals",v1,v2,"types",d1,d2,"to get",thisType)
+			//db.Print1("combine vals",v1,v2,"types",d1,d2,"to get",thisType)
 
 			//check addition semantics
 			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) {
@@ -154,7 +153,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			thisType = typeCompute(v1,v2,d1,d2)
 			v12 := v1; if v2 == nil { v12 = nil }
 			thisType = typeCompute(v12,v3,thisType,d3)
-			db.Print1("combine vals",v1,v2,v3,"types",d1,d2,d3,"to get",thisType)
+			//db.Print1("combine vals",v1,v2,v3,"types",d1,d2,d3,"to get",thisType)
 			if v3==nil {v1 = nil}
 		}
 		//predicate comparisions are typed independantly, so leave type in tok3

@@ -34,6 +34,7 @@ type QuerySpecs struct {
 	fromRow []string
 	toRow []interface{}
 	intColumn bool
+	groupby bool
 }
 func (q *QuerySpecs) NextTok() *Token {
 	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
