@@ -47,6 +47,7 @@ const (
 	FN_AVG =      KEYWORD|iota
 	FN_MIN =      KEYWORD|iota
 	FN_MAX =      KEYWORD|iota
+	FN_COUNT =    KEYWORD|iota
 	FN_FORMAT =   KEYWORD|iota
 	FN_COALESCE = KEYWORD|iota
 	//special bits
@@ -166,6 +167,7 @@ var functionMap = map[string]int {
 	"avg" :      FN_AVG,
 	"min" :      FN_MIN,
 	"max" :      FN_MAX,
+	"count" :    FN_COUNT,
 	"format" :   FN_FORMAT,
 	"coalesce" : FN_COALESCE,
 }

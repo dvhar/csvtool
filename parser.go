@@ -301,10 +301,10 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 }
 
 //if implement dot notation, put parser here
-//tok1 is [value, column index]
+//tok1 is [value, column index, function id]
 //tok2 is [0,1,2] for literal/column/function
 //tok3 is type
-//node1 is function if doing that
+//node1 is function expression if doing that
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
@@ -329,7 +329,8 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.tok2 = 1
 		n.tok3 = fdata.types[num-1]
 	//see if it's a function
-	} else if  _,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
+	} else if  fn,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
+		n.tok1 = fn
 		n.tok2 = 2
 		n.node1, err = parseFunction(q)
 		if err != nil { return n,err }
@@ -554,6 +555,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 		case FN_SUM: fallthrough
 		case FN_AVG: fallthrough
 		case FN_MIN: fallthrough
+		case FN_COUNT: fallthrough
 		case FN_MAX:
 			q.groupby = true
 	}

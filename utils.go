@@ -129,6 +129,7 @@ const (
 	T_FLOAT = iota
 	T_DATE = iota
 	T_STRING = iota
+	T_AGGRAGATE = iota
 )
 func max(a int, b int) int {
 	if a>b { return a }
@@ -303,4 +304,9 @@ type sockMessage struct {
 type sockDirMessage struct {
 	Type int
 	Dir Directory
+}
+type Aggragate struct {
+	val interface{}
+	typ int
+	function int
 }

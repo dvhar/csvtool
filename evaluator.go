@@ -203,17 +203,15 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	return nil
 }
 
-func retriever (n* Node, m map[interface{}]interface{}, r *SingleQueryResult){
+func groupRetriever (n* Node, m map[interface{}]interface{}, r *SingleQueryResult){
 	switch n.tok1.(int) {
-	case 0:
-		for _,v := range m { r.Vals = append(r.Vals, v.([]interface{})) }
-	case 1:
-		for _,v := range m { retriever(n.node1, v.(map[interface{}]interface{}), r) }
+	case 0: for _,v := range m { r.Vals = append(r.Vals, v.([]interface{})) }
+	case 1: for _,v := range m { groupRetriever(n.node1, v.(map[interface{}]interface{}), r) }
 	}
 }
 func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	if !q.groupby { return }
 	root := q.tree.node4
 	if root == nil { res.Vals = append(res.Vals, q.toRow); return }
-	retriever(root.node1, root.tok1.(map[interface{}]interface{}), res)
+	groupRetriever(root.node1, root.tok1.(map[interface{}]interface{}), res)
 }

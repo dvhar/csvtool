@@ -29,8 +29,46 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 
 func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	_,val := execExpression(q, n.node1.node1)
-	q.toRow[n.tok1.(int)] = val
+	index := n.tok1.(int)
+	typ,val := execExpression(q, n.node1.node1)
+	if typ != T_AGGRAGATE{
+		q.toRow[index] = val
+	} else {
+		v := val.(Aggragate).val
+		//first entry to aggragate target
+		if q.toRow[index] == nil {
+			switch val.(Aggragate).function {
+			case FN_COUNT: q.toRow[index] = 1
+			default: q.toRow[index] = v
+			}
+		//update target with new value
+		} else if v != nil {
+			switch val.(Aggragate).function {
+			case FN_SUM: fallthrough
+			case FN_AVG:
+				switch val.(Aggragate).typ {
+				case T_INT:    q.toRow[index] = q.toRow[index].(int)     + v.(int)
+				case T_FLOAT:  q.toRow[index] = q.toRow[index].(float64) + v.(float64) 
+				}
+			case FN_MIN:
+				switch val.(Aggragate).typ {
+				case T_STRING: if q.toRow[index].(string)        > v.(string)     { q.toRow[index] = v }
+				case T_INT:    if q.toRow[index].(int)           > v.(int)        { q.toRow[index] = v }
+				case T_FLOAT:  if q.toRow[index].(float64)       > v.(float64)    { q.toRow[index] = v }
+				case T_DATE:   if q.toRow[index].(time.Time).After(v.(time.Time)) { q.toRow[index] = v }
+				}
+			case FN_MAX:
+				switch val.(Aggragate).typ {
+				case T_STRING: if q.toRow[index].(string)         < v.(string)     { q.toRow[index] = v }
+				case T_INT:    if q.toRow[index].(int)            < v.(int)        { q.toRow[index] = v }
+				case T_FLOAT:  if q.toRow[index].(float64)        < v.(float64)    { q.toRow[index] = v }
+				case T_DATE:   if q.toRow[index].(time.Time).Before(v.(time.Time)) { q.toRow[index] = v }
+				}
+			case FN_COUNT:
+				q.toRow[index] = q.toRow[index].(int) + 1
+			}
+		}
+	}
 	execSelections(q, n.node2)
 }
 
@@ -81,13 +119,17 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	if n == nil { return 0,nil }
 
 	switch n.label {
+	case N_FUNCTION:
+		t1,v1 := execExpression(q, n.node1)
+		return T_AGGRAGATE, Aggragate{v1,t1,n.tok1.(int)}
 	case N_VALUE:
 		//literal
 		if n.tok2.(int) == 0 {
 			return n.tok3.(int), n.tok1
-		//TODO: evaluate function
+		//aggragate function
 		} else if n.tok2.(int) == 2 {
-			return 0,nil
+			t1,v1 := execExpression(q, n.node1)
+			return T_AGGRAGATE, Aggragate{v1,t1,n.tok1.(int)}
 		//column
 		} else {
 			var val interface{}
