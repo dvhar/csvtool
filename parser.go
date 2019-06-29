@@ -550,20 +550,26 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	n.node1, err = parseExprAdd(q)
 	if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
 	q.NextTok()
+	switch n.tok1.(int) {
+		case FN_SUM: fallthrough
+		case FN_AVG: fallthrough
+		case FN_MIN: fallthrough
+		case FN_MAX:
+			q.groupby = true
+	}
 	return n,err
 }
 
 //node1 is groupExpressions
-//tok1 is groups if no explicit groupby TODO: create when first find aggregate function
+//tok1 is groups map
 func parseGroupby(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_GROUPBY}
 	var err error
-	if q.Tok().val != "group" && q.PeekTok().val != "by" { return nil,err }
+	if q.Tok().val != "group" && q.PeekTok().val != "by" { return nil,nil }
 	q.NextTok()
 	q.NextTok()
 	n.node1, err = parseGroupExpressions(q)
 	n.tok1 = make(map[interface{}]interface{})
-	q.groupby = true
 	return n,err
 }
 

@@ -11,7 +11,7 @@ import (
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 	//row is target of aggregate function
 	if q.groupby {
-		q.toRow = execGroupBy(q,q.tree.node4).([]interface{})
+		q.toRow = execGroupBy(q,q.tree.node4)
 	//normal target row
 	} else {
 		q.toRow = make([]interface{}, q.colSpec.NewWidth)
@@ -24,7 +24,7 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 		} //grouped rows will be sent from map to 2D array later
 		q.quantityRetrieved++
 	}
-	if q.save { saver <- saveData{Type : CH_ROW, Row : &q.toRow} ; <-savedLine}
+	if q.save && !q.groupby { saver <- saveData{Type : CH_ROW, Row : &q.toRow} ; <-savedLine}
 }
 
 func execSelections(q *QuerySpecs, n *Node) {
@@ -41,26 +41,28 @@ func evalWhere(q *QuerySpecs) bool {
 }
 
 //return target array
-func execGroupBy(q *QuerySpecs, n *Node) interface{} {
-	if !q.groupby || n == nil { return nil }
-	if n.node1 == nil { return n.tok1 }
+func execGroupBy(q *QuerySpecs, n *Node) []interface{} {
+	if !q.groupby { return nil }
+	//use q.toRow if grouping without groupby clause so group all to just one row
+	if n == nil {
+		if q.toRow == nil { q.toRow = make([]interface{}, q.colSpec.NewWidth) }
+		return q.toRow
+	}
 	return execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
 }
-func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) interface{} {
+func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) []interface{} {
 	_, key := execExpression(q,n.node1)
 	switch n.tok1.(int) {
 	case 0:
-		db.Print1("at zero node")
 		row,ok := m[key]
 		if ok {
-			return row
+			return row.([]interface{})
 		} else {
 			row = make([]interface{}, q.colSpec.NewWidth)
 			m[key] = row
-			return row
+			return row.([]interface{})
 		}
 	case 1:
-		db.Print1("at one node")
 		nextMap,ok := m[key]
 		if ok {
 			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))
@@ -70,7 +72,6 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))
 		}
 	}
-	db.Print1("got past switch")
 	return nil
 }
 
