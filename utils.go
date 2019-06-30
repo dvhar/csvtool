@@ -8,6 +8,7 @@ import (
 	"encoding/csv"
 	"path/filepath"
 	"os"
+	"time"
 	"errors"
 	s "strings"
 	d "github.com/araddon/dateparse"
@@ -315,3 +316,54 @@ type AggValue struct {
 	val interface{}
 	count int
 }
+
+
+//interface experiment
+type Value interface {
+	Greater(other interface{}) bool
+	GreatEq(other interface{}) bool
+	Less(other interface{}) bool
+	LessEq(other interface{}) bool
+	Equal(other interface{}) bool
+}
+type float struct { val float64 }
+type integer struct { val int }
+type date struct { val time.Time }
+type text struct { val string }
+type null struct { val string }
+type like struct { val *regexp.Regexp }
+
+func (f float) Less(other interface{}) bool { return f.val < other.(float).val }
+func (i integer) Less(other interface{}) bool { return i.val < other.(integer).val }
+func (d date) Less(other interface{}) bool { return d.val.Before(other.(date).val) }
+func (t text) Less(other interface{}) bool { return t.val < other.(text).val }
+func (n null) Less(other interface{}) bool { return n.val < other.(null).val }
+func (l like) Less(other interface{}) bool { return false }
+
+func (f float) LessEq(other interface{}) bool { return f.val <= other.(float).val }
+func (i integer) LessEq(other interface{}) bool { return i.val <= other.(integer).val }
+func (d date) LessEq(other interface{}) bool { return !d.val.After(other.(date).val) }
+func (t text) LessEq(other interface{}) bool { return t.val <= other.(text).val }
+func (n null) LessEq(other interface{}) bool { return n.val <= other.(null).val }
+func (l like) LessEq(other interface{}) bool { return false }
+
+func (f float) Greater(other interface{}) bool { return f.val > other.(float).val }
+func (i integer) Greater(other interface{}) bool { return i.val > other.(integer).val }
+func (d date) Greater(other interface{}) bool { return d.val.After(other.(date).val) }
+func (t text) Greater(other interface{}) bool { return t.val > other.(text).val }
+func (n null) Greater(other interface{}) bool { return n.val > other.(null).val }
+func (l like) Greater(other interface{}) bool { return false }
+
+func (f float) GreatEq(other interface{}) bool { return f.val >= other.(float).val }
+func (i integer) GreatEq(other interface{}) bool { return i.val >= other.(integer).val }
+func (d date) GreatEq(other interface{}) bool { return !d.val.Before(other.(date).val) }
+func (t text) GreatEq(other interface{}) bool { return t.val >= other.(text).val }
+func (n null) GreatEq(other interface{}) bool { return n.val >= other.(null).val }
+func (l like) GreatEq(other interface{}) bool { return false }
+
+func (f float) Equal(other interface{}) bool { return f.val == other.(float).val }
+func (i integer) Equal(other interface{}) bool { return i.val == other.(integer).val }
+func (d date) Equal(other interface{}) bool { return d.val.Equal(other.(date).val) }
+func (t text) Equal(other interface{}) bool { return t.val == other.(text).val }
+func (n null) Equal(other interface{}) bool { return n.val == other.(null).val }
+func (l like) Equal(other interface{}) bool { return l.val.MatchString(Sprint(other)) }
