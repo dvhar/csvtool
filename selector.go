@@ -5,7 +5,7 @@ import (
   d "github.com/araddon/dateparse"
   s "strings"
 	//"regexp"
-	"time"
+	//"time"
 )
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
@@ -30,48 +30,31 @@ func execSelections(q *QuerySpecs, n *Node) {
 	typ,val := execExpression(q, n.node1.node1)
 	if typ != T_AGGRAGATE{
 		q.toRow[index] = val
-	} else {
-		v := val.(Aggragate).val
+	} else if val.(Aggragate).val != nil {
+		v := val.(Aggragate).val.(Value)
 		//first entry to aggragate target
 		if q.toRow[index] == nil {
 			switch val.(Aggragate).function {
-			case FN_COUNT: q.toRow[index] = 1
-			case FN_AVG:   q.toRow[index] = AggValue{val.(Aggragate).val, 1}
+			case FN_COUNT: q.toRow[index] = integer{1}
+			case FN_AVG:   q.toRow[index] = AggValue{v, 1}
 			default: q.toRow[index] = v
 			}
 		//update target with new value
-		} else if v != nil {
+		} else {
 			switch val.(Aggragate).function {
 			case FN_AVG:
 				//find a better way to update member of struct interface
 				count := q.toRow[index].(AggValue).count + 1
-				var sum interface{}
-				switch val.(Aggragate).typ {
-				case T_INT:    sum = q.toRow[index].(AggValue).val.(int) + v.(int)
-				case T_FLOAT:  sum = q.toRow[index].(AggValue).val.(float64) + v.(float64)
-				}
-			   q.toRow[index] = AggValue{sum,count}
+				sum := q.toRow[index].(AggValue).val.(Value).Add(v)
+				q.toRow[index] = AggValue{sum,count}
 			case FN_SUM:
-				switch val.(Aggragate).typ {
-				case T_INT:    q.toRow[index] = q.toRow[index].(int)     + v.(int)
-				case T_FLOAT:  q.toRow[index] = q.toRow[index].(float64) + v.(float64) 
-				}
+				q.toRow[index] = q.toRow[index].(Value).Add(v)
 			case FN_MIN:
-				switch val.(Aggragate).typ {
-				case T_STRING: if q.toRow[index].(string)        > v.(string)     { q.toRow[index] = v }
-				case T_INT:    if q.toRow[index].(int)           > v.(int)        { q.toRow[index] = v }
-				case T_FLOAT:  if q.toRow[index].(float64)       > v.(float64)    { q.toRow[index] = v }
-				case T_DATE:   if q.toRow[index].(time.Time).After(v.(time.Time)) { q.toRow[index] = v }
-				}
+				if q.toRow[index].(Value).Greater(v) { q.toRow[index] = v }
 			case FN_MAX:
-				switch val.(Aggragate).typ {
-				case T_STRING: if q.toRow[index].(string)         < v.(string)     { q.toRow[index] = v }
-				case T_INT:    if q.toRow[index].(int)            < v.(int)        { q.toRow[index] = v }
-				case T_FLOAT:  if q.toRow[index].(float64)        < v.(float64)    { q.toRow[index] = v }
-				case T_DATE:   if q.toRow[index].(time.Time).Before(v.(time.Time)) { q.toRow[index] = v }
-				}
+				if q.toRow[index].(Value).Less(v) { q.toRow[index] = v }
 			case FN_COUNT:
-				q.toRow[index] = q.toRow[index].(int) + 1
+				q.toRow[index] = q.toRow[index].(Value).Add(integer{1})
 			}
 		}
 	}
@@ -141,7 +124,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 				case T_NULL:   val = nil
 				case T_STRING: val = text{cell}
 			}
-			Printf("column %+V being retrieved as %d\n",val,n.tok3.(int))
+			//Printf("column %+V being retrieved as %d\n",val,n.tok3.(int))
 			return n.tok3.(int), val
 		}
 
