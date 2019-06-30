@@ -122,8 +122,6 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 //returns type and value
 //need to handle null values
 func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
-	if n == nil { return 0,nil }
-
 	switch n.label {
 	case N_FUNCTION:
 		t1,v1 := execExpression(q, n.node1)
@@ -140,10 +138,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 				case T_INT:	   a,_ := Atoi(cell); val = integer{a}
 				case T_FLOAT:  a,_ := ParseFloat(cell,64); val = float{a}
 				case T_DATE:   a,_ := d.ParseAny(cell); val = date{a}
-				case T_NULL:   val = null{""}
+				case T_NULL:   val = nil
 				case T_STRING: val = text{cell}
 			}
-			//Printf("column %+V being retrieved as %d\n",val,n.tok3.(int))
+			Printf("column %+V being retrieved as %d\n",val,n.tok3.(int))
 			return n.tok3.(int), val
 		}
 
@@ -151,8 +149,8 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		t1,v1 := execExpression(q, n.node1)
 		if _,ok := n.tok1.(int); ok && v1 != nil {
 			switch t1 {
-			case T_INT:   v1 = v1.(int) * -1
-			case T_FLOAT: v1 = v1.(float64) * -1.0
+			case T_INT:   v1 = v1.(Value).Mult(integer{-1})
+			case T_FLOAT: v1 = v1.(Value).Mult(float{-1})
 			}
 		}
 		return t1,v1
@@ -174,8 +172,9 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_EXPRADD:
 		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
+			if v1 == nil { return t1,v1 }
 			_,v2 := execExpression(q, n.node2)
-			if v1==nil || v2==nil { return t1,nil }
+			if v2 == nil { return t1,v2 }
 			switch op {
 			case SP_PLUS:   v1=v1.(Value).Add(v2.(Value))
 			case SP_MINUS:  v1=v1.(Value).Sub(v2.(Value))
@@ -254,24 +253,32 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 	case N_PREDCOMP:
 		_,val1 := execExpression(q, n.node1)
 		_,val2 := execExpression(q, n.node2)
-		expr1 := val1.(Value)
-		expr2 := val2.(Value)
-		switch n.tok1.(int) {
-		case KW_LIKE: match = expr2.Equal(expr1)
-		case SP_NOEQ: negate ^= 1; fallthrough
-		case SP_EQ:      match = expr1.Equal(expr2)
-		case SP_LESSEQ:  match = expr1.LessEq(expr2)
-		case SP_GREAT:   match = expr1.Greater(expr2)
-		case SP_GREATEQ: match = expr1.GreatEq(expr2)
-		case SP_LESS:    match = expr1.Less(expr2)
-		case KW_BETWEEN:
-			_,val3 := execExpression(q, n.node3)
-			expr3 := val3.(Value)
-			biggerThanFirst := expr1.Greater(expr2)
-			if biggerThanFirst {
-				match = expr1.Less(expr3)
-			} else {
-				match = expr1.GreatEq(expr3)
+		if val1 == nil || val2 == nil {
+			switch n.tok1.(int) {
+			case SP_NOEQ: negate ^= 1; fallthrough
+			case SP_EQ:  match = val1 == val2
+			default: match = false
+			}
+		} else {
+			expr1 := val1.(Value)
+			expr2 := val2.(Value)
+			switch n.tok1.(int) {
+			case KW_LIKE: match = expr2.Equal(expr1)
+			case SP_NOEQ: negate ^= 1; fallthrough
+			case SP_EQ:      match = expr1.Equal(expr2)
+			case SP_LESSEQ:  match = expr1.LessEq(expr2)
+			case SP_GREAT:   match = expr1.Greater(expr2)
+			case SP_GREATEQ: match = expr1.GreatEq(expr2)
+			case SP_LESS:    match = expr1.Less(expr2)
+			case KW_BETWEEN:
+				_,val3 := execExpression(q, n.node3)
+				expr3 := val3.(Value)
+				biggerThanFirst := expr1.Greater(expr2)
+				if biggerThanFirst {
+					match = expr1.Less(expr3)
+				} else {
+					match = expr1.GreatEq(expr3)
+				}
 			}
 		}
 	}
