@@ -325,45 +325,85 @@ type Value interface {
 	Less(other interface{}) bool
 	LessEq(other interface{}) bool
 	Equal(other interface{}) bool
+	Add(other interface{}) interface{}
+	Sub(other interface{}) interface{}
+	Mult(other interface{}) interface{}
+	Div(other interface{}) interface{}
+	Mod(other interface{}) interface{}
 }
 type float struct { val float64 }
 type integer struct { val int }
 type date struct { val time.Time }
 type text struct { val string }
 type null struct { val string }
-type like struct { val *regexp.Regexp }
+type liker struct { val *regexp.Regexp }
 
 func (f float) Less(other interface{}) bool { return f.val < other.(float).val }
 func (i integer) Less(other interface{}) bool { return i.val < other.(integer).val }
 func (d date) Less(other interface{}) bool { return d.val.Before(other.(date).val) }
 func (t text) Less(other interface{}) bool { return t.val < other.(text).val }
 func (n null) Less(other interface{}) bool { return n.val < other.(null).val }
-func (l like) Less(other interface{}) bool { return false }
+func (l liker) Less(other interface{}) bool { return false }
 
 func (f float) LessEq(other interface{}) bool { return f.val <= other.(float).val }
 func (i integer) LessEq(other interface{}) bool { return i.val <= other.(integer).val }
 func (d date) LessEq(other interface{}) bool { return !d.val.After(other.(date).val) }
 func (t text) LessEq(other interface{}) bool { return t.val <= other.(text).val }
 func (n null) LessEq(other interface{}) bool { return n.val <= other.(null).val }
-func (l like) LessEq(other interface{}) bool { return false }
+func (l liker) LessEq(other interface{}) bool { return false }
 
 func (f float) Greater(other interface{}) bool { return f.val > other.(float).val }
 func (i integer) Greater(other interface{}) bool { return i.val > other.(integer).val }
 func (d date) Greater(other interface{}) bool { return d.val.After(other.(date).val) }
 func (t text) Greater(other interface{}) bool { return t.val > other.(text).val }
 func (n null) Greater(other interface{}) bool { return n.val > other.(null).val }
-func (l like) Greater(other interface{}) bool { return false }
+func (l liker) Greater(other interface{}) bool { return false }
 
 func (f float) GreatEq(other interface{}) bool { return f.val >= other.(float).val }
 func (i integer) GreatEq(other interface{}) bool { return i.val >= other.(integer).val }
 func (d date) GreatEq(other interface{}) bool { return !d.val.Before(other.(date).val) }
 func (t text) GreatEq(other interface{}) bool { return t.val >= other.(text).val }
 func (n null) GreatEq(other interface{}) bool { return n.val >= other.(null).val }
-func (l like) GreatEq(other interface{}) bool { return false }
+func (l liker) GreatEq(other interface{}) bool { return false }
 
 func (f float) Equal(other interface{}) bool { return f.val == other.(float).val }
 func (i integer) Equal(other interface{}) bool { return i.val == other.(integer).val }
 func (d date) Equal(other interface{}) bool { return d.val.Equal(other.(date).val) }
 func (t text) Equal(other interface{}) bool { return t.val == other.(text).val }
 func (n null) Equal(other interface{}) bool { return n.val == other.(null).val }
-func (l like) Equal(other interface{}) bool { return l.val.MatchString(Sprint(other)) }
+func (l liker) Equal(other interface{}) bool { return l.val.MatchString(Sprint(other)) }
+
+func (f float) Add(other interface{}) interface{} { return float{f.val + other.(float).val} }
+func (i integer) Add(other interface{}) interface{} { return integer{i.val + other.(integer).val} }
+func (d date) Add(other interface{}) interface{} { return d }
+func (t text) Add(other interface{}) interface{} { return text{t.val + other.(text).val} }
+func (n null) Add(other interface{}) interface{} { return null{n.val + other.(null).val} }
+func (l liker) Add(other interface{}) interface{} { return l }
+
+func (f float) Sub(other interface{}) interface{} { return float{f.val - other.(float).val} }
+func (i integer) Sub(other interface{}) interface{} { return integer{i.val - other.(integer).val} }
+func (d date) Sub(other interface{}) interface{} { return d }
+func (t text) Sub(other interface{}) interface{} { return t }
+func (n null) Sub(other interface{}) interface{} { return n }
+func (l liker) Sub(other interface{}) interface{} { return l }
+
+func (f float) Mult(other interface{}) interface{} { return float{f.val * other.(float).val} }
+func (i integer) Mult(other interface{}) interface{} { return integer{i.val * other.(integer).val} }
+func (d date) Mult(other interface{}) interface{} { return d }
+func (t text) Mult(other interface{}) interface{} { return t }
+func (n null) Mult(other interface{}) interface{} { return n }
+func (l liker) Mult(other interface{}) interface{} { return l }
+
+func (f float) Div(other interface{}) interface{} { return float{f.val / other.(float).val} }
+func (i integer) Div(other interface{}) interface{} { return integer{i.val / other.(integer).val} }
+func (d date) Div(other interface{}) interface{} { return d }
+func (t text) Div(other interface{}) interface{} { return t }
+func (n null) Div(other interface{}) interface{} { return n }
+func (l liker) Div(other interface{}) interface{} { return l }
+
+func (f float) Mod(other interface{}) interface{} { return f }
+func (i integer) Mod(other interface{}) interface{} { return integer{i.val % other.(integer).val} }
+func (d date) Mod(other interface{}) interface{} { return d }
+func (t text) Mod(other interface{}) interface{} { return t }
+func (n null) Mod(other interface{}) interface{} { return n }
+func (l liker) Mod(other interface{}) interface{} { return l }

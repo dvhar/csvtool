@@ -4,6 +4,7 @@ import (
   . "strconv"
   d "github.com/araddon/dateparse"
   "regexp"
+  "time"
   "errors"
 )
 
@@ -198,19 +199,23 @@ func enforceType(n *Node, t int) error {
 		if n.tok1 == nil { return nil }
 		n.tok3 = t
 		if n.tok2.(int) == 0 {
-			if _,ok := n.tok1.(*regexp.Regexp); ok { return err } //don't retype regex
-			db.Print2("typing tok",n.tok1,"as",t)
+			if _,ok := n.tok1.(*regexp.Regexp); ok { n.tok1=liker{n.tok1.(*regexp.Regexp)}; return err } //don't retype regex
+			Println("typing tok",n.tok1,"as",t)
 			switch t {
 			case T_INT:
 				val,err = Atoi(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as integer") }
+				val = integer{val.(int)}
 			case T_FLOAT:
 				val,err = ParseFloat(n.tok1.(string),64)
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as floating point number") }
+				val = float{val.(float64)}
 			case T_DATE:
 				val,err = d.ParseAny(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
-			default: val = n.tok1
+				val = date{val.(time.Time)}
+			case T_NULL:   val = null{Sprint(val)}
+			case T_STRING: val = text{Sprint(val)}
 			}
 			n.tok1 = val
 		}

@@ -30,18 +30,18 @@ func runTests(doTest bool){
 	dir1 := "/home/dave/Documents/work/"
 	//dir1 := "/home/dave/testing/ram/"
 	file1 := "parkingTest.csv"
-	//file2 := "parkingTestShort.csv"
+	file2 := "parkingTestShort.csv"
 	f1 := " " + dir1 + file1 + " "
-	//f2 := " " + dir1 + file2 + " "
+	f2 := " " + dir1 + file2 + " "
 	selectSet := 1
-	//whereSet := 1<<1
-	//fromSet := 1<<2
+	whereSet := 1<<1
+	fromSet := 1<<2
 	thisTest := selectSet
 
 	var tests = []Test {
-		/*
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
 		Test{"select top 20 * from"+f1, "select all star", true, selectSet},
+		Test{`select top 20 c5 from`+f1+`where c5 like %ny%`,  "case with multiple predicate types", true, selectSet},
 		Test{`select top 20 c4 'Issue Date' c8+c12+10 as int-sum 'c8-int'=c8 c12 as 'c12-int' 
 			c1+c2+10.2 as flt-add c1*c2*10.2 as flt-mult c2 / c1 / 10.2 as flt-div c2 - c1 - 10.2 as flt-sub
 			from`+f1, "simple expressions and aliases", true, selectSet},
@@ -127,7 +127,6 @@ func runTests(doTest bool){
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null and c33 = null)`,"not and",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null or c33 = null)`,"not or",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null xor c33 = null)`,"not xor",true,whereSet},
-		*/
 		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1+`group by c5`,"aggregate with groupings",true,selectSet},
 		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1,"aggregate with one group",true,selectSet},
 	}

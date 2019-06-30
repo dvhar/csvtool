@@ -4,7 +4,7 @@ import (
   . "strconv"
   d "github.com/araddon/dateparse"
   s "strings"
-	"regexp"
+	//"regexp"
 	"time"
 )
 
@@ -133,15 +133,15 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		if n.tok2.(int) == 0 {
 			return n.tok3.(int), n.tok1
 		} else if n.tok2.(int) != 2 {
-			var val interface{}
+			var val Value
 			cell := q.fromRow[n.tok1.(int)]
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
 			switch n.tok3.(int) {
-				case T_INT:	   val,_ = Atoi(cell)
-				case T_FLOAT:  val,_ = ParseFloat(cell,64)
-				case T_DATE:   val,_ = d.ParseAny(cell)
-				case T_NULL:   val = nil
-				case T_STRING: val = cell
+				case T_INT:	   a,_ := Atoi(cell); val = integer{a}
+				case T_FLOAT:  a,_ := ParseFloat(cell,64); val = float{a}
+				case T_DATE:   a,_ := d.ParseAny(cell); val = date{a}
+				case T_NULL:   val = null{""}
+				case T_STRING: val = text{cell}
 			}
 			//Printf("column %+V being retrieved as %d\n",val,n.tok3.(int))
 			return n.tok3.(int), val
@@ -163,18 +163,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 			if v1 == nil { return t1,v1 }
 			_,v2 := execExpression(q, n.node2)
 			if v2 == nil { return t1,v2 }
-			switch t1 {
-			case T_INT:
-				switch op {
-				case SP_STAR: v1=v1.(int)*v2.(int)
-				case SP_DIV:  v1=v1.(int)/v2.(int)
-				case SP_MOD:  v1=v1.(int)%v2.(int)
-				}
-			case T_FLOAT:
-				switch op {
-				case SP_STAR: v1=v1.(float64)*v2.(float64)
-				case SP_DIV:  v1=v1.(float64)/v2.(float64)
-				}
+			switch op {
+			case SP_STAR: v1=v1.(Value).Mult(v2.(Value))
+			case SP_DIV:  v1=v1.(Value).Div(v2.(Value))
+			case SP_MOD:  v1=v1.(Value).Mod(v2.(Value))
 			}
 		}
 		return t1,v1
@@ -183,12 +175,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
 			_,v2 := execExpression(q, n.node2)
-			//Printf("%+V %+V\n", v1, v2)
 			if v1==nil || v2==nil { return t1,nil }
-			switch t1 {
-			case T_INT:   if op==SP_PLUS { v1=v1.(int)+v2.(int) } else { v1=v1.(int)-v2.(int) }
-			case T_FLOAT: if op==SP_PLUS { v1=v1.(float64)+v2.(float64) } else { v1=v1.(float64)-v2.(float64) }
-			case T_STRING: if op==SP_PLUS { v1=v1.(string)+v2.(string) } //else remove substring
+			switch op {
+			case SP_PLUS:   v1=v1.(Value).Add(v2.(Value))
+			case SP_MINUS:  v1=v1.(Value).Sub(v2.(Value))
 			}
 		}
 		return t1,v1
@@ -262,67 +252,26 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 
 	//maybe find a less repetetive way to write this
 	case N_PREDCOMP:
-		_,expr1 := execExpression(q, n.node1)
-		_,expr2 := execExpression(q, n.node2)
-		typ := n.tok3.(int)
-		if expr1==nil || expr2==nil { typ = T_NULL }
+		_,val1 := execExpression(q, n.node1)
+		_,val2 := execExpression(q, n.node2)
+		expr1 := val1.(Value)
+		expr2 := val2.(Value)
 		switch n.tok1.(int) {
-		case KW_LIKE: match = expr2.(*regexp.Regexp).MatchString(Sprint(expr1))
-
+		case KW_LIKE: match = expr2.Equal(expr1)
 		case SP_NOEQ: negate ^= 1; fallthrough
-		case SP_EQ:
-		//db.Print2("ex1, ex3:",expr1, expr2, t1,t2)
-			switch typ {
-			case T_DATE:   match = expr1.(time.Time).Equal(expr2.(time.Time))
-			default:	   match = expr1 == expr2
-			}
-
-		case SP_LESSEQ: negate ^= 1; fallthrough
-		case SP_GREAT:
-			switch typ {
-			case T_NULL:   match = expr1!=nil           && expr2==nil
-			case T_STRING: match = expr1.(string)        > expr2.(string)
-			case T_INT:    match = expr1.(int)           > expr2.(int)
-			case T_FLOAT:  match = expr1.(float64)       > expr2.(float64)
-			case T_DATE:   match = expr1.(time.Time).After(expr2.(time.Time))
-			}
-
-		case SP_GREATEQ: negate ^= 1; fallthrough
-		case SP_LESS:
-			switch typ {
-			case T_NULL:   match = expr1==nil            && expr2!=nil
-			case T_STRING: match = expr1.(string)         < expr2.(string)
-			case T_INT:    match = expr1.(int)            < expr2.(int)
-			case T_FLOAT:  match = expr1.(float64)        < expr2.(float64)
-			case T_DATE:   match = expr1.(time.Time).Before(expr2.(time.Time))
-			}
-
+		case SP_EQ:      match = expr1.Equal(expr2)
+		case SP_LESSEQ:  match = expr1.LessEq(expr2)
+		case SP_GREAT:   match = expr1.Greater(expr2)
+		case SP_GREATEQ: match = expr1.GreatEq(expr2)
+		case SP_LESS:    match = expr1.Less(expr2)
 		case KW_BETWEEN:
-			_,expr3 := execExpression(q, n.node3)
-			var biggerThanFirst bool
-			switch typ {
-			case T_NULL:   biggerThanFirst = expr1!=nil             && expr2==nil
-			case T_STRING: biggerThanFirst = expr1.(string)         >= expr2.(string)
-			case T_INT:    biggerThanFirst = expr1.(int)            >= expr2.(int)
-			case T_FLOAT:  biggerThanFirst = expr1.(float64)        >= expr2.(float64)
-			case T_DATE:   biggerThanFirst = !expr1.(time.Time).Before(expr2.(time.Time))
-			}
+			_,val3 := execExpression(q, n.node3)
+			expr3 := val3.(Value)
+			biggerThanFirst := expr1.Greater(expr2)
 			if biggerThanFirst {
-				switch typ {
-				case T_NULL:   match = expr1==nil            && expr3!=nil
-				case T_STRING: match = expr1.(string)         < expr3.(string)
-				case T_INT:    match = expr1.(int)            < expr3.(int)
-				case T_FLOAT:  match = expr1.(float64)        < expr3.(float64)
-				case T_DATE:   match = expr1.(time.Time).Before(expr3.(time.Time))
-				}
+				match = expr1.Less(expr3)
 			} else {
-				switch typ {
-				case T_NULL:   match = expr1!=nil             && expr3==nil
-				case T_STRING: match = expr1.(string)         >= expr3.(string)
-				case T_INT:    match = expr1.(int)            >= expr3.(int)
-				case T_FLOAT:  match = expr1.(float64)        >= expr3.(float64)
-				case T_DATE:   match = !expr1.(time.Time).Before(expr3.(time.Time))
-				}
+				match = expr1.GreatEq(expr3)
 			}
 		}
 	}

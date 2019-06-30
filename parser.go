@@ -445,7 +445,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		re = regexp.MustCompile("_")
 		like = re.ReplaceAllString(like.(string), ".")
 		like,err = regexp.Compile("(?i)^"+like.(string)+"$")
-		n.node2 = &Node{label: N_VALUE, tok1: like.(*regexp.Regexp), tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
+		n.node2 = &Node{label: N_VALUE, tok1: liker{like.(*regexp.Regexp)}, tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
 		q.NextTok()
 	} else {
 		n.node2, err = parseExprAdd(q)
