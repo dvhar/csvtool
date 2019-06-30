@@ -149,6 +149,7 @@ func runOneTestQuery(query string) error {
 	q := QuerySpecs{ queryString : query, }
 	res, err := csvQuery(&q)
 	if err != nil { return err }
+	Println("aggregates:",q.colSpec.functions)
 	Println("number of colums:",res.Numcols)
 	Println("number of rows:",res.Numrows)
 	Println("types:",res.Types)

@@ -17,11 +17,8 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 		q.toRow = make([]interface{}, q.colSpec.NewWidth)
 	}
 	execSelections(q, q.tree.node1.node1)
-	if q.quantityRetrieved <= q.showLimit {
-		//normal target
-		if !q.groupby {
-			res.Vals = append(res.Vals, q.toRow)
-		} //grouped rows will be sent from map to 2D array later
+	if q.quantityRetrieved <= q.showLimit && !q.groupby {
+		res.Vals = append(res.Vals, q.toRow)
 		q.quantityRetrieved++
 	}
 	if q.save && !q.groupby { saver <- saveData{Type : CH_ROW, Row : &q.toRow} ; <-savedLine}
@@ -39,13 +36,22 @@ func execSelections(q *QuerySpecs, n *Node) {
 		if q.toRow[index] == nil {
 			switch val.(Aggragate).function {
 			case FN_COUNT: q.toRow[index] = 1
+			case FN_AVG:   q.toRow[index] = AggValue{val.(Aggragate).val, 1}
 			default: q.toRow[index] = v
 			}
 		//update target with new value
 		} else if v != nil {
 			switch val.(Aggragate).function {
-			case FN_SUM: fallthrough
 			case FN_AVG:
+				//find a better way to update member of struct interface
+				count := q.toRow[index].(AggValue).count + 1
+				var sum interface{}
+				switch val.(Aggragate).typ {
+				case T_INT:    sum = q.toRow[index].(AggValue).val.(int) + v.(int)
+				case T_FLOAT:  sum = q.toRow[index].(AggValue).val.(float64) + v.(float64)
+				}
+			   q.toRow[index] = AggValue{sum,count}
+			case FN_SUM:
 				switch val.(Aggragate).typ {
 				case T_INT:    q.toRow[index] = q.toRow[index].(int)     + v.(int)
 				case T_FLOAT:  q.toRow[index] = q.toRow[index].(float64) + v.(float64) 
@@ -126,12 +132,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		//literal
 		if n.tok2.(int) == 0 {
 			return n.tok3.(int), n.tok1
-		//aggragate function
-		} else if n.tok2.(int) == 2 {
-			t1,v1 := execExpression(q, n.node1)
-			return T_AGGRAGATE, Aggragate{v1,t1,n.tok1.(int)}
-		//column
-		} else {
+		} else if n.tok2.(int) != 2 {
 			var val interface{}
 			cell := q.fromRow[n.tok1.(int)]
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }

@@ -203,15 +203,29 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	return nil
 }
 
-func groupRetriever (n* Node, m map[interface{}]interface{}, r *SingleQueryResult){
+func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *SingleQueryResult){
 	switch n.tok1.(int) {
-	case 0: for _,v := range m { r.Vals = append(r.Vals, v.([]interface{})) }
-	case 1: for _,v := range m { groupRetriever(n.node1, v.(map[interface{}]interface{}), r) }
+	case 0:
+		for _,row := range m {
+			r.Vals = append(r.Vals, row.([]interface{}))
+			for i,v := range r.Vals[q.quantityRetrieved] {
+				if agg,ok := v.(AggValue); ok && q.colSpec.functions[i].function == FN_AVG {
+					switch q.colSpec.functions[i].typ {
+					case T_INT:   r.Vals[q.quantityRetrieved][i] = agg.val.(int)     / agg.count
+					case T_FLOAT: r.Vals[q.quantityRetrieved][i] = agg.val.(float64) / float64(agg.count)
+					}
+				}
+			}
+			q.quantityRetrieved++
+			if q.quantityRetrieved > q.showLimit { return }
+		}
+	case 1: for _,v := range m { groupRetriever(q, n.node1, v.(map[interface{}]interface{}), r) }
 	}
 }
 func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	if !q.groupby { return }
 	root := q.tree.node4
+	q.quantityRetrieved = 0
 	if root == nil { res.Vals = append(res.Vals, q.toRow); return }
-	groupRetriever(root.node1, root.tok1.(map[interface{}]interface{}), res)
+	groupRetriever(q, root.node1, root.tok1.(map[interface{}]interface{}), res)
 }

@@ -122,6 +122,7 @@ type Columns struct {
 	NewTypes []int
 	NewPos []int
 	NewWidth int
+	functions []Aggragate
 }
 const (
 	T_NULL = iota
@@ -309,4 +310,8 @@ type Aggragate struct {
 	val interface{}
 	typ int
 	function int
+}
+type AggValue struct {
+	val interface{}
+	count int
 }

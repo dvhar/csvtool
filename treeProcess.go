@@ -297,14 +297,40 @@ func columnNamer(q *QuerySpecs, n *Node) {
 	if n.label == N_SELECTIONS &&
 		n.node1.label == N_COLITEM {
 			n.tok1 = colIdx
-			colIdx++
 			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
 			} else { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
 			newColItem(q, n.tok1.(int), n.node1.tok3.(int), n.tok2.(string))
+			colIdx++
 		}
 	columnNamer(q, n.node1)
 	columnNamer(q, n.node2)
 	columnNamer(q, n.node3)
+}
+
+//find aggragate functions that will need postprocessing
+func findFunctions(q *QuerySpecs, n *Node) {
+	if q.colSpec.functions == nil {q.colSpec.functions = make([]Aggragate, q.colSpec.NewWidth)}
+	if n == nil { return }
+	if n.label == N_SELECTIONS {
+		if fun := findFunction(n.node1); fun != nil {
+			q.colSpec.functions[n.tok1.(int)] = *fun
+			q.colSpec.functions[n.tok1.(int)].typ = q.colSpec.NewTypes[n.tok1.(int)]
+		}
+	}
+	findFunctions(q, n.node1)
+	findFunctions(q, n.node2)
+	findFunctions(q, n.node3)
+}
+func findFunction(n *Node) *Aggragate {
+	if n == nil { return nil }
+	if n.label == N_FUNCTION { return &Aggragate{nil,0,n.tok1.(int)} }
+	a := findFunction(n.node1)
+	if a != nil { return a }
+	a = findFunction(n.node2)
+	if a != nil { return a }
+	a = findFunction(n.node3)
+	if a != nil { return a }
+	return nil
 }
 
 func newColItem(q* QuerySpecs, idx, typ int, name string) {

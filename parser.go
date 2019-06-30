@@ -46,13 +46,14 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	err = openFiles(q)
 	if err != nil { return n,err }
 
-	//new expression parser
 	n.node1,err =  parseSelect(q)
 	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
+	findFunctions(q, n.node1)
+
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -552,8 +553,8 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
 	q.NextTok()
 	switch n.tok1.(int) {
-		case FN_SUM: fallthrough
 		case FN_AVG: fallthrough
+		case FN_SUM: fallthrough
 		case FN_MIN: fallthrough
 		case FN_COUNT: fallthrough
 		case FN_MAX:
