@@ -216,8 +216,10 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 					}
 				}
 			}
+			if q.save  { saver <- saveData{Type : CH_ROW, Row : &r.Vals[q.quantityRetrieved]} ; <-savedLine}
 			q.quantityRetrieved++
-			if q.quantityRetrieved > q.showLimit { return }
+			if q.quantityRetrieved > q.showLimit && !q.save { return }
+			if q.quantityRetrieved > q.showLimit && q.save { r.Vals = r.Vals[0:len(r.Vals)-1] }
 		}
 	case 1: for _,v := range m { groupRetriever(q, n.node1, v.(map[interface{}]interface{}), r) }
 	}
@@ -226,6 +228,11 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	if !q.groupby { return }
 	root := q.tree.node4
 	q.quantityRetrieved = 0
-	if root == nil { res.Vals = append(res.Vals, q.toRow); return }
+	//make map for single group so it gets processed with that system
+	if root == nil {
+		map1 := make(map[interface{}]interface{})
+		map1[0] = q.toRow
+		root = &Node{ tok1: map1, node1: &Node{ tok1: 0}}
+	}
 	groupRetriever(q, root.node1, root.tok1.(map[interface{}]interface{}), res)
 }
