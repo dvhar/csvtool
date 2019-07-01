@@ -33,7 +33,7 @@ type QuerySpecs struct {
 	files map[string]*FileData
 	numfiles int
 	fromRow []string
-	toRow []interface{}
+	toRow []GoStringer
 	intColumn bool
 	groupby bool
 }
@@ -228,7 +228,7 @@ type saveData struct {
 	Number int
 	Type int
 	Header []string
-	Row *[]interface{}
+	Row *[]GoStringer
 }
 //one SingleQueryResult struct holds the results of one query
 type SingleQueryResult struct {
@@ -238,7 +238,7 @@ type SingleQueryResult struct {
 	Types []int
 	Colnames []string
 	Pos []int
-	Vals [][]interface{}
+	Vals [][]GoStringer
 	Status int
 	Query string
 }
@@ -316,6 +316,7 @@ type AggValue struct {
 	val interface{}
 	count int
 }
+func (a AggValue) GoString() string { return Sprint(a.val) }
 
 
 //interface experiment
@@ -330,6 +331,8 @@ type Value interface {
 	Mult(other interface{}) interface{}
 	Div(other interface{}) interface{}
 	Mod(other interface{}) interface{}
+	GoString() string
+	MarshalJSON() ([]byte,error)
 }
 type float struct { val float64 }
 type integer struct { val int }
@@ -407,3 +410,17 @@ func (d date) Mod(other interface{}) interface{} { return d }
 func (t text) Mod(other interface{}) interface{} { return t }
 func (n null) Mod(other interface{}) interface{} { return n }
 func (l liker) Mod(other interface{}) interface{} { return l }
+
+func (f float) GoString() string { return Sprintf("%f",f.val) }
+func (i integer) GoString() string { return Sprintf("%d",i.val) }
+func (d date) GoString() string { return d.val.Format("2006-01-02 15:04:05") }
+func (t text) GoString() string { return t.val }
+func (n null) GoString() string { return n.val }
+func (l liker) GoString() string { return Sprint(l.val) }
+
+func (f float) MarshalJSON() ([]byte,error) { return []byte(f.GoString()) ,nil}
+func (i integer) MarshalJSON() ([]byte,error) { return []byte(i.GoString()) ,nil}
+func (d date) MarshalJSON() ([]byte,error) { return []byte(d.GoString()) ,nil}
+func (t text) MarshalJSON() ([]byte,error) { return []byte(t.GoString()) ,nil}
+func (n null) MarshalJSON() ([]byte,error) { return []byte(n.GoString()) ,nil}
+func (l liker) MarshalJSON() ([]byte,error) { return []byte(l.GoString()) ,nil}

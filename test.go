@@ -2,6 +2,7 @@ package main
 import (
 	. "fmt"
 	"os"
+	"encoding/json"
 )
 
 type DebugPrint struct {
@@ -158,5 +159,7 @@ func runOneTestQuery(query string) error {
 		Println("-----------------------------------------")
 		Println(res.Vals[ii])
 	}
+	js,_ := json.Marshal(res)
+	Println(string(js))
 	return nil
 }

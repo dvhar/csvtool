@@ -6,7 +6,6 @@ import (
 	. "strconv"
 	"errors"
 	. "fmt"
-	"time"
 	"os"
 )
 
@@ -60,11 +59,7 @@ func realtimeCsvSaver() {
 						//make sure each entry is formatted well according to its type
 						if entry == nil { output[i] = ""
 						} else {
-							switch entry.(type) {
-								//case time.Time: output[i] = entry.(time.Time).Format(time.RFC3339)
-								case time.Time: output[i] = entry.(time.Time).Format("2006-01-02 15:04:05")
-								default: output[i] = Sprint(entry)
-							}
+							output[i] = Sprint(entry)
 						}
 					}
 					err = writer.Write(output)

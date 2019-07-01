@@ -14,7 +14,7 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 		q.toRow = execGroupBy(q,q.tree.node4)
 	//normal target row
 	} else {
-		q.toRow = make([]interface{}, q.colSpec.NewWidth)
+		q.toRow = make([]GoStringer, q.colSpec.NewWidth)
 	}
 	execSelections(q, q.tree.node1.node1)
 	if q.quantityRetrieved <= q.showLimit && !q.groupby {
@@ -28,8 +28,9 @@ func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	index := n.tok1.(int)
 	typ,val := execExpression(q, n.node1.node1)
+	if val == nil { val = null{""} }
 	if typ != T_AGGRAGATE{
-		q.toRow[index] = val
+		q.toRow[index] = val.(GoStringer)
 	} else if val.(Aggragate).val != nil {
 		v := val.(Aggragate).val.(Value)
 		//first entry to aggragate target
@@ -48,13 +49,13 @@ func execSelections(q *QuerySpecs, n *Node) {
 				sum := q.toRow[index].(AggValue).val.(Value).Add(v)
 				q.toRow[index] = AggValue{sum,count}
 			case FN_SUM:
-				q.toRow[index] = q.toRow[index].(Value).Add(v)
+				q.toRow[index] = q.toRow[index].(Value).Add(v).(Value)
 			case FN_MIN:
 				if q.toRow[index].(Value).Greater(v) { q.toRow[index] = v }
 			case FN_MAX:
 				if q.toRow[index].(Value).Less(v) { q.toRow[index] = v }
 			case FN_COUNT:
-				q.toRow[index] = q.toRow[index].(Value).Add(integer{1})
+				q.toRow[index] = q.toRow[index].(Value).Add(integer{1}).(Value)
 			}
 		}
 	}
@@ -68,26 +69,26 @@ func evalWhere(q *QuerySpecs) bool {
 }
 
 //return target array
-func execGroupBy(q *QuerySpecs, n *Node) []interface{} {
+func execGroupBy(q *QuerySpecs, n *Node) []GoStringer {
 	if !q.groupby { return nil }
 	//use q.toRow if grouping without groupby clause so group all to just one row
 	if n == nil {
-		if q.toRow == nil { q.toRow = make([]interface{}, q.colSpec.NewWidth) }
+		if q.toRow == nil { q.toRow = make([]GoStringer, q.colSpec.NewWidth) }
 		return q.toRow
 	}
 	return execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
 }
-func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) []interface{} {
+func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) []GoStringer {
 	_, key := execExpression(q,n.node1)
 	switch n.tok1.(int) {
 	case 0:
 		row,ok := m[key]
 		if ok {
-			return row.([]interface{})
+			return row.([]GoStringer)
 		} else {
-			row = make([]interface{}, q.colSpec.NewWidth)
+			row = make([]GoStringer, q.colSpec.NewWidth)
 			m[key] = row
-			return row.([]interface{})
+			return row.([]GoStringer)
 		}
 	case 1:
 		nextMap,ok := m[key]
