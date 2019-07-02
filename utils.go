@@ -412,7 +412,7 @@ func (t text) Mod(other Value) Value    { return t }
 func (n null) Mod(other Value) Value    { return n }
 func (l liker) Mod(other Value) Value   { return l }
 
-func (f float) GoString() string   { return Sprintf("%f",f.val) }
+func (f float) GoString() string   { return Sprintf("%.10g",f.val) }
 func (i integer) GoString() string { return Sprintf("%d",i.val) }
 func (d date) GoString() string    { return d.val.Format("2006-01-02 15:04:05") }
 func (t text) GoString() string    { return t.val }

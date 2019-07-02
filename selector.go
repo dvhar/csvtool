@@ -229,7 +229,6 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		if negate==1 { return !match }
 		return match
 
-	//maybe find a less repetetive way to write this
 	case N_PREDCOMP:
 		_,val1 := execExpression(q, n.node1)
 		_,val2 := execExpression(q, n.node2)
@@ -253,10 +252,10 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			case KW_BETWEEN:
 				_,val3 := execExpression(q, n.node3)
 				expr3 := val3.(Value)
-				if expr1.Greater(expr2) {
-					match = expr1.LessEq(expr3)
+				if expr1.GreatEq(expr2) {
+					match = expr1.Less(expr3)
 				} else {
-					match = expr1.Greater(expr3)
+					match = expr1.GreatEq(expr3)
 				}
 			}
 		}
