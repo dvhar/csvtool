@@ -48,14 +48,10 @@ func execSelections(q *QuerySpecs, n *Node) {
 				count := q.toRow[index].(AggValue).count + 1
 				sum := q.toRow[index].(AggValue).val.(Value).Add(v)
 				q.toRow[index] = AggValue{sum,count}
-			case FN_SUM:
-				q.toRow[index] = q.toRow[index].(Value).Add(v).(Value)
-			case FN_MIN:
-				if q.toRow[index].(Value).Greater(v) { q.toRow[index] = v }
-			case FN_MAX:
-				if q.toRow[index].(Value).Less(v) { q.toRow[index] = v }
-			case FN_COUNT:
-				q.toRow[index] = q.toRow[index].(Value).Add(integer{1}).(Value)
+			case FN_SUM:   q.toRow[index] = q.toRow[index].(Value).Add(v).(Value)
+			case FN_MIN:   if q.toRow[index].(Value).Greater(v) { q.toRow[index] = v }
+			case FN_MAX:   if q.toRow[index].(Value).Less(v) { q.toRow[index] = v }
+			case FN_COUNT: q.toRow[index] = q.toRow[index].(Value).Add(integer{1}).(Value)
 			}
 		}
 	}
@@ -116,12 +112,12 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 			return n.tok3.(int), n.tok1
 		} else if n.tok2.(int) != 2 {
 			var val Value
-			cell := q.fromRow[n.tok1.(int)]
+			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
 			switch n.tok3.(int) {
-				case T_INT:	   a,_ := Atoi(cell); val = integer{a}
+				case T_INT:	   a,_ := Atoi(cell);          val = integer{a}
 				case T_FLOAT:  a,_ := ParseFloat(cell,64); val = float{a}
-				case T_DATE:   a,_ := d.ParseAny(cell); val = date{a}
+				case T_DATE:   a,_ := d.ParseAny(cell);    val = date{a}
 				case T_NULL:   val = nil
 				case T_STRING: val = text{cell}
 			}
@@ -247,8 +243,8 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			expr1 := val1.(Value)
 			expr2 := val2.(Value)
 			switch n.tok1.(int) {
-			case KW_LIKE: match = expr2.Equal(expr1)
-			case SP_NOEQ: negate ^= 1; fallthrough
+			case KW_LIKE:    match = expr2.Equal(expr1)
+			case SP_NOEQ:    negate ^= 1; fallthrough
 			case SP_EQ:      match = expr1.Equal(expr2)
 			case SP_LESSEQ:  match = expr1.LessEq(expr2)
 			case SP_GREAT:   match = expr1.Greater(expr2)
@@ -257,11 +253,10 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			case KW_BETWEEN:
 				_,val3 := execExpression(q, n.node3)
 				expr3 := val3.(Value)
-				biggerThanFirst := expr1.Greater(expr2)
-				if biggerThanFirst {
-					match = expr1.Less(expr3)
+				if expr1.Greater(expr2) {
+					match = expr1.LessEq(expr3)
 				} else {
-					match = expr1.GreatEq(expr3)
+					match = expr1.Greater(expr3)
 				}
 			}
 		}

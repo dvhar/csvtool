@@ -53,6 +53,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
 	findFunctions(q, n.node1)
+	Println("select:")
+	treePrint(n.node1,0)
 
 
 	n.node2, err = parseFrom(q)
@@ -63,6 +65,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	_,_,_,err = typeCheck(n.node3)
 	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
+	Println("where:")
+	treePrint(n.node3,0)
 
 	n.node4,err =  parseGroupby(q)
 	if err != nil { return n,err }
@@ -127,7 +131,6 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 //tok3 is external use of subtree
 func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
-	db.Print2("selections parser got token",q.Tok())
 	var err error
 	var hidden bool
 	if q.Tok().id == SP_COMMA { q.NextTok() }
@@ -146,7 +149,6 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case WORD:        fallthrough
 	case SP_MINUS:        fallthrough
 	case SP_LPAREN:
-		db.Print2("colitem starts with",q.Tok())
 		if !hidden { countSelected++ }
 		n.node1,err = parseColumnItem(q)
 		if err != nil { return n,err }

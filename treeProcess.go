@@ -3,7 +3,6 @@ import (
   . "fmt"
   . "strconv"
   d "github.com/araddon/dateparse"
-  "regexp"
   "time"
   "errors"
 )
@@ -199,8 +198,7 @@ func enforceType(n *Node, t int) error {
 		if n.tok1 == nil { return nil }
 		n.tok3 = t
 		if n.tok2.(int) == 0 {
-			if _,ok := n.tok1.(*regexp.Regexp); ok { n.tok1=liker{n.tok1.(*regexp.Regexp)}; return err } //don't retype regex
-			Println("typing tok",n.tok1,"as",t)
+			if _,ok := n.tok1.(liker); ok { return err } //don't retype regex
 			switch t {
 			case T_INT:
 				val,err = Atoi(n.tok1.(string))
@@ -214,8 +212,8 @@ func enforceType(n *Node, t int) error {
 				val,err = d.ParseAny(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
 				val = date{val.(time.Time)}
-			case T_NULL:   val = null{Sprint(val)}
-			case T_STRING: val = text{Sprint(val)}
+			case T_NULL:   val = null{n.tok1.(string)}
+			case T_STRING: val = text{n.tok1.(string)}
 			}
 			n.tok1 = val
 		}
@@ -226,11 +224,9 @@ func enforceType(n *Node, t int) error {
 
 	case N_EXPRCASE:
 		if tk2,ok := n.tok2.(int); ok && tk2 == N_EXPRADD { //initial when expression
-			db.Print2("case with expression compare")
 			err = enforceType(n.node1, n.node2.tok3.(int))
 			if err != nil { return err }
 			for whenNode := n.node2; whenNode != nil; whenNode = whenNode.node2 {  //when expression list
-				db.Print2("giving exprcase type",n.node2.tok3)
 				err = enforceType(whenNode.node1.node1, n.node2.tok3.(int))
 				if err != nil { return err }
 			}

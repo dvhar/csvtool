@@ -2,7 +2,7 @@ package main
 import (
 	. "fmt"
 	"os"
-	"encoding/json"
+	//"encoding/json"
 )
 
 type DebugPrint struct {
@@ -37,7 +37,7 @@ func runTests(doTest bool){
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
-	thisTest := selectSet
+	thisTest := selectSet | fromSet | whereSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -159,7 +159,7 @@ func runOneTestQuery(query string) error {
 		Println("-----------------------------------------")
 		Println(res.Vals[ii])
 	}
-	js,_ := json.Marshal(res)
-	Println(string(js))
+	//js,_ := json.Marshal(res)
+	//Println("json:",string(js))
 	return nil
 }

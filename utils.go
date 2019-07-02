@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"github.com/gorilla/websocket"
 	"encoding/csv"
+	"encoding/json"
 	"path/filepath"
 	"os"
 	"time"
@@ -321,16 +322,16 @@ func (a AggValue) GoString() string { return Sprint(a.val) }
 
 //interface experiment
 type Value interface {
-	Greater(other interface{}) bool
-	GreatEq(other interface{}) bool
-	Less(other interface{}) bool
-	LessEq(other interface{}) bool
-	Equal(other interface{}) bool
-	Add(other interface{}) interface{}
-	Sub(other interface{}) interface{}
-	Mult(other interface{}) interface{}
-	Div(other interface{}) interface{}
-	Mod(other interface{}) interface{}
+	Greater(other Value) bool
+	GreatEq(other Value) bool
+	Less(other Value) bool
+	LessEq(other Value) bool
+	Equal(other Value) bool
+	Add(other Value) Value
+	Sub(other Value) Value
+	Mult(other Value) Value
+	Div(other Value) Value
+	Mod(other Value) Value
 	GoString() string
 	MarshalJSON() ([]byte,error)
 }
@@ -341,86 +342,86 @@ type text struct { val string }
 type null struct { val string }
 type liker struct { val *regexp.Regexp }
 
-func (f float) Less(other interface{}) bool { return f.val < other.(float).val }
-func (i integer) Less(other interface{}) bool { return i.val < other.(integer).val }
-func (d date) Less(other interface{}) bool { return d.val.Before(other.(date).val) }
-func (t text) Less(other interface{}) bool { return t.val < other.(text).val }
-func (n null) Less(other interface{}) bool { return n.val < other.(null).val }
-func (l liker) Less(other interface{}) bool { return false }
+func (f float) Less(other Value) bool      { return f.val < other.(float).val }
+func (i integer) Less(other Value) bool    { return i.val < other.(integer).val }
+func (d date) Less(other Value) bool       { return d.val.Before(other.(date).val) }
+func (t text) Less(other Value) bool       { return t.val < other.(text).val }
+func (n null) Less(other Value) bool       { return n.val < other.(null).val }
+func (l liker) Less(other Value) bool      { return false }
 
-func (f float) LessEq(other interface{}) bool { return f.val <= other.(float).val }
-func (i integer) LessEq(other interface{}) bool { return i.val <= other.(integer).val }
-func (d date) LessEq(other interface{}) bool { return !d.val.After(other.(date).val) }
-func (t text) LessEq(other interface{}) bool { return t.val <= other.(text).val }
-func (n null) LessEq(other interface{}) bool { return n.val <= other.(null).val }
-func (l liker) LessEq(other interface{}) bool { return false }
+func (f float) LessEq(other Value) bool    { return f.val <= other.(float).val }
+func (i integer) LessEq(other Value) bool  { return i.val <= other.(integer).val }
+func (d date) LessEq(other Value) bool     { return !d.val.After(other.(date).val) }
+func (t text) LessEq(other Value) bool     { return t.val <= other.(text).val }
+func (n null) LessEq(other Value) bool     { return n.val <= other.(null).val }
+func (l liker) LessEq(other Value) bool    { return false }
 
-func (f float) Greater(other interface{}) bool { return f.val > other.(float).val }
-func (i integer) Greater(other interface{}) bool { return i.val > other.(integer).val }
-func (d date) Greater(other interface{}) bool { return d.val.After(other.(date).val) }
-func (t text) Greater(other interface{}) bool { return t.val > other.(text).val }
-func (n null) Greater(other interface{}) bool { return n.val > other.(null).val }
-func (l liker) Greater(other interface{}) bool { return false }
+func (f float) Greater(other Value) bool   { return f.val > other.(float).val }
+func (i integer) Greater(other Value) bool { return i.val > other.(integer).val }
+func (d date) Greater(other Value) bool    { return d.val.After(other.(date).val) }
+func (t text) Greater(other Value) bool    { return t.val > other.(text).val }
+func (n null) Greater(other Value) bool    { return n.val > other.(null).val }
+func (l liker) Greater(other Value) bool   { return false }
 
-func (f float) GreatEq(other interface{}) bool { return f.val >= other.(float).val }
-func (i integer) GreatEq(other interface{}) bool { return i.val >= other.(integer).val }
-func (d date) GreatEq(other interface{}) bool { return !d.val.Before(other.(date).val) }
-func (t text) GreatEq(other interface{}) bool { return t.val >= other.(text).val }
-func (n null) GreatEq(other interface{}) bool { return n.val >= other.(null).val }
-func (l liker) GreatEq(other interface{}) bool { return false }
+func (f float) GreatEq(other Value) bool   { return f.val >= other.(float).val }
+func (i integer) GreatEq(other Value) bool { return i.val >= other.(integer).val }
+func (d date) GreatEq(other Value) bool    { return !d.val.Before(other.(date).val) }
+func (t text) GreatEq(other Value) bool    { return t.val >= other.(text).val }
+func (n null) GreatEq(other Value) bool    { return n.val >= other.(null).val }
+func (l liker) GreatEq(other Value) bool   { return false }
 
-func (f float) Equal(other interface{}) bool { return f.val == other.(float).val }
-func (i integer) Equal(other interface{}) bool { return i.val == other.(integer).val }
-func (d date) Equal(other interface{}) bool { return d.val.Equal(other.(date).val) }
-func (t text) Equal(other interface{}) bool { return t.val == other.(text).val }
-func (n null) Equal(other interface{}) bool { return n.val == other.(null).val }
-func (l liker) Equal(other interface{}) bool { return l.val.MatchString(Sprint(other)) }
+func (f float) Equal(other Value) bool     { return f.val == other.(float).val }
+func (i integer) Equal(other Value) bool   { return i.val == other.(integer).val }
+func (d date) Equal(other Value) bool      { return d.val.Equal(other.(date).val) }
+func (t text) Equal(other Value) bool      { return t.val == other.(text).val }
+func (n null) Equal(other Value) bool      { return n.val == other.(null).val }
+func (l liker) Equal(other Value) bool     { return l.val.MatchString(Sprint(other)) }
 
-func (f float) Add(other interface{}) interface{} { return float{f.val + other.(float).val} }
-func (i integer) Add(other interface{}) interface{} { return integer{i.val + other.(integer).val} }
-func (d date) Add(other interface{}) interface{} { return d }
-func (t text) Add(other interface{}) interface{} { return text{t.val + other.(text).val} }
-func (n null) Add(other interface{}) interface{} { return null{n.val + other.(null).val} }
-func (l liker) Add(other interface{}) interface{} { return l }
+func (f float) Add(other Value) Value   { return float{f.val + other.(float).val} }
+func (i integer) Add(other Value) Value { return integer{i.val + other.(integer).val} }
+func (d date) Add(other Value) Value    { return d }
+func (t text) Add(other Value) Value    { return text{t.val + other.(text).val} }
+func (n null) Add(other Value) Value    { return null{n.val + other.(null).val} }
+func (l liker) Add(other Value) Value   { return l }
 
-func (f float) Sub(other interface{}) interface{} { return float{f.val - other.(float).val} }
-func (i integer) Sub(other interface{}) interface{} { return integer{i.val - other.(integer).val} }
-func (d date) Sub(other interface{}) interface{} { return d }
-func (t text) Sub(other interface{}) interface{} { return t }
-func (n null) Sub(other interface{}) interface{} { return n }
-func (l liker) Sub(other interface{}) interface{} { return l }
+func (f float) Sub(other Value) Value   { return float{f.val - other.(float).val} }
+func (i integer) Sub(other Value) Value { return integer{i.val - other.(integer).val} }
+func (d date) Sub(other Value) Value    { return d }
+func (t text) Sub(other Value) Value    { return t }
+func (n null) Sub(other Value) Value    { return n }
+func (l liker) Sub(other Value) Value   { return l }
 
-func (f float) Mult(other interface{}) interface{} { return float{f.val * other.(float).val} }
-func (i integer) Mult(other interface{}) interface{} { return integer{i.val * other.(integer).val} }
-func (d date) Mult(other interface{}) interface{} { return d }
-func (t text) Mult(other interface{}) interface{} { return t }
-func (n null) Mult(other interface{}) interface{} { return n }
-func (l liker) Mult(other interface{}) interface{} { return l }
+func (f float) Mult(other Value) Value  { return float{f.val * other.(float).val} }
+func (i integer) Mult(other Value) Value{ return integer{i.val * other.(integer).val} }
+func (d date) Mult(other Value) Value   { return d }
+func (t text) Mult(other Value) Value   { return t }
+func (n null) Mult(other Value) Value   { return n }
+func (l liker) Mult(other Value) Value  { return l }
 
-func (f float) Div(other interface{}) interface{} { return float{f.val / other.(float).val} }
-func (i integer) Div(other interface{}) interface{} { return integer{i.val / other.(integer).val} }
-func (d date) Div(other interface{}) interface{} { return d }
-func (t text) Div(other interface{}) interface{} { return t }
-func (n null) Div(other interface{}) interface{} { return n }
-func (l liker) Div(other interface{}) interface{} { return l }
+func (f float) Div(other Value) Value   { return float{f.val / other.(float).val} }
+func (i integer) Div(other Value) Value { return integer{i.val / other.(integer).val} }
+func (d date) Div(other Value) Value    { return d }
+func (t text) Div(other Value) Value    { return t }
+func (n null) Div(other Value) Value    { return n }
+func (l liker) Div(other Value) Value   { return l }
 
-func (f float) Mod(other interface{}) interface{} { return f }
-func (i integer) Mod(other interface{}) interface{} { return integer{i.val % other.(integer).val} }
-func (d date) Mod(other interface{}) interface{} { return d }
-func (t text) Mod(other interface{}) interface{} { return t }
-func (n null) Mod(other interface{}) interface{} { return n }
-func (l liker) Mod(other interface{}) interface{} { return l }
+func (f float) Mod(other Value) Value   { return f }
+func (i integer) Mod(other Value) Value { return integer{i.val % other.(integer).val} }
+func (d date) Mod(other Value) Value    { return d }
+func (t text) Mod(other Value) Value    { return t }
+func (n null) Mod(other Value) Value    { return n }
+func (l liker) Mod(other Value) Value   { return l }
 
-func (f float) GoString() string { return Sprintf("%f",f.val) }
+func (f float) GoString() string   { return Sprintf("%f",f.val) }
 func (i integer) GoString() string { return Sprintf("%d",i.val) }
-func (d date) GoString() string { return d.val.Format("2006-01-02 15:04:05") }
-func (t text) GoString() string { return t.val }
-func (n null) GoString() string { return n.val }
-func (l liker) GoString() string { return Sprint(l.val) }
+func (d date) GoString() string    { return d.val.Format("2006-01-02 15:04:05") }
+func (t text) GoString() string    { return t.val }
+func (n null) GoString() string    { return n.val }
+func (l liker) GoString() string   { return Sprint(l.val) }
 
-func (f float) MarshalJSON() ([]byte,error) { return []byte(f.GoString()) ,nil}
-func (i integer) MarshalJSON() ([]byte,error) { return []byte(i.GoString()) ,nil}
-func (d date) MarshalJSON() ([]byte,error) { return []byte(d.GoString()) ,nil}
-func (t text) MarshalJSON() ([]byte,error) { return []byte(t.GoString()) ,nil}
-func (n null) MarshalJSON() ([]byte,error) { return []byte(n.GoString()) ,nil}
-func (l liker) MarshalJSON() ([]byte,error) { return []byte(l.GoString()) ,nil}
+func (f float) MarshalJSON() ([]byte,error)   { return json.Marshal(f.GoString()) }
+func (i integer) MarshalJSON() ([]byte,error) { return json.Marshal(i.GoString())}
+func (d date) MarshalJSON() ([]byte,error)    { return json.Marshal(d.GoString()) }
+func (t text) MarshalJSON() ([]byte,error)    { return json.Marshal(t.GoString()) }
+func (n null) MarshalJSON() ([]byte,error)    { return json.Marshal(n.GoString()) }
+func (l liker) MarshalJSON() ([]byte,error)   { return json.Marshal(l.GoString())}
