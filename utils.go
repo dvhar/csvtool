@@ -368,11 +368,11 @@ func (t text) LessEq(other Value) bool     { return t.val <= other.(text).val }
 func (n null) LessEq(other Value) bool     { return n.val <= other.(null).val }
 func (l liker) LessEq(other Value) bool    { return false }
 
-func (f float) Greater(other Value) bool   { return f.val > other.(float).val }
-func (i integer) Greater(other Value) bool { return i.val > other.(integer).val }
-func (d date) Greater(other Value) bool    { return d.val.After(other.(date).val) }
-func (t text) Greater(other Value) bool    { return t.val > other.(text).val }
-func (n null) Greater(other Value) bool    { return n.val > other.(null).val }
+func (f float) Greater(other Value) bool   { if _,ok := other.(null); ok { return true } else {return f.val > other.(float).val } }
+func (i integer) Greater(other Value) bool { if _,ok := other.(null); ok { return true } else {return i.val > other.(integer).val } }
+func (d date) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return d.val.After(other.(date).val) } }
+func (t text) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return t.val > other.(text).val } }
+func (n null) Greater(other Value) bool    { if _,ok := other.(null); ok { return n.val != "" } else { return false } }
 func (l liker) Greater(other Value) bool   { return false }
 
 func (f float) GreatEq(other Value) bool   { return f.val >= other.(float).val }

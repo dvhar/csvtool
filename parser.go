@@ -570,7 +570,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 func parseGroupby(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_GROUPBY}
 	var err error
-	if q.Tok().val != "group" && q.PeekTok().val != "by" { return nil,nil }
+	if !(q.Tok().val == "group" && q.PeekTok().val == "by") { return nil,nil }
 	q.NextTok()
 	q.NextTok()
 	n.node1, err = parseGroupExpressions(q)

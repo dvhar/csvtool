@@ -4,7 +4,6 @@ import (
   "encoding/csv"
   "os"
   . "strconv"
-  "time"
   "sort"
   "io"
   "bytes"
@@ -31,13 +30,11 @@ type LineReader struct {
 }
 type ValPos struct {
 	pos int64
-	val interface{}
-}
-func (l*LineReader) SavePos(colNo int) {
-	l.valPositions = append(l.valPositions, ValPos{l.prevPos, l.results[colNo]})
+	val Value
 }
 func (l*LineReader) SavePos2(value interface{}) {
-	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
+	if value == nil { value = null{""} }
+	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value.(Value)})
 }
 func (l*LineReader) PrepareReRead() {
 	l.lineBytes = make([]byte, l.maxLineSize)
@@ -96,6 +93,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	var reader LineReader
 	reader.Init(q, "_f1")
 	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.fp.Close() }()
+	Println("sort expr is",q.sortExpr,"<---")
 	if q.sortExpr == nil {
 		err = normalQuery(q, &res, &reader)
 	} else {
@@ -175,14 +173,8 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		if reader.valPositions[i].val == nil && reader.valPositions[j].val == nil { return false
 		} else if reader.valPositions[i].val == nil { return false
 		} else if reader.valPositions[j].val == nil { return true }
-		ret := false
-		switch q.sortType {
-			case T_NULL:   fallthrough
-			case T_STRING: ret = reader.valPositions[i].val.(string)        > reader.valPositions[j].val.(string)
-			case T_INT:	ret = reader.valPositions[i].val.(int)              > reader.valPositions[j].val.(int)
-			case T_FLOAT:  ret = reader.valPositions[i].val.(float64)       > reader.valPositions[j].val.(float64)
-			case T_DATE:   ret = reader.valPositions[i].val.(time.Time).After(reader.valPositions[j].val.(time.Time))
-		}
+		ret := reader.valPositions[i].val.Greater(reader.valPositions[j].val)
+		//Println(ret,reader.valPositions[i],reader.valPositions[j])
 		if q.sortWay == 2 { return !ret }
 		return ret
 	})
