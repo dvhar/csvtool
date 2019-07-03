@@ -207,12 +207,12 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 	switch n.tok1.(int) {
 	case 0:
 		for _,row := range m {
-			r.Vals = append(r.Vals, row.([]GoStringer))
+			r.Vals = append(r.Vals, row.([]Value))
 			for i,v := range r.Vals[q.quantityRetrieved] {
-				if agg,ok := v.(AggValue); ok && q.colSpec.functions[i].function == FN_AVG {
+				if agg,ok := v.(AverageVal); ok && q.colSpec.functions[i].function == FN_AVG {
 					switch q.colSpec.functions[i].typ {
-					case T_INT:   r.Vals[q.quantityRetrieved][i] = agg.val.(Value).Div(integer{agg.count}).(Value)
-					case T_FLOAT: r.Vals[q.quantityRetrieved][i] = agg.val.(Value).Div(float{float64(agg.count)}).(Value)
+					case T_INT:   r.Vals[q.quantityRetrieved][i] = agg.val.Div(integer{agg.count})
+					case T_FLOAT: r.Vals[q.quantityRetrieved][i] = agg.val.Div(float{float64(agg.count)})
 					}
 				}
 			}

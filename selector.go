@@ -14,7 +14,7 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 		q.toRow = execGroupBy(q,q.tree.node4)
 	//normal target row
 	} else {
-		q.toRow = make([]GoStringer, q.colSpec.NewWidth)
+		q.toRow = make([]Value, q.colSpec.NewWidth)
 	}
 	execSelections(q, q.tree.node1.node1)
 	if q.quantityRetrieved <= q.showLimit && !q.groupby {
@@ -30,28 +30,24 @@ func execSelections(q *QuerySpecs, n *Node) {
 	typ,val := execExpression(q, n.node1.node1)
 	if val == nil { val = null{""} }
 	if typ != T_AGGRAGATE{
-		q.toRow[index] = val.(GoStringer)
+		q.toRow[index] = val.(Value)
 	} else if val.(Aggragate).val != nil {
 		v := val.(Aggragate).val.(Value)
 		//first entry to aggragate target
 		if q.toRow[index] == nil {
 			switch val.(Aggragate).function {
 			case FN_COUNT: q.toRow[index] = integer{1}
-			case FN_AVG:   q.toRow[index] = AggValue{v, 1}
+			case FN_AVG:   q.toRow[index] = AverageVal{v, 1}
 			default: q.toRow[index] = v
 			}
 		//update target with new value
 		} else {
 			switch val.(Aggragate).function {
-			case FN_AVG:
-				//find a better way to update member of struct interface
-				count := q.toRow[index].(AggValue).count + 1
-				sum := q.toRow[index].(AggValue).val.(Value).Add(v)
-				q.toRow[index] = AggValue{sum,count}
-			case FN_SUM:   q.toRow[index] = q.toRow[index].(Value).Add(v).(Value)
-			case FN_MIN:   if q.toRow[index].(Value).Greater(v) { q.toRow[index] = v }
-			case FN_MAX:   if q.toRow[index].(Value).Less(v) { q.toRow[index] = v }
-			case FN_COUNT: q.toRow[index] = q.toRow[index].(Value).Add(integer{1}).(Value)
+			case FN_AVG:   q.toRow[index] = q.toRow[index].Add(v)
+			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v)
+			case FN_MIN:   if q.toRow[index].Greater(v) { q.toRow[index] = v }
+			case FN_MAX:   if q.toRow[index].Less(v) { q.toRow[index] = v }
+			case FN_COUNT: q.toRow[index] = q.toRow[index].Add(integer{1})
 			}
 		}
 	}
@@ -65,26 +61,26 @@ func evalWhere(q *QuerySpecs) bool {
 }
 
 //return target array
-func execGroupBy(q *QuerySpecs, n *Node) []GoStringer {
+func execGroupBy(q *QuerySpecs, n *Node) []Value {
 	if !q.groupby { return nil }
 	//use q.toRow if grouping without groupby clause so group all to just one row
 	if n == nil {
-		if q.toRow == nil { q.toRow = make([]GoStringer, q.colSpec.NewWidth) }
+		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth) }
 		return q.toRow
 	}
 	return execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
 }
-func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) []GoStringer {
+func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) []Value {
 	_, key := execExpression(q,n.node1)
 	switch n.tok1.(int) {
 	case 0:
 		row,ok := m[key]
 		if ok {
-			return row.([]GoStringer)
+			return row.([]Value)
 		} else {
-			row = make([]GoStringer, q.colSpec.NewWidth)
+			row = make([]Value, q.colSpec.NewWidth)
 			m[key] = row
-			return row.([]GoStringer)
+			return row.([]Value)
 		}
 	case 1:
 		nextMap,ok := m[key]

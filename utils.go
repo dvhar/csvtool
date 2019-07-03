@@ -34,7 +34,7 @@ type QuerySpecs struct {
 	files map[string]*FileData
 	numfiles int
 	fromRow []string
-	toRow []GoStringer
+	toRow []Value
 	intColumn bool
 	groupby bool
 }
@@ -229,7 +229,7 @@ type saveData struct {
 	Number int
 	Type int
 	Header []string
-	Row *[]GoStringer
+	Row *[]Value
 }
 //one SingleQueryResult struct holds the results of one query
 type SingleQueryResult struct {
@@ -239,7 +239,7 @@ type SingleQueryResult struct {
 	Types []int
 	Colnames []string
 	Pos []int
-	Vals [][]GoStringer
+	Vals [][]Value
 	Status int
 	Query string
 }
@@ -313,11 +313,23 @@ type Aggragate struct {
 	typ int
 	function int
 }
-type AggValue struct {
-	val interface{}
+type AverageVal struct {
+	val Value
 	count int
 }
-func (a AggValue) GoString() string { return Sprint(a.val) }
+func (a AverageVal) Add(other Value) Value { return AverageVal{ a.val.Add(other), a.count + 1, } }
+func (a AverageVal) GoString() string { return a.val.(Value).GoString() }
+func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.(Value).GoString()) }
+//these methods aren't used, just need to fit Value interface
+func (a AverageVal) Greater(other Value) bool { return false }
+func (a AverageVal) GreatEq(other Value) bool { return false }
+func (a AverageVal) Less(other Value) bool { return false }
+func (a AverageVal) LessEq(other Value) bool { return false }
+func (a AverageVal) Equal(other Value) bool { return false }
+func (a AverageVal) Sub(other Value) Value { return a.val.(Value) }
+func (a AverageVal) Mult(other Value) Value { return a.val.(Value) }
+func (a AverageVal) Div(other Value) Value { return a.val.(Value) }
+func (a AverageVal) Mod(other Value) Value { return a.val.(Value) }
 
 
 //interface experiment

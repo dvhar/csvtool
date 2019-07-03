@@ -37,7 +37,7 @@ func runTests(doTest bool){
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
-	thisTest := selectSet | fromSet | whereSet
+	thisTest := selectSet //| fromSet | whereSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
