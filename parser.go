@@ -54,7 +54,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	columnNamer(q, n.node1)
 	findFunctions(q, n.node1)
 	Println("select:")
-	treePrint(n.node1,0)
 
 
 	n.node2, err = parseFrom(q)
@@ -66,7 +65,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
 	Println("where:")
-	treePrint(n.node3,0)
 
 	n.node4,err =  parseGroupby(q)
 	if err != nil { return n,err }
@@ -191,7 +189,6 @@ func parseColumnItem(q* QuerySpecs) (*Node,error) {
 //node1 is exprMult
 //node2 is exprAdd
 //tok1 is add/minus operator
-//tok3 will be type
 func parseExprAdd(q* QuerySpecs) (*Node,error) {
 	var err error
 	n := &Node{label:N_EXPRADD}
@@ -210,7 +207,6 @@ func parseExprAdd(q* QuerySpecs) (*Node,error) {
 //node1 is exprNeg
 //node2 is exprMult
 //tok1 is mult/div operator
-//tok3 will be type
 func parseExprMult(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_EXPRMULT}
 	var err error
@@ -229,7 +225,6 @@ func parseExprMult(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is minus operator
-//tok3 will be type
 //node1 is exprCase
 func parseExprNeg(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_EXPRNEG}
@@ -244,7 +239,6 @@ func parseExprNeg(q* QuerySpecs) (*Node,error) {
 
 //tok1 is [case, word, expr] token - tells if case, terminal value, or (expr)
 //tok2 is [when, expr] token - tells what kind of case. predlist, or expr exprlist respectively
-//tok3 will be type
 //node2.tok3 will be initial 'when' expression type
 //node1 is (expression), when predicate list, expression for exprlist
 //node2 is expression list to compare to initial expression
@@ -355,7 +349,6 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 says if more predicates
-//tok3 of case node will be type
 //node1 is case predicate
 //node2 is next case predicate list node
 func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
@@ -370,7 +363,6 @@ func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
-//tok3 of case node will be type
 //node1 is predicates
 //node2 is expression if true
 func parseCasePredicate(q* QuerySpecs) (*Node,error) {
@@ -536,7 +528,6 @@ func parseOrder(q* QuerySpecs) error {
 		if err != nil { return err }
 		err = enforceType(q.sortExpr, q.sortType)
 		branchShortener(q,q.sortExpr)
-		treePrint(q.sortExpr,0)
 		if q.Tok().id == KW_ORDHOW { q.NextTok(); q.sortWay = 2 }
 	}
 	return err

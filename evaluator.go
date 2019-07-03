@@ -119,7 +119,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 		match := evalWhere(q)
 		if match && evalDistinct(q, distinctCheck) {
 			execSelect(q, res)
-			res.Numrows++;
+			if !q.groupby { res.Numrows++ }
 		}
 
 		//periodic updates
@@ -149,7 +149,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	rowsChecked := 0
 	var match bool
 	var err error
-	var sexp interface{}
+	var sortExpr interface{}
 	//initial scan to find line positions
 	for {
 		if stop == 1 { break }
@@ -159,8 +159,8 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		if err != nil {break}
 		match = evalWhere(q)
 		if match {
-			_,sexp = execExpression(q, q.sortExpr)
-			reader.SavePos(sexp)
+			_,sortExpr = execExpression(q, q.sortExpr)
+			reader.SavePos(sortExpr)
 		}
 	}
 

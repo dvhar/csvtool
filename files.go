@@ -38,9 +38,7 @@ func realtimeCsvSaver() {
 				}
 
 			case CH_HEADER:
-				println("got saver header")
 				if state == 1 {
-					println("processed saver header")
 					numRecieved++
 					if numTotal > 1 {
 						savePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
@@ -55,13 +53,7 @@ func realtimeCsvSaver() {
 
 			case CH_ROW:
 				if state == 2 {
-					for i,entry := range *(c.Row) {
-						//make sure each entry is formatted well according to its type
-						if entry == nil { output[i] = ""
-						} else {
-							output[i] = Sprint(entry)
-						}
-					}
+					for i,entry := range *(c.Row) { output[i] = entry.String() }
 					err = writer.Write(output)
 					savedLine <- true
 				}

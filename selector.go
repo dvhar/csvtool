@@ -7,8 +7,10 @@ import (
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 	//row is target of aggregate function
+	var newrow bool
 	if q.groupby {
-		q.toRow = execGroupBy(q,q.tree.node4)
+		newrow, q.toRow = execGroupBy(q,q.tree.node4)
+		if newrow { res.Numrows++ }
 	//normal target row
 	} else {
 		q.toRow = make([]Value, q.colSpec.NewWidth)
@@ -58,26 +60,28 @@ func evalWhere(q *QuerySpecs) bool {
 }
 
 //return target array
-func execGroupBy(q *QuerySpecs, n *Node) []Value {
-	if !q.groupby { return nil }
+func execGroupBy(q *QuerySpecs, n *Node) (bool, []Value) {
+	if !q.groupby { return false, nil }
 	//use q.toRow if grouping without groupby clause so group all to just one row
 	if n == nil {
-		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth) }
-		return q.toRow
+		var newrow bool
+		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth); newrow = true }
+		return newrow, q.toRow
 	}
 	return execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
 }
-func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) []Value {
+//return newrow bool and row array
+func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) (bool, []Value) {
 	_, key := execExpression(q,n.node1)
 	switch n.tok1.(int) {
 	case 0:
 		row,ok := m[key]
 		if ok {
-			return row.([]Value)
+			return false, row.([]Value)
 		} else {
 			row = make([]Value, q.colSpec.NewWidth)
 			m[key] = row
-			return row.([]Value)
+			return true, row.([]Value)
 		}
 	case 1:
 		nextMap,ok := m[key]
@@ -89,7 +93,7 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))
 		}
 	}
-	return nil
+	return false, nil
 }
 
 //returns type and value

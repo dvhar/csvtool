@@ -31,7 +31,6 @@ func main() {
 	println("version 0.31 - 6/22/2019")
 	flag.Parse()
 	runTests(*testing)
-	//get password and other flags
 	messager = make(chan string)
 	fileclick = make(chan string)
 	directory = make(chan Directory)
