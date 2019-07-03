@@ -318,8 +318,8 @@ type AverageVal struct {
 	count int
 }
 func (a AverageVal) Add(other Value) Value { return AverageVal{ a.val.Add(other), a.count + 1, } }
-func (a AverageVal) GoString() string { return a.val.GoString() }
-func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.GoString()) }
+func (a AverageVal) String() string { return a.val.String() }
+func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.String()) }
 //these methods aren't used, just need to fit Value interface
 func (a AverageVal) Greater(other Value) bool { return false }
 func (a AverageVal) GreatEq(other Value) bool { return false }
@@ -343,7 +343,7 @@ type Value interface {
 	Mult(other Value) Value
 	Div(other Value) Value
 	Mod(other Value) Value
-	GoString() string
+	String() string
 	MarshalJSON() ([]byte,error)
 }
 type float struct { val float64 }
@@ -423,16 +423,16 @@ func (t text) Mod(other Value) Value    { return t }
 func (n null) Mod(other Value) Value    { return n }
 func (l liker) Mod(other Value) Value   { return l }
 
-func (f float) GoString() string   { return Sprintf("%.10g",f.val) }
-func (i integer) GoString() string { return Sprintf("%d",i.val) }
-func (d date) GoString() string    { return d.val.Format("2006-01-02 15:04:05") }
-func (t text) GoString() string    { return t.val }
-func (n null) GoString() string    { return n.val }
-func (l liker) GoString() string   { return Sprint(l.val) }
+func (f float) String() string   { return Sprintf("%.10g",f.val) }
+func (i integer) String() string { return Sprintf("%d",i.val) }
+func (d date) String() string    { return d.val.Format("2006-01-02 15:04:05") }
+func (t text) String() string    { return t.val }
+func (n null) String() string    { return n.val }
+func (l liker) String() string   { return Sprint(l.val) }
 
-func (f float) MarshalJSON() ([]byte,error)   { return json.Marshal(f.GoString()) }
-func (i integer) MarshalJSON() ([]byte,error) { return json.Marshal(i.GoString())}
-func (d date) MarshalJSON() ([]byte,error)    { return json.Marshal(d.GoString()) }
-func (t text) MarshalJSON() ([]byte,error)    { return json.Marshal(t.GoString()) }
-func (n null) MarshalJSON() ([]byte,error)    { return json.Marshal(n.GoString()) }
-func (l liker) MarshalJSON() ([]byte,error)   { return json.Marshal(l.GoString())}
+func (f float) MarshalJSON() ([]byte,error)   { return json.Marshal(f.String()) }
+func (i integer) MarshalJSON() ([]byte,error) { return json.Marshal(i.String())}
+func (d date) MarshalJSON() ([]byte,error)    { return json.Marshal(d.String()) }
+func (t text) MarshalJSON() ([]byte,error)    { return json.Marshal(t.String()) }
+func (n null) MarshalJSON() ([]byte,error)    { return json.Marshal(n.String()) }
+func (l liker) MarshalJSON() ([]byte,error)   { return json.Marshal(l.String())}

@@ -52,6 +52,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	case N_VALUE:
 		if n.tok2.(int)==2 { //function
 			_, d1, _, err := typeCheck(n.node1)
+			if n.node1.tok1.(int) == FN_COUNT { d1 = T_INT }
 			return n.label,d1,nil,err
 		}
 		if n.tok2.(int)==0 { val = n.tok1 } //literal
@@ -329,9 +330,7 @@ func findFunction(n *Node) *Aggragate {
 	if a != nil { return a }
 	a = findFunction(n.node2)
 	if a != nil { return a }
-	a = findFunction(n.node3)
-	if a != nil { return a }
-	return nil
+	return findFunction(n.node3)
 }
 
 func newColItem(q* QuerySpecs, idx, typ int, name string) {

@@ -1,10 +1,8 @@
 package main
 import (
-  . "strconv"
-  d "github.com/araddon/dateparse"
-  s "strings"
-	//"regexp"
-	//"time"
+	. "strconv"
+	d "github.com/araddon/dateparse"
+	s "strings"
 )
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
@@ -42,7 +40,7 @@ func execSelections(q *QuerySpecs, n *Node) {
 		//update target with new value
 		} else {
 			switch val.(Aggragate).function {
-			case FN_AVG:   q.toRow[index] = q.toRow[index].Add(v)
+			case FN_AVG:   fallthrough
 			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v)
 			case FN_MIN:   if q.toRow[index].Greater(v) { q.toRow[index] = v }
 			case FN_MAX:   if q.toRow[index].Less(v) { q.toRow[index] = v }
@@ -105,6 +103,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		//literal
 		if n.tok2.(int) == 0 {
 			return n.tok3.(int), n.tok1
+		//column value
 		} else if n.tok2.(int) != 2 {
 			var val Value
 			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
@@ -116,7 +115,6 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 				case T_NULL:   val = nil
 				case T_STRING: val = text{cell}
 			}
-			//Printf("column %+V being retrieved as %d\n",val,n.tok3.(int))
 			return n.tok3.(int), val
 		}
 

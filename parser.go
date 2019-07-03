@@ -147,7 +147,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	//expression
 	case KW_CASE:     fallthrough
 	case WORD:        fallthrough
-	case SP_MINUS:        fallthrough
+	case SP_MINUS:    fallthrough
 	case SP_LPAREN:
 		if !hidden { countSelected++ }
 		n.node1,err = parseColumnItem(q)
