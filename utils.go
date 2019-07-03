@@ -318,8 +318,8 @@ type AverageVal struct {
 	count int
 }
 func (a AverageVal) Add(other Value) Value { return AverageVal{ a.val.Add(other), a.count + 1, } }
-func (a AverageVal) GoString() string { return a.val.(Value).GoString() }
-func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.(Value).GoString()) }
+func (a AverageVal) GoString() string { return a.val.GoString() }
+func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.GoString()) }
 //these methods aren't used, just need to fit Value interface
 func (a AverageVal) Greater(other Value) bool { return false }
 func (a AverageVal) GreatEq(other Value) bool { return false }
@@ -331,8 +331,7 @@ func (a AverageVal) Mult(other Value) Value { return a.val.(Value) }
 func (a AverageVal) Div(other Value) Value { return a.val.(Value) }
 func (a AverageVal) Mod(other Value) Value { return a.val.(Value) }
 
-
-//interface experiment
+//interface to simply operations with various datatypes
 type Value interface {
 	Greater(other Value) bool
 	GreatEq(other Value) bool
@@ -372,7 +371,7 @@ func (f float) Greater(other Value) bool   { if _,ok := other.(null); ok { retur
 func (i integer) Greater(other Value) bool { if _,ok := other.(null); ok { return true } else {return i.val > other.(integer).val } }
 func (d date) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return d.val.After(other.(date).val) } }
 func (t text) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return t.val > other.(text).val } }
-func (n null) Greater(other Value) bool    { if _,ok := other.(null); ok { return n.val != "" } else { return false } }
+func (n null) Greater(other Value) bool    { if o,ok := other.(null); ok { return n.val > o.val } else { return false } }
 func (l liker) Greater(other Value) bool   { return false }
 
 func (f float) GreatEq(other Value) bool   { return f.val >= other.(float).val }

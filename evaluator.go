@@ -32,7 +32,7 @@ type ValPos struct {
 	pos int64
 	val Value
 }
-func (l*LineReader) SavePos2(value interface{}) {
+func (l*LineReader) SavePos(value interface{}) {
 	if value == nil { value = null{""} }
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value.(Value)})
 }
@@ -88,12 +88,10 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 		ShowLimit : q.showLimit,
 	}
 
-	db.Print1("parsing complete")
 	//prepare reader and run query
 	var reader LineReader
 	reader.Init(q, "_f1")
 	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.fp.Close() }()
-	Println("sort expr is",q.sortExpr,"<---")
 	if q.sortExpr == nil {
 		err = normalQuery(q, &res, &reader)
 	} else {
@@ -160,10 +158,9 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		q.fromRow,err = reader.Read()
 		if err != nil {break}
 		match = evalWhere(q)
-		//if match { reader.SavePos(q.sortCol) }
 		if match {
 			_,sexp = execExpression(q, q.sortExpr)
-			reader.SavePos2(sexp)
+			reader.SavePos(sexp)
 		}
 	}
 
@@ -174,7 +171,6 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		} else if reader.valPositions[i].val == nil { return false
 		} else if reader.valPositions[j].val == nil { return true }
 		ret := reader.valPositions[i].val.Greater(reader.valPositions[j].val)
-		//Println(ret,reader.valPositions[i],reader.valPositions[j])
 		if q.sortWay == 2 { return !ret }
 		return ret
 	})

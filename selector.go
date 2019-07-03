@@ -1,6 +1,5 @@
 package main
 import (
-	. "fmt"
   . "strconv"
   d "github.com/araddon/dateparse"
   s "strings"
@@ -201,7 +200,8 @@ func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interfac
 		return typ,v1
 	case N_CWEXPR:
 		_,v1 := execExpression(q, n.node1)
-		if Sprint(v1) == Sprint(testVal) { return execExpression(q, n.node2) }
+		if (v1 != nil && testVal != nil && v1.(Value).Equal(testVal.(Value))) ||
+			v1 == nil && testVal == nil { return execExpression(q, n.node2) }
 	}
 	return -1,nil
 }
