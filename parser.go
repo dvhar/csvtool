@@ -53,8 +53,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
 	findFunctions(q, n.node1)
-	Println("select:")
-
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
@@ -64,7 +62,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	_,_,_,err = typeCheck(n.node3)
 	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
-	Println("where:")
 
 	n.node4,err =  parseGroupby(q)
 	if err != nil { return n,err }
@@ -524,9 +521,9 @@ func parseOrder(q* QuerySpecs) error {
 		q.NextTok()
 		q.sortExpr,err = parseExprAdd(q)
 		if err != nil { return err }
-		_,q.sortType,_,err = typeCheck(q.sortExpr)
+		_,sortType,_,err := typeCheck(q.sortExpr)
 		if err != nil { return err }
-		err = enforceType(q.sortExpr, q.sortType)
+		err = enforceType(q.sortExpr, sortType)
 		branchShortener(q,q.sortExpr)
 		if q.Tok().id == KW_ORDHOW { q.NextTok(); q.sortWay = 2 }
 	}

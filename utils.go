@@ -26,7 +26,6 @@ type QuerySpecs struct {
 	quantityRetrieved int
 	distinctExpr *Node
 	sortExpr *Node
-	sortType int
 	sortWay int
 	save bool
 	showLimit int
@@ -278,7 +277,7 @@ type FilePaths struct {
 	Status int
 }
 //struct that matches incoming json requests
-type Qrequest struct {
+type webQueryRequest struct {
 	Query string
 	Qamount int
 	FileIO int
@@ -331,7 +330,7 @@ func (a AverageVal) Mult(other Value) Value { return a.val.(Value) }
 func (a AverageVal) Div(other Value) Value { return a.val.(Value) }
 func (a AverageVal) Mod(other Value) Value { return a.val.(Value) }
 
-//interface to simply operations with various datatypes
+//interface to simplify operations with various datatypes
 type Value interface {
 	Greater(other Value) bool
 	GreatEq(other Value) bool

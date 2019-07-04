@@ -83,7 +83,7 @@ func main() {
 }
 
 //wrapper for csvQuery
-func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
+func runCsvQuery(query string, req *webQueryRequest) (SingleQueryResult,error) {
 	q := QuerySpecs{ queryString : query, }
 	if (req.FileIO & F_CSV) != 0 { q.save = true }
 	res, err := csvQuery(&q)
@@ -92,8 +92,8 @@ func runCsvQuery(query string, req *Qrequest) (SingleQueryResult,error) {
 }
 
 
-//run Qrequest with multiple queries deliniated by semicolon
-func runQueries(req *Qrequest) ([]SingleQueryResult, error) {
+//run webQueryRequest with multiple queries deliniated by semicolon
+func runQueries(req *webQueryRequest) ([]SingleQueryResult, error) {
 	query := req.Query
 	//remove uneeded characters from end of string
 	ending := regexp.MustCompile(`;\s*$`)

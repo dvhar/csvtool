@@ -98,23 +98,24 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		body, _ := ioutil.ReadAll(r.Body)
-			println(formatRequest(r))
-			println(string(body))
-		var req Qrequest
+		println(formatRequest(r))
+		println(string(body))
+		var req webQueryRequest
 		var err error
 		retData = ReturnData{}
 		json.Unmarshal(body,&req)
 		retData.Status = DAT_BLANK
 		retData.OriginalQuery = req.Query
 
-		//attempt query
-		println("requesting query")
+		println("attempting queries")
 		retData.Entries,err = runQueries(&req)
 		successMessage := "Query successful. Returning data"
 		if (req.FileIO & F_CSV) != 0 {
 			saver <- saveData{Type : CH_DONE}
 			successMessage = "Saved to "+FPaths.SavePath
 		}
+
+		println("finished queries")
 		if err != nil {
 			retData.Status |= DAT_ERROR
 			retData.Message = Sprint(err)
@@ -123,16 +124,17 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 			messager <- successMessage
 		}
 
-		full_json,_ := json.Marshal(retData)
-
-		//update json with save message
 		rowLimit(&retData)
+		println("finished row limit")
 		if (retData.Status & DAT_GOOD)!=0 && retData.Clipped && req.FileIO == 0 { messager <- "Showing only top "+Itoa(maxLimit) }
-		full_json,_ = json.Marshal(retData)
-		Fprint(w, string(full_json))
-		full_json = []byte("")
+		returnJSON,_ := json.Marshal(retData)
 		retData = ReturnData{}
+		println("marshalled json")
+		Fprint(w, string(returnJSON))
+		println("sent data to http writer")
+		returnJSON = []byte("")
 		runtime.GC()
+		println("all done")
 	}
 }
 
@@ -151,32 +153,30 @@ func rowLimit(retData *ReturnData) {
 	}
 }
 
+//currently only returns paths
 func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//request and response types
-		type Irequest struct {
+		type InfoRequest struct {
 			Info string
 		}
-		type Ireturn struct {
+		type InfoReturn struct {
 			SavePath string
 			OpenPath string
 			Status int
 		}
 		body, _ := ioutil.ReadAll(r.Body)
-		var req Irequest
-		var ret Ireturn
+		var req InfoRequest
+		var ret InfoReturn
 		json.Unmarshal(body,&req)
 
-		//currently only returns paths
 		ret.SavePath = FPaths.SavePath
 		ret.OpenPath = FPaths.OpenPath
 		ret.Status = FPaths.Status
 
-		full_json,_ := json.Marshal(ret)
-		Fprint(w, string(full_json))
+		returnJSON,_ := json.Marshal(ret)
+		Fprint(w, string(returnJSON))
 	}
 }
-
 
 //show request from browser
 func formatRequest(r *http.Request) string {

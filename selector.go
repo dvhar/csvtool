@@ -27,7 +27,7 @@ func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	index := n.tok1.(int)
 	typ,val := execExpression(q, n.node1.node1)
-	if val == nil { val = null{""} }
+	if val == nil { val = null{} }
 	if typ != T_AGGRAGATE{
 		q.toRow[index] = val.(Value)
 	} else if val.(Aggragate).val != nil {
@@ -233,7 +233,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		if val1 == nil || val2 == nil {
 			switch n.tok1.(int) {
 			case SP_NOEQ: negate ^= 1; fallthrough
-			case SP_EQ:  match = val1 == val2
+			case SP_EQ:  match = (val1 == nil && val2 == nil)
 			default: match = false
 			}
 		} else {

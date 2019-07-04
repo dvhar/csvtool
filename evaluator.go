@@ -14,8 +14,6 @@ var active bool
 
 //Random access csv reader
 type LineReader struct {
-	results []interface{}
-	types []int
 	valPositions []ValPos
 	lineBytes []byte
 	limit int
@@ -33,7 +31,7 @@ type ValPos struct {
 	val Value
 }
 func (l*LineReader) SavePos(value interface{}) {
-	if value == nil { value = null{""} }
+	if value == nil { value = null{} }
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value.(Value)})
 }
 func (l*LineReader) PrepareReRead() {
@@ -41,12 +39,10 @@ func (l*LineReader) PrepareReRead() {
 	l.byteReader = bytes.NewReader(l.lineBytes)
 }
 func (l*LineReader) Init(q *QuerySpecs, f string) {
-	l.types = q.files[f].types
 	l.fp,_ = os.Open(q.files[f].fname)
 	l.valPositions = make([]ValPos,0)
 	l.tee = io.TeeReader(l.fp, &l.lineBuffer)
 	l.csvReader = csv.NewReader(l.tee)
-	l.results = make([]interface{}, q.files[f].width)
 	if q.quantityLimit == 0 { l.limit = 1<<62 } else { l.limit = q.quantityLimit }
 	l.Read()
 }
