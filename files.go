@@ -25,46 +25,46 @@ func realtimeCsvSaver() {
 
 	for c := range saver {
 		switch c.Type {
-			case CH_SAVPREP:
-				err = pathChecker(c.Message)
-				if err == nil {
-					savePath = FPaths.SavePath
-					Println("Saving to ",savePath)
-					numTotal = c.Number
-					numRecieved = 0
-					state = 1
-				} else {
-					messager <- Sprint(err)
-				}
-
-			case CH_HEADER:
-				if state == 1 {
-					numRecieved++
-					if numTotal > 1 {
-						savePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
-					}
-					file, err = os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0660)
-					writer = csv.NewWriter(file)
-					err = writer.Write(c.Header)
-					output = make([]string, len(c.Header))
-					state = 2
-					savedLine <- true
-				}
-
-			case CH_ROW:
-				if state == 2 {
-					for i,entry := range *(c.Row) { output[i] = entry.String() }
-					err = writer.Write(output)
-					savedLine <- true
-				}
-
-			case CH_NEXT:
-				writer.Flush()
-				file.Close()
+		case CH_SAVPREP:
+			err = pathChecker(c.Message)
+			if err == nil {
+				savePath = FPaths.SavePath
+				Println("Saving to ",savePath)
+				numTotal = c.Number
+				numRecieved = 0
 				state = 1
+			} else {
+				messager <- Sprint(err)
+			}
 
-			case CH_DONE:
-				state = 0
+		case CH_HEADER:
+			if state == 1 {
+				numRecieved++
+				if numTotal > 1 {
+					savePath = extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(numRecieved)+`.csv`)
+				}
+				file, err = os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY, 0660)
+				writer = csv.NewWriter(file)
+				err = writer.Write(c.Header)
+				output = make([]string, len(c.Header))
+				state = 2
+				savedLine <- true
+			}
+
+		case CH_ROW:
+			if state == 2 {
+				for i,entry := range *(c.Row) { output[i] = entry.String() }
+				err = writer.Write(output)
+				savedLine <- true
+			}
+
+		case CH_NEXT:
+			writer.Flush()
+			file.Close()
+			state = 1
+
+		case CH_DONE:
+			state = 0
 		}
 		if err != nil { messager <- Sprint(err) }
 	}

@@ -31,21 +31,9 @@ func typeCompute(v1, v2 interface{}, d1, d2 int) int {
 
 //type checker
 //only return val if expression is a literal
-var it int
 var caseWhenExprType int
 func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,nil,nil }
-
-	//printer for debugging
-	if db.verbose3 {
-		it++
-		for j:=0;j<it;j++ { Print("  ") }
-		Println(treeMap[n.label])
-		for j:=0;j<it;j++ { Print("  ") }
-		Println("toks:","'"+Sprint(n.tok1)+"'","'"+Sprint(n.tok2)+"'","'"+Sprint(n.tok3)+"'")
-		defer func(){ it-- }()
-	}
-
 	var val interface{}
 	switch n.label {
 
