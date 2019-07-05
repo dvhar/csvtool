@@ -132,6 +132,7 @@ func runTests(doTest bool){
 		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1,"aggregate with one group",true,selectSet},
 		Test{`select count(c1) c5 from`+f1+`group by c5`,"aggregate with multiple groups",true,selectSet},
 		Test{`select top 5 count(c1) c5 * from`+f1+`group by c5`,"limited aggregate with multiple groups",true,selectSet},
+		Test{`select c5 c9 max(c3) as max min(c3) as min avg=avg(c3) caout = count(*) from`+f1+`group by c5 c6`,"nested groups",true,selectSet},
 	}
 
 	for _,t := range tests {

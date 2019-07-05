@@ -1,7 +1,6 @@
 package main
 import (
 	. "strconv"
-	//. "fmt"
 	d "github.com/araddon/dateparse"
 	s "strings"
 )
@@ -76,7 +75,6 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 	_, key := execExpression(q,n.node1)
 	switch n.tok1.(int) {
 	case 0:
-		//Println("terminal group with values:", key, m[key])
 		row,ok := m[key]
 		if ok {
 			return false, row.([]Value)
@@ -86,7 +84,6 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 			return true, row.([]Value)
 		}
 	case 1:
-		//Println("middle group with values:", key, m[key])
 		nextMap,ok := m[key]
 		if ok {
 			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))
@@ -100,12 +97,12 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 }
 
 //returns type and value
-//need to handle null values
 func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	switch n.label {
 	case N_FUNCTION:
 		t1,v1 := execExpression(q, n.node1)
 		return T_AGGRAGATE, Aggragate{v1,t1,n.tok1.(int)}
+
 	case N_VALUE:
 		//literal
 		if n.tok2.(int) == 0 {
@@ -252,6 +249,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			case SP_LESS:    match = expr1.Less(expr2)
 			case KW_BETWEEN:
 				_,val3 := execExpression(q, n.node3)
+				if val3 == nil { match = false; break }
 				expr3 := val3.(Value)
 				if expr1.GreatEq(expr2) {
 					match = expr1.Less(expr3)

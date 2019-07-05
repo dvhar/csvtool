@@ -61,7 +61,7 @@ func main() {
 	done := make(chan bool)
 	go httpserver(serverUrl, done)
 
-	//exit program if it goes 5 seconds without being viewed in a browser
+	//exit program if it goes 10 seconds without being viewed in a browser
 	go func(){
 		ticker := time.NewTicker(time.Second)
 		counter := 0
