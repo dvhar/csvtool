@@ -1,6 +1,7 @@
 package main
 import (
 	. "strconv"
+	//. "fmt"
 	d "github.com/araddon/dateparse"
 	s "strings"
 )
@@ -75,6 +76,7 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 	_, key := execExpression(q,n.node1)
 	switch n.tok1.(int) {
 	case 0:
+		//Println("terminal group with values:", key, m[key])
 		row,ok := m[key]
 		if ok {
 			return false, row.([]Value)
@@ -84,6 +86,7 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 			return true, row.([]Value)
 		}
 	case 1:
+		//Println("middle group with values:", key, m[key])
 		nextMap,ok := m[key]
 		if ok {
 			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))

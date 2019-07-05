@@ -312,23 +312,6 @@ type Aggragate struct {
 	typ int
 	function int
 }
-type AverageVal struct {
-	val Value
-	count int
-}
-func (a AverageVal) Add(other Value) Value { return AverageVal{ a.val.Add(other), a.count + 1, } }
-func (a AverageVal) String() string { return a.val.String() }
-func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.String()) }
-//these methods aren't used, just need to fit Value interface
-func (a AverageVal) Greater(other Value) bool { return false }
-func (a AverageVal) GreatEq(other Value) bool { return false }
-func (a AverageVal) Less(other Value) bool { return false }
-func (a AverageVal) LessEq(other Value) bool { return false }
-func (a AverageVal) Equal(other Value) bool { return false }
-func (a AverageVal) Sub(other Value) Value { return a.val.(Value) }
-func (a AverageVal) Mult(other Value) Value { return a.val.(Value) }
-func (a AverageVal) Div(other Value) Value { return a.val.(Value) }
-func (a AverageVal) Mod(other Value) Value { return a.val.(Value) }
 
 //interface to simplify operations with various datatypes
 type Value interface {
@@ -345,12 +328,30 @@ type Value interface {
 	String() string
 	MarshalJSON() ([]byte,error)
 }
-type float struct { val float64 }
+
+type AverageVal struct {
+	val Value
+	count int
+}
+func (a AverageVal) Add(other Value) Value { return AverageVal{ a.val.Add(other), a.count + 1, } }
+func (a AverageVal) String() string { return a.val.String() }
+func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.String()) }
+func (a AverageVal) Greater(other Value) bool { return false }
+func (a AverageVal) GreatEq(other Value) bool { return false }
+func (a AverageVal) Less(other Value) bool { return false }
+func (a AverageVal) LessEq(other Value) bool { return false }
+func (a AverageVal) Equal(other Value) bool { return false }
+func (a AverageVal) Sub(other Value) Value { return a.val }
+func (a AverageVal) Mult(other Value) Value { return a.val }
+func (a AverageVal) Div(other Value) Value { return a.val }
+func (a AverageVal) Mod(other Value) Value { return a.val }
+
+type float struct   { val float64 }
 type integer struct { val int }
-type date struct { val time.Time }
-type text struct { val string }
-type null struct { val string }
-type liker struct { val *regexp.Regexp }
+type date struct    { val time.Time }
+type text struct    { val string }
+type null struct    { val string }
+type liker struct   { val *regexp.Regexp }
 
 func (f float) Less(other Value) bool      { return f.val < other.(float).val }
 func (i integer) Less(other Value) bool    { return i.val < other.(integer).val }

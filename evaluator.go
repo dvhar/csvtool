@@ -205,7 +205,7 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 			if q.quantityRetrieved > q.showLimit && !q.save { return }
 			if q.quantityRetrieved > q.showLimit && q.save { r.Vals = r.Vals[0:len(r.Vals)-1] }
 		}
-	case 1: for _,v := range m { groupRetriever(q, n.node1, v.(map[interface{}]interface{}), r) }
+	case 1: for _,v := range m { groupRetriever(q, n.node2, v.(map[interface{}]interface{}), r) }
 	}
 }
 func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
