@@ -114,10 +114,11 @@ export const bit = {
 	T_INT           : 1,
 	T_FLOAT         : 2,
 	T_DATE          : 3,
-	T_STRING        : 4,
-	T_UNKNOWN       : 5,
+	T_DURATION      : 4,
+	T_STRING        : 5,
+	T_UNKNOWN       : 6,
 
 
 };
 
-export const t = ['Null', 'Int', 'Float', 'Date', 'Text', 'Unknown', ];
+export const t = ['Null', 'Int', 'Float', 'Date', 'Duration', 'Text', 'Unknown', ];

@@ -109,9 +109,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
 			switch n.tok3.(int) {
-				case T_INT:	   a,_ := Atoi(cell);          val = integer(a)
-				case T_FLOAT:  a,_ := ParseFloat(cell,64); val = float(a)
-				case T_DATE:   a,_ := d.ParseAny(cell);    val = date{a}
+				case T_INT:	     a,_ := Atoi(cell);            val = integer(a)
+				case T_FLOAT:    a,_ := ParseFloat(cell,64);   val = float(a)
+				case T_DATE:     a,_ := d.ParseAny(cell);      val = date{a}
+				case T_DURATION: a,_ := parseDuration(cell); val = duration{a}
 				case T_NULL:   val = nil
 				case T_STRING: val = text(cell)
 			}
@@ -122,6 +123,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		t1,v1 := execExpression(q, n.node1)
 		if _,ok := n.tok1.(int); ok && v1 != nil {
 			switch t1 {
+			case T_DURATION: fallthrough
 			case T_INT:   v1 = v1.(Value).Mult(integer(-1))
 			case T_FLOAT: v1 = v1.(Value).Mult(float(-1))
 			}

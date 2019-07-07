@@ -445,27 +445,17 @@ func (l liker) Equal(other Value) bool     { return l.val.MatchString(Sprint(oth
 
 func (d duration) Add(other Value) Value {
 	switch o := other.(type) {
-		case date:
-			return date{o.val.Add(d.val)}
-		case duration:
-			return duration{d.val + o.val}
+		case date:     return date{o.val.Add(d.val)}
+		case duration: return duration{d.val + o.val}
 	}
 	return d
 }
 func (d duration) Sub(other Value) Value {
 	switch o := other.(type) {
-		case date:
-			return date{o.val.Add(- d.val)}
-		case duration:
-			return duration{d.val - o.val}
+		case date:     return date{o.val.Add(- d.val)}
+		case duration: return duration{d.val - o.val}
 	}
 	return d
-}
-func (d duration) Mult(other Value) Value {
-	return duration{d.val * time.Duration(other.(integer))}
-}
-func (d duration) Div(other Value) Value {
-	return duration{d.val / time.Duration(other.(integer))}
 }
 
 func (f float) Add(other Value) Value   { return float(f + other.(float)) }
@@ -479,10 +469,8 @@ func (f float) Sub(other Value) Value   { return float(f - other.(float)) }
 func (i integer) Sub(other Value) Value { return integer(i - other.(integer)) }
 func (d date) Sub(other Value) Value    {
 	switch o := other.(type) {
-		case date:
-			return duration{d.val.Sub(o.val)}
-		case duration:
-			return date{d.val.Add(-o.val)}
+		case date:     return duration{d.val.Sub(o.val)}
+		case duration: return date{d.val.Add(-o.val)}
 	}
 	return d
 }
@@ -492,7 +480,7 @@ func (l liker) Sub(other Value) Value   { return l }
 
 func (f float) Mult(other Value) Value  {
 	switch o := other.(type) {
-		case float:  return float(f * o)
+		case float:    return float(f * o)
 		case duration: return duration{time.Duration(f) * o.val}
 	}
 	return f
@@ -504,38 +492,40 @@ func (i integer) Mult(other Value) Value{
 	}
 	return i
 }
-func (d date) Mult(other Value) Value   { return d }
-func (t text) Mult(other Value) Value   { return t }
-func (n null) Mult(other Value) Value   { return n }
-func (l liker) Mult(other Value) Value  { return l }
+func (d date) Mult(other Value) Value     { return d }
+func (d duration) Mult(other Value) Value { return duration{d.val * time.Duration(other.(integer))} }
+func (t text) Mult(other Value) Value     { return t }
+func (n null) Mult(other Value) Value     { return n }
+func (l liker) Mult(other Value) Value    { return l }
 
-func (f float) Div(other Value) Value   { return float(f / other.(float)) }
-func (i integer) Div(other Value) Value { return integer(i / other.(integer)) }
-func (d date) Div(other Value) Value    { return d }
-func (t text) Div(other Value) Value    { return t }
-func (n null) Div(other Value) Value    { return n }
-func (l liker) Div(other Value) Value   { return l }
+func (f float) Div(other Value) Value    { return float(f / other.(float)) }
+func (i integer) Div(other Value) Value  { return integer(i / other.(integer)) }
+func (d date) Div(other Value) Value     { return d }
+func (d duration) Div(other Value) Value { return duration{d.val / time.Duration(other.(integer))} }
+func (t text) Div(other Value) Value     { return t }
+func (n null) Div(other Value) Value     { return n }
+func (l liker) Div(other Value) Value    { return l }
 
-func (f float) Mod(other Value) Value   { return f }
-func (i integer) Mod(other Value) Value { return integer(i % other.(integer)) }
-func (d date) Mod(other Value) Value    { return d }
-func (d duration) Mod(other Value) Value{ return d }
-func (t text) Mod(other Value) Value    { return t }
-func (n null) Mod(other Value) Value    { return n }
-func (l liker) Mod(other Value) Value   { return l }
+func (f float) Mod(other Value) Value    { return f }
+func (i integer) Mod(other Value) Value  { return integer(i % other.(integer)) }
+func (d date) Mod(other Value) Value     { return d }
+func (d duration) Mod(other Value) Value { return d }
+func (t text) Mod(other Value) Value     { return t }
+func (n null) Mod(other Value) Value     { return n }
+func (l liker) Mod(other Value) Value    { return l }
 
-func (f float) String() string   { return Sprintf("%.10g",f) }
-func (i integer) String() string { return Sprintf("%d",i) }
-func (d date) String() string    { return d.val.Format("2006-01-02 15:04:05") }
-func (d duration) String() string{ return d.val.String() }
-func (t text) String() string    { return string(t) }
-func (n null) String() string    { return string(n) }
-func (l liker) String() string   { return Sprint(l) }
+func (f float) String() string    { return Sprintf("%.10g",f) }
+func (i integer) String() string  { return Sprintf("%d",i) }
+func (d date) String() string     { return d.val.Format("2006-01-02 15:04:05") }
+func (d duration) String() string { return d.val.String() }
+func (t text) String() string     { return string(t) }
+func (n null) String() string     { return string(n) }
+func (l liker) String() string    { return Sprint(l) }
 
-func (f float) MarshalJSON() ([]byte,error)   { return json.Marshal(f.String()) }
-func (i integer) MarshalJSON() ([]byte,error) { return json.Marshal(i.String())}
-func (d date) MarshalJSON() ([]byte,error)    { return json.Marshal(d.String()) }
-func (d duration) MarshalJSON() ([]byte,error){ return json.Marshal(d.String()) }
-func (t text) MarshalJSON() ([]byte,error)    { return json.Marshal(t.String()) }
-func (n null) MarshalJSON() ([]byte,error)    { return json.Marshal(n.String()) }
-func (l liker) MarshalJSON() ([]byte,error)   { return json.Marshal(l.String())}
+func (f float) MarshalJSON() ([]byte,error)    { return json.Marshal(f.String()) }
+func (i integer) MarshalJSON() ([]byte,error)  { return json.Marshal(i.String())}
+func (d date) MarshalJSON() ([]byte,error)     { return json.Marshal(d.String()) }
+func (d duration) MarshalJSON() ([]byte,error) { return json.Marshal(d.String()) }
+func (t text) MarshalJSON() ([]byte,error)     { return json.Marshal(t.String()) }
+func (n null) MarshalJSON() ([]byte,error)     { return json.Marshal(n.String()) }
+func (l liker) MarshalJSON() ([]byte,error)    { return json.Marshal(l.String())}

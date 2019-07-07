@@ -138,10 +138,6 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(v1,v2,d1,d2)
 
-			//duration has the most complex type interaction
-			if isOneOfType(d1,d2,T_DATE,T_DURATION){
-			}
-
 			//check addition semantics
 			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) {
 				return 0,0,nil, errors.New("Cannot add or subtract types "+typeMap[d1]+" and "+typeMap[d2]) }
@@ -219,6 +215,10 @@ func enforceType(n *Node, t int) error {
 				val,err = d.ParseAny(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
 				val = date{val.(time.Time)}
+			case T_DURATION:
+				val,err = parseDuration(n.tok1.(string))
+				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as time duration") }
+				val = duration{val.(time.Duration)}
 			case T_NULL:   val = null(n.tok1.(string))
 			case T_STRING: val = text(n.tok1.(string))
 			}
