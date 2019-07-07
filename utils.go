@@ -50,26 +50,26 @@ func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
 const (
 	//parse tree node types
 	N_QUERY = iota
-	N_SELECT = iota
-	N_SELECTIONS = iota
-	N_FROM = iota
-	N_WHERE = iota
-	N_ORDER = iota
-	N_COLITEM = iota
-	N_EXPRADD = iota
-	N_EXPRMULT = iota
-	N_EXPRNEG = iota
-	N_EXPRCASE = iota
-	N_CPREDLIST = iota
-	N_CPRED = iota
-	N_CWEXPRLIST = iota
-	N_CWEXPR = iota
-	N_PREDICATES = iota
-	N_PREDCOMP = iota
-	N_VALUE = iota
-	N_FUNCTION = iota
-	N_GROUPBY = iota
-	N_EXPRESSIONS = iota
+	N_SELECT
+	N_SELECTIONS
+	N_FROM
+	N_WHERE
+	N_ORDER
+	N_COLITEM
+	N_EXPRADD
+	N_EXPRMULT
+	N_EXPRNEG
+	N_EXPRCASE
+	N_CPREDLIST
+	N_CPRED
+	N_CWEXPRLIST
+	N_CWEXPR
+	N_PREDICATES
+	N_PREDCOMP
+	N_VALUE
+	N_FUNCTION
+	N_GROUPBY
+	N_EXPRESSIONS
 )
 //tree node labels for debugging
 var treeMap = map[int]string {
@@ -127,11 +127,12 @@ type Columns struct {
 }
 const (
 	T_NULL = iota
-	T_INT = iota
-	T_FLOAT = iota
-	T_DATE = iota
-	T_STRING = iota
-	T_AGGRAGATE = iota
+	T_INT
+	T_FLOAT
+	T_DATE
+	T_STRING
+	T_DURATION
+	T_AGGRAGATE
 )
 func max(a int, b int) int {
 	if a>b { return a }
@@ -159,6 +160,8 @@ func getNarrowestType(value string, startType int) int {
 	  startType = max(T_FLOAT, startType)
 	} else if _,err := d.ParseAny(entry); err == nil{
 	  startType = max(T_DATE, startType)
+	} else if _,err := parseDuration(entry); err == nil {
+	  startType = T_DURATION
 	} else {
 	  startType = T_STRING
 	}
@@ -167,6 +170,8 @@ func getNarrowestType(value string, startType int) int {
 //infer types of all infile columns
 func inferTypes(q *QuerySpecs, f string) error {
 	LeadingZeroString = regexp.MustCompile(`^0\d+$`)
+	//may want to get rid of single letter option for time duration
+	durationPattern = regexp.MustCompile(`^\d+\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|months|month|years|year|s|m|h|d|w|mo|y)$`)
 	//open file
 	fp,err := os.Open(q.files[f].fname)
 	if err != nil { return errors.New("problem opening input file") }
@@ -190,6 +195,49 @@ func inferTypes(q *QuerySpecs, f string) error {
 	}
 	return  err
 }
+var durationPattern *regexp.Regexp
+func parseDuration(str string) (time.Duration, error) {
+	dur, err := time.ParseDuration(str)
+	if err == nil { return dur, err }
+	if !durationPattern.MatchString(str) { return 0, errors.New("Error: Could not parse '"+str+"' as a time duration") }
+	times := s.Split(str," ")
+	quantity,_ := Atoi(times[0])
+	unit := times[1]
+	switch unit {
+		case "y":    fallthrough
+		case "year": fallthrough
+		case "years":
+			quantity *= 52
+			fallthrough
+		case "w":    fallthrough
+		case "week": fallthrough
+		case "weeks":
+			quantity *= 7
+			fallthrough
+		case "d":   fallthrough
+		case "day": fallthrough
+		case "days":
+			quantity *= 24
+			fallthrough
+		case "h":    fallthrough
+		case "hour": fallthrough
+		case "hours":
+			quantity *= 60
+			fallthrough
+		case "m":      fallthrough
+		case "minute": fallthrough
+		case "minutes":
+			quantity *= 60
+			fallthrough
+		case "s":      fallthrough
+		case "second": fallthrough
+		case "seconds":
+			quantity *= 60
+			return time.Second * time.Duration(quantity), nil
+	}
+	return 0, errors.New("Error: Unable to calculate months")
+}
+
 //find files and open them
 func openFiles(q *QuerySpecs) error {
 	extension := regexp.MustCompile(`\.csv$`)
@@ -218,10 +266,10 @@ func openFiles(q *QuerySpecs) error {
 //channel data
 const (
 	CH_HEADER = iota
-	CH_ROW = iota
-	CH_DONE = iota
-	CH_NEXT = iota
-	CH_SAVPREP = iota
+	CH_ROW
+	CH_DONE
+	CH_NEXT
+	CH_SAVPREP
 )
 type saveData struct {
 	Message string
@@ -287,11 +335,11 @@ type webQueryRequest struct {
 //websockets
 const (
 	SK_MSG = iota
-	SK_PING = iota
-	SK_PONG = iota
-	SK_STOP = iota
-	SK_DIRLIST = iota
-	SK_FILECLICK = iota
+	SK_PING
+	SK_PONG
+	SK_STOP
+	SK_DIRLIST
+	SK_FILECLICK
 )
 type Client struct {
 	conn *websocket.Conn
@@ -341,10 +389,10 @@ func (a AverageVal) GreatEq(other Value) bool { return false }
 func (a AverageVal) Less(other Value) bool { return false }
 func (a AverageVal) LessEq(other Value) bool { return false }
 func (a AverageVal) Equal(other Value) bool { return false }
-func (a AverageVal) Sub(other Value) Value { return a.val }
-func (a AverageVal) Mult(other Value) Value { return a.val }
-func (a AverageVal) Div(other Value) Value { return a.val }
-func (a AverageVal) Mod(other Value) Value { return a.val }
+func (a AverageVal) Sub(other Value) Value { return a }
+func (a AverageVal) Mult(other Value) Value { return a }
+func (a AverageVal) Div(other Value) Value { return a }
+func (a AverageVal) Mod(other Value) Value { return a }
 
 type float float64
 type integer int
