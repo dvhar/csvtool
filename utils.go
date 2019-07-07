@@ -130,8 +130,8 @@ const (
 	T_INT
 	T_FLOAT
 	T_DATE
-	T_STRING
 	T_DURATION
+	T_STRING
 	T_AGGRAGATE
 )
 func max(a int, b int) int {
@@ -161,7 +161,7 @@ func getNarrowestType(value string, startType int) int {
 	} else if _,err := d.ParseAny(entry); err == nil{
 	  startType = max(T_DATE, startType)
 	} else if _,err := parseDuration(entry); err == nil {
-	  startType = T_DURATION
+	  startType = max(T_DURATION, startType)
 	} else {
 	  startType = T_STRING
 	}

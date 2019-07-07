@@ -9,7 +9,7 @@ import (
 
 //what type results from operation with 2 expressions with various data types and column/literal source
 //null[c,l], int[c,l], float[c,l], date[c,l], string[c,l] in both dimensions
-var typeChart = [10][10]int {
+var typeChartOld = [10][10]int {
 	{4,4,4,4,4,4,4,4,4,4},
 	{4,4,1,1,2,2,3,3,4,4},
 	{4,1,1,1,2,2,3,1,4,1},
@@ -20,6 +20,27 @@ var typeChart = [10][10]int {
 	{4,3,1,1,2,2,3,3,4,4},
 	{4,4,4,4,4,4,3,4,4,4},
 	{4,4,1,4,2,4,3,4,4,4},
+}
+//null[c,l], int[c,l], float[c,l], date[c,l], duration[c,l], string[c,l] in both dimensions
+//may want to double check time duration interactions
+var typeChart = [12][12]int {
+	{5,5, 5,5, 5,5, 5,5, 5,5, 5,5},
+	{5,5, 1,1, 2,2, 3,3, 4,4, 5,5},
+
+	{5,1, 1,1, 2,2, 3,1, 4,4, 5,1},
+	{5,1, 1,1, 2,2, 3,1, 4,4, 5,5},
+
+	{5,2, 2,2, 2,2, 3,2, 4,2, 5,2},
+	{5,2, 2,2, 2,2, 3,2, 4,4, 5,5},
+
+	{5,3, 3,3, 3,3, 4,4, 3,3, 3,3},
+	{5,3, 1,1, 2,2, 4,4, 3,3, 5,5},
+
+	{5,4, 4,4, 4,4, 3,3, 4,4, 5,4},
+	{5,4, 4,4, 2,4, 3,3, 4,4, 5,5},
+
+	{5,5, 5,5, 5,5, 3,5, 5,5, 5,5},
+	{5,5, 1,5, 2,5, 3,5, 4,5, 5,5},
 }
 func typeCompute(v1, v2 interface{}, d1, d2 int) int {
 	i1 := 2*d1
