@@ -192,17 +192,17 @@ func enforceType(n *Node, t int) error {
 			case T_INT:
 				val,err = Atoi(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as integer") }
-				val = integer{val.(int)}
+				val = integer(val.(int))
 			case T_FLOAT:
 				val,err = ParseFloat(n.tok1.(string),64)
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as floating point number") }
-				val = float{val.(float64)}
+				val = float(val.(float64))
 			case T_DATE:
 				val,err = d.ParseAny(n.tok1.(string))
 				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
 				val = date{val.(time.Time)}
-			case T_NULL:   val = null{n.tok1.(string)}
-			case T_STRING: val = text{n.tok1.(string)}
+			case T_NULL:   val = null(n.tok1.(string))
+			case T_STRING: val = text(n.tok1.(string))
 			}
 			n.tok1 = val
 		}

@@ -19,7 +19,7 @@ func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	index := n.tok1.(int)
 	typ,val := execExpression(q, n.node1.node1)
-	if val == nil { val = null{} }
+	if val == nil { val = null("") }
 	if typ != T_AGGRAGATE{
 		q.toRow[index] = val.(Value)
 	} else if val.(Aggragate).val != nil {
@@ -27,7 +27,7 @@ func execSelections(q *QuerySpecs, n *Node) {
 		//first entry to aggragate target
 		if q.toRow[index] == nil {
 			switch val.(Aggragate).function {
-			case FN_COUNT: q.toRow[index] = integer{1}
+			case FN_COUNT: q.toRow[index] = integer(1)
 			case FN_AVG:   q.toRow[index] = AverageVal{v, 1}
 			default: q.toRow[index] = v
 			}
@@ -38,7 +38,7 @@ func execSelections(q *QuerySpecs, n *Node) {
 			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v)
 			case FN_MIN:   if q.toRow[index].Greater(v) { q.toRow[index] = v }
 			case FN_MAX:   if q.toRow[index].Less(v) { q.toRow[index] = v }
-			case FN_COUNT: q.toRow[index] = q.toRow[index].Add(integer{1})
+			case FN_COUNT: q.toRow[index] = q.toRow[index].Add(integer(1))
 			}
 		}
 	}
@@ -109,11 +109,11 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
 			switch n.tok3.(int) {
-				case T_INT:	   a,_ := Atoi(cell);          val = integer{a}
-				case T_FLOAT:  a,_ := ParseFloat(cell,64); val = float{a}
+				case T_INT:	   a,_ := Atoi(cell);          val = integer(a)
+				case T_FLOAT:  a,_ := ParseFloat(cell,64); val = float(a)
 				case T_DATE:   a,_ := d.ParseAny(cell);    val = date{a}
 				case T_NULL:   val = nil
-				case T_STRING: val = text{cell}
+				case T_STRING: val = text(cell)
 			}
 			return n.tok3.(int), val
 		}
@@ -122,8 +122,8 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		t1,v1 := execExpression(q, n.node1)
 		if _,ok := n.tok1.(int); ok && v1 != nil {
 			switch t1 {
-			case T_INT:   v1 = v1.(Value).Mult(integer{-1})
-			case T_FLOAT: v1 = v1.(Value).Mult(float{-1})
+			case T_INT:   v1 = v1.(Value).Mult(integer(-1))
+			case T_FLOAT: v1 = v1.(Value).Mult(float(-1))
 			}
 		}
 		return t1,v1

@@ -31,7 +31,7 @@ type ValPos struct {
 	val Value
 }
 func (l*LineReader) SavePos(value interface{}) {
-	if value == nil { value = null{} }
+	if value == nil { value = null("") }
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value.(Value)})
 }
 func (l*LineReader) PrepareReRead() {
@@ -192,8 +192,8 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 			for i,v := range r.Vals[q.quantityRetrieved] {
 				if agg,ok := v.(AverageVal); ok && q.colSpec.functions[i].function == FN_AVG {
 					switch q.colSpec.functions[i].typ {
-					case T_INT:   r.Vals[q.quantityRetrieved][i] = agg.val.Div(integer{agg.count})
-					case T_FLOAT: r.Vals[q.quantityRetrieved][i] = agg.val.Div(float{float64(agg.count)})
+					case T_INT:   r.Vals[q.quantityRetrieved][i] = agg.val.Div(integer(agg.count))
+					case T_FLOAT: r.Vals[q.quantityRetrieved][i] = agg.val.Div(float(float64(agg.count)))
 					}
 				}
 			}
