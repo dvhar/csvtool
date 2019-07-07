@@ -100,6 +100,7 @@ var typeMap = map[int]string {
 	T_INT:       "integer",
 	T_FLOAT:     "float",
 	T_DATE:      "date",
+	T_DURATION:  "duration",
 	T_STRING:    "string",
 }
 type FileData struct {
@@ -397,6 +398,7 @@ func (a AverageVal) Mod(other Value) Value { return a }
 type float float64
 type integer int
 type date struct {val time.Time}
+type duration struct {val time.Duration}
 type text string
 type null string
 type liker struct {val *regexp.Regexp}
@@ -404,6 +406,7 @@ type liker struct {val *regexp.Regexp}
 func (f float) Less(other Value) bool      { return f < other.(float) }
 func (i integer) Less(other Value) bool    { return i < other.(integer) }
 func (d date) Less(other Value) bool       { return d.val.Before(other.(date).val) }
+func (d duration) Less(other Value) bool   { return d.val < other.(duration).val }
 func (t text) Less(other Value) bool       { return t < other.(text) }
 func (n null) Less(other Value) bool       { return n < other.(null) }
 func (l liker) Less(other Value) bool      { return false }
@@ -411,6 +414,7 @@ func (l liker) Less(other Value) bool      { return false }
 func (f float) LessEq(other Value) bool    { return f <= other.(float) }
 func (i integer) LessEq(other Value) bool  { return i <= other.(integer) }
 func (d date) LessEq(other Value) bool     { return !d.val.After(other.(date).val) }
+func (d duration) LessEq(other Value) bool { return d.val <= other.(duration).val }
 func (t text) LessEq(other Value) bool     { return t <= other.(text) }
 func (n null) LessEq(other Value) bool     { return n <= other.(null) }
 func (l liker) LessEq(other Value) bool    { return false }
@@ -418,6 +422,7 @@ func (l liker) LessEq(other Value) bool    { return false }
 func (f float) Greater(other Value) bool   { if _,ok := other.(null); ok { return true } else {return f > other.(float) } }
 func (i integer) Greater(other Value) bool { if _,ok := other.(null); ok { return true } else {return i > other.(integer) } }
 func (d date) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return d.val.After(other.(date).val) } }
+func (d duration) Greater(other Value) bool{ return d.val > other.(duration).val }
 func (t text) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return t > other.(text) } }
 func (n null) Greater(other Value) bool    { if o,ok := other.(null); ok { return n > o } else { return false } }
 func (l liker) Greater(other Value) bool   { return false }
@@ -425,6 +430,7 @@ func (l liker) Greater(other Value) bool   { return false }
 func (f float) GreatEq(other Value) bool   { return f >= other.(float) }
 func (i integer) GreatEq(other Value) bool { return i >= other.(integer) }
 func (d date) GreatEq(other Value) bool    { return !d.val.Before(other.(date).val) }
+func (d duration) GreatEq(other Value) bool{ return d.val > other.(duration).val }
 func (t text) GreatEq(other Value) bool    { return t >= other.(text) }
 func (n null) GreatEq(other Value) bool    { return n >= other.(null) }
 func (l liker) GreatEq(other Value) bool   { return false }
@@ -432,26 +438,72 @@ func (l liker) GreatEq(other Value) bool   { return false }
 func (f float) Equal(other Value) bool     { return f == other.(float) }
 func (i integer) Equal(other Value) bool   { return i == other.(integer) }
 func (d date) Equal(other Value) bool      { return d.val.Equal(other.(date).val) }
+func (d duration) Equal(other Value) bool  { return d.val == other.(duration).val }
 func (t text) Equal(other Value) bool      { return t == other.(text) }
 func (n null) Equal(other Value) bool      { return n == other.(null) }
 func (l liker) Equal(other Value) bool     { return l.val.MatchString(Sprint(other)) }
 
+func (d duration) Add(other Value) Value {
+	switch o := other.(type) {
+		case date:
+			return date{o.val.Add(d.val)}
+		case duration:
+			return duration{d.val + o.val}
+	}
+	return d
+}
+func (d duration) Sub(other Value) Value {
+	switch o := other.(type) {
+		case date:
+			return date{o.val.Add(- d.val)}
+		case duration:
+			return duration{d.val - o.val}
+	}
+	return d
+}
+func (d duration) Mult(other Value) Value {
+	return duration{d.val * time.Duration(other.(integer))}
+}
+func (d duration) Div(other Value) Value {
+	return duration{d.val / time.Duration(other.(integer))}
+}
+
 func (f float) Add(other Value) Value   { return float(f + other.(float)) }
 func (i integer) Add(other Value) Value { return integer(i + other.(integer)) }
-func (d date) Add(other Value) Value    { return d }
+func (d date) Add(other Value) Value    { return date{d.val.Add(other.(duration).val)} }
 func (t text) Add(other Value) Value    { return text(t + other.(text)) }
 func (n null) Add(other Value) Value    { return null(n + other.(null)) }
 func (l liker) Add(other Value) Value   { return l }
 
 func (f float) Sub(other Value) Value   { return float(f - other.(float)) }
 func (i integer) Sub(other Value) Value { return integer(i - other.(integer)) }
-func (d date) Sub(other Value) Value    { return d }
+func (d date) Sub(other Value) Value    {
+	switch o := other.(type) {
+		case date:
+			return duration{d.val.Sub(o.val)}
+		case duration:
+			return date{d.val.Add(-o.val)}
+	}
+	return d
+}
 func (t text) Sub(other Value) Value    { return t }
 func (n null) Sub(other Value) Value    { return n }
 func (l liker) Sub(other Value) Value   { return l }
 
-func (f float) Mult(other Value) Value  { return float(f * other.(float)) }
-func (i integer) Mult(other Value) Value{ return integer(i * other.(integer)) }
+func (f float) Mult(other Value) Value  {
+	switch o := other.(type) {
+		case float:  return float(f * o)
+		case duration: return duration{time.Duration(f) * o.val}
+	}
+	return f
+}
+func (i integer) Mult(other Value) Value{
+	switch o := other.(type) {
+		case integer:  return integer(i * o)
+		case duration: return duration{time.Duration(i) * o.val}
+	}
+	return i
+}
 func (d date) Mult(other Value) Value   { return d }
 func (t text) Mult(other Value) Value   { return t }
 func (n null) Mult(other Value) Value   { return n }
@@ -467,6 +519,7 @@ func (l liker) Div(other Value) Value   { return l }
 func (f float) Mod(other Value) Value   { return f }
 func (i integer) Mod(other Value) Value { return integer(i % other.(integer)) }
 func (d date) Mod(other Value) Value    { return d }
+func (d duration) Mod(other Value) Value{ return d }
 func (t text) Mod(other Value) Value    { return t }
 func (n null) Mod(other Value) Value    { return n }
 func (l liker) Mod(other Value) Value   { return l }
@@ -474,6 +527,7 @@ func (l liker) Mod(other Value) Value   { return l }
 func (f float) String() string   { return Sprintf("%.10g",f) }
 func (i integer) String() string { return Sprintf("%d",i) }
 func (d date) String() string    { return d.val.Format("2006-01-02 15:04:05") }
+func (d duration) String() string{ return d.val.String() }
 func (t text) String() string    { return string(t) }
 func (n null) String() string    { return string(n) }
 func (l liker) String() string   { return Sprint(l) }
@@ -481,6 +535,7 @@ func (l liker) String() string   { return Sprint(l) }
 func (f float) MarshalJSON() ([]byte,error)   { return json.Marshal(f.String()) }
 func (i integer) MarshalJSON() ([]byte,error) { return json.Marshal(i.String())}
 func (d date) MarshalJSON() ([]byte,error)    { return json.Marshal(d.String()) }
+func (d duration) MarshalJSON() ([]byte,error){ return json.Marshal(d.String()) }
 func (t text) MarshalJSON() ([]byte,error)    { return json.Marshal(t.String()) }
 func (n null) MarshalJSON() ([]byte,error)    { return json.Marshal(n.String()) }
 func (l liker) MarshalJSON() ([]byte,error)   { return json.Marshal(l.String())}

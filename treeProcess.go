@@ -23,6 +23,7 @@ var typeChartOld = [10][10]int {
 }
 //null[c,l], int[c,l], float[c,l], date[c,l], duration[c,l], string[c,l] in both dimensions
 //may want to double check time duration interactions
+//doesn't work for types where different operation results in different type
 var typeChart = [12][12]int {
 	{5,5, 5,5, 5,5, 5,5, 5,5, 5,5},
 	{5,5, 1,1, 2,2, 3,3, 4,4, 5,5},
@@ -33,8 +34,8 @@ var typeChart = [12][12]int {
 	{5,2, 2,2, 2,2, 3,2, 4,2, 5,2},
 	{5,2, 2,2, 2,2, 3,2, 4,4, 5,5},
 
-	{5,3, 3,3, 3,3, 4,4, 3,3, 3,3},
-	{5,3, 1,1, 2,2, 4,4, 3,3, 5,5},
+	{5,3, 3,3, 3,3, 3,3, 3,3, 3,3},
+	{5,3, 1,1, 2,2, 3,3, 3,3, 5,5},
 
 	{5,4, 4,4, 4,4, 3,3, 4,4, 5,4},
 	{5,4, 4,4, 2,4, 3,3, 4,4, 5,5},
@@ -111,8 +112,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		if err != nil { return 0,0,nil,err }
 		switch n.label {
 		case N_EXPRNEG:
-			if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT {
-				Println("minus error");
+			if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT && d1 != T_DURATION {
 				err = errors.New("Minus sign does not work with type "+typeMap[d1]) }
 		case N_COLITEM: n.tok3 = d1; fallthrough
 		case N_WHERE:
@@ -137,19 +137,19 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			_, d2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(v1,v2,d1,d2)
-			//db.Print1("combine vals",v1,v2,"types",d1,d2,"to get",thisType)
+
+			//duration has the most complex type interaction
+			if isOneOfType(d1,d2,T_DATE,T_DURATION){
+			}
 
 			//check addition semantics
 			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) {
-				Println("add error");
 				return 0,0,nil, errors.New("Cannot add or subtract types "+typeMap[d1]+" and "+typeMap[d2]) }
 			//check modulus semantics
 			if n.label==N_EXPRMULT && operator == SP_MOD && (d1!=T_INT || d2!=T_INT) {
-				Println("mod error");
 				return 0,0,nil, errors.New("Modulus operator requires integers") }
 			//check multiplication semantics
 			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
-				Println("mult error");
 				return 0,0,nil, errors.New("Cannot multiply or divide types "+typeMap[d1]+" and "+typeMap[d2]) }
 			if v2==nil {val = nil}
 		}
@@ -163,17 +163,14 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			thisType = typeCompute(v1,v2,d1,d2)
 			v12 := v1; if v2 == nil { v12 = nil }
 			thisType = typeCompute(v12,v3,thisType,d3)
-			//db.Print1("combine vals",v1,v2,v3,"types",d1,d2,d3,"to get",thisType)
 			if v3==nil {v1 = nil}
 		}
 		//predicate comparisions are typed independantly, so leave type in tok3
 		if n.label == N_PREDCOMP { n.tok3 = thisType }
-		//Println(treeMap[n.label],"returning val",val)
 		return n.label, thisType, v1, err
 
 	//case 'when' expression needs to match others but isn't node's return type
 	case N_CWEXPR:
-		//may want to precompute n.node1
 		_, thisType, _, err := typeCheck(n.node2)
 		return n.label, thisType, nil, err
 
