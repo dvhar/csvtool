@@ -6,15 +6,7 @@ import (
 )
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
-	//row is target of aggregate function
-	var newrow bool
-	if q.groupby {
-		newrow, q.toRow = execGroupBy(q,q.tree.node4)
-		if newrow { res.Numrows++ }
-	//normal target row
-	} else {
-		q.toRow = make([]Value, q.colSpec.NewWidth)
-	}
+	if execGroupOrNewRow(q,q.tree.node4) { res.Numrows++ }
 	execSelections(q, q.tree.node1.node1)
 	if q.quantityRetrieved <= q.showLimit && !q.groupby {
 		res.Vals = append(res.Vals, q.toRow)
@@ -59,16 +51,20 @@ func evalWhere(q *QuerySpecs) bool {
 	return evalPredicates(q, node.node1)
 }
 
-//return target array
-func execGroupBy(q *QuerySpecs, n *Node) (bool, []Value) {
-	if !q.groupby { return false, nil }
-	//use q.toRow if grouping without groupby clause so group all to just one row
+//set target row and return bool for newrow or not
+func execGroupOrNewRow(q *QuerySpecs, n *Node) bool {
+	//not grouping
+	if !q.groupby { q.toRow = make([]Value, q.colSpec.NewWidth); return true }
+
+	//grouping to a single row because no groupby clause
 	if n == nil {
-		var newrow bool
-		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth); newrow = true }
-		return newrow, q.toRow
+		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth); return true }
+		return false
 	}
-	return execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
+	//grouping with groupby clause
+	var newrow bool
+	newrow, q.toRow = execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
+	return newrow
 }
 //return newrow bool and row array
 func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) (bool, []Value) {

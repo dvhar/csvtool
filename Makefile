@@ -1,4 +1,4 @@
-DEPS = files.go scanner.go parser.go evaluator.go main.go server.go traversers.go
+DEPS = *.go
 
 
 all: cql.lnx rice-box.go

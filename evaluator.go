@@ -113,10 +113,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 
 		//find matches and retrieve results
 		match := evalWhere(q)
-		if match && evalDistinct(q, distinctCheck) {
-			execSelect(q, res)
-			if !q.groupby { res.Numrows++ }
-		}
+		if match && evalDistinct(q, distinctCheck) { execSelect(q, res) }
 
 		//periodic updates
 		rowsChecked++
