@@ -51,6 +51,25 @@ func typeCompute(v1, v2 interface{}, d1, d2 int) int {
 	return typeChart[i1][i2]
 }
 
+//return preserveSubtrees and final type
+func keepSubtreeTypes(t1, t2, op int) (bool,int) {
+	switch op {
+		case SP_STAR: fallthrough
+		case SP_DIV:
+			if t1 == T_DURATION && t2 == T_INT ||
+			   t1 == T_DURATION && t2 == T_FLOAT ||
+			   t2 == T_DURATION && t1 == T_INT ||
+			   t2 == T_DURATION && t1 == T_FLOAT { return true, T_DURATION }
+		case SP_MINUS:
+			if t1 == T_DATE && t2 == T_DATE { return true, T_DURATION }
+			fallthrough
+		case SP_PLUS:
+			if t1 == T_DURATION && t2 == T_DATE ||
+			   t2 == T_DURATION && t1 == T_DATE { return true, T_DATE }
+	}
+	return false, 0
+}
+
 //type checker
 //only return val if expression is a literal
 var caseWhenExprType int
@@ -138,15 +157,37 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			if err != nil { return 0,0,nil,err }
 			thisType = typeCompute(v1,v2,d1,d2)
 
+			//see if using special rules for time/duration type interaction
+			keep, final := keepSubtreeTypes(d1,d2,operator)
+			if keep {
+				thisType = final
+				n.tok2 = true
+				err = enforceType(n.node1, d1)
+				if err != nil { return 0,0,nil,err }
+				err = enforceType(n.node2, d2)
+				if err != nil { return 0,0,nil,err }
+			}
+
+			//time subtraction semantics
+			if n.label==N_EXPRADD && operator == SP_PLUS && d1 == T_DATE && d2 == T_DATE {
+				return 0,0,nil, errors.New("Cannot add 2 dates")
+			}
 			//check addition semantics
-			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) {
+			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) &&
+				!((d1 == T_DATE && d2 == T_DURATION) || (d1 == T_DURATION && d2 == T_DATE) || (d1 == T_DATE && d2 == T_DATE)) {
 				return 0,0,nil, errors.New("Cannot add or subtract types "+typeMap[d1]+" and "+typeMap[d2]) }
 			//check modulus semantics
 			if n.label==N_EXPRMULT && operator == SP_MOD && (d1!=T_INT || d2!=T_INT) {
 				return 0,0,nil, errors.New("Modulus operator requires integers") }
 			//check multiplication semantics
-			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT){
+			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT) &&
+				!((d1 == T_INT && d2 == T_DURATION) || (d1 == T_DURATION && d2 == T_INT)) &&
+				!((d1 == T_FLOAT && d2 == T_DURATION) || (d1 == T_DURATION && d2 == T_FLOAT)){
 				return 0,0,nil, errors.New("Cannot multiply or divide types "+typeMap[d1]+" and "+typeMap[d2]) }
+			//time division semantics
+			if n.label==N_EXPRMULT && operator == SP_DIV && d1 == T_INT && d2 == T_DURATION {
+				return 0,0,nil, errors.New("Cannot divide integer by time duration")
+			}
 			if v2==nil {val = nil}
 		}
 
@@ -254,6 +295,13 @@ func enforceType(n *Node, t int) error {
 	case N_PREDCOMP:
 		if tt, ok := n.tok3.(int); ok { t = tt }
 		fallthrough
+	//subtrees were already enforced if doing operation that preserves subtree types
+	case N_EXPRADD:
+		if _,ok := n.tok2.(bool); ok && n.label == N_EXPRADD { return err }
+		fallthrough
+	case N_EXPRMULT:
+		if _,ok := n.tok2.(bool); ok && n.label == N_EXPRMULT { return err }
+		fallthrough
 	default:
 		err = enforceType(n.node1,t)
 		if err != nil { return err }
@@ -274,11 +322,14 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 	n.node3 = branchShortener(q, n.node3)
 	//node only links to next node
 	if n.tok1 == nil &&
-		n.tok2 == nil &&
 		n.tok3 == nil &&
 		n.node2 == nil &&
 		n.node3 == nil &&
-		n.label != N_SELECTIONS{ return n.node1 }
+		n.label != N_SELECTIONS{
+			if n.tok2 == nil { return n.node1 }
+			//tok2 in this case is just used to preserve subtree type in previous step
+			if n.label == N_EXPRADD || n.label == N_EXPRMULT { return n.node1 }
+		}
 	//predicates has no logical operator or negator so it's just one predicate
 	if n.label == N_PREDICATES && n.tok1 == nil && n.tok2 == nil { return n.node1 }
 	//case node just links to next node

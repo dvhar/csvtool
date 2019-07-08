@@ -233,7 +233,6 @@ func parseDuration(str string) (time.Duration, error) {
 		case "s":      fallthrough
 		case "second": fallthrough
 		case "seconds":
-			quantity *= 60
 			return time.Second * time.Duration(quantity), nil
 	}
 	return 0, errors.New("Error: Unable to calculate months")
@@ -493,7 +492,13 @@ func (i integer) Mult(other Value) Value{
 	return i
 }
 func (d date) Mult(other Value) Value     { return d }
-func (d duration) Mult(other Value) Value { return duration{d.val * time.Duration(other.(integer))} }
+func (d duration) Mult(other Value) Value {
+	switch o := other.(type) {
+		case integer: return duration{d.val * time.Duration(o)}
+		case float:   return duration{d.val * time.Duration(o)}
+	}
+	return d
+}
 func (t text) Mult(other Value) Value     { return t }
 func (n null) Mult(other Value) Value     { return n }
 func (l liker) Mult(other Value) Value    { return l }
@@ -501,7 +506,13 @@ func (l liker) Mult(other Value) Value    { return l }
 func (f float) Div(other Value) Value    { return float(f / other.(float)) }
 func (i integer) Div(other Value) Value  { return integer(i / other.(integer)) }
 func (d date) Div(other Value) Value     { return d }
-func (d duration) Div(other Value) Value { return duration{d.val / time.Duration(other.(integer))} }
+func (d duration) Div(other Value) Value {
+	switch o := other.(type) {
+		case integer: return duration{d.val / time.Duration(o)}
+		case float:   return duration{d.val / time.Duration(o)}
+	}
+	return d
+}
 func (t text) Div(other Value) Value     { return t }
 func (n null) Div(other Value) Value     { return n }
 func (l liker) Div(other Value) Value    { return l }
