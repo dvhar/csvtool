@@ -1,4 +1,4 @@
-//data structures, constants, and whatnot
+//data structures, constants, helper functions, and whatnot. Should really clean this up
 // _f# is file map key designed to avoid collisions with aliases and file names
 package main
 import (
@@ -206,6 +206,10 @@ func getNarrowestType(value string, startType int) int {
 	  startType = max(T_FLOAT, startType)
 	} else if _,err := d.ParseAny(entry); err == nil{
 	  startType = max(T_DATE, startType)
+	  //sometimes duration can get mistaken for a date
+	   if _,err := parseDuration(entry); err == nil {
+		  startType = max(T_DURATION, startType)
+	   }
 	} else if _,err := parseDuration(entry); err == nil {
 	  startType = max(T_DURATION, startType)
 	} else {
@@ -217,7 +221,7 @@ func getNarrowestType(value string, startType int) int {
 func inferTypes(q *QuerySpecs, f string) error {
 	LeadingZeroString = regexp.MustCompile(`^0\d+$`)
 	//may want to get rid of single letter option for time duration
-	durationPattern = regexp.MustCompile(`^\d+\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|months|month|years|year|s|m|h|d|w|mo|y)$`)
+	durationPattern = regexp.MustCompile(`^(\d+|\d+\.\d+)\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|months|month|years|year|s|m|h|d|w|mo|y)$`)
 	//open file
 	fp,err := os.Open(q.files[f].fname)
 	if err != nil { return errors.New("problem opening input file") }
@@ -247,7 +251,7 @@ func parseDuration(str string) (time.Duration, error) {
 	if err == nil { return dur, err }
 	if !durationPattern.MatchString(str) { return 0, errors.New("Error: Could not parse '"+str+"' as a time duration") }
 	times := s.Split(str," ")
-	quantity,_ := Atoi(times[0])
+	quantity,_ := ParseFloat(times[0],64)
 	unit := times[1]
 	switch unit {
 		case "y":    fallthrough
@@ -278,7 +282,8 @@ func parseDuration(str string) (time.Duration, error) {
 		case "s":      fallthrough
 		case "second": fallthrough
 		case "seconds":
-			return time.Second * time.Duration(quantity), nil
+			Println("str:",str,"quantity:",quantity)
+			return time.Second * time.Duration(int(quantity)), nil
 	}
 	return 0, errors.New("Error: Unable to calculate months")
 }

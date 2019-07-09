@@ -122,7 +122,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		if n.tok2.(int) == 0 {
 			return n.tok3.(int), n.tok1
 		//column value
-		} else if n.tok2.(int) != 2 {
+		} else if n.tok2.(int) == 1 {
 			var val Value
 			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
@@ -139,13 +139,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 
 	case N_EXPRNEG:
 		t1,v1 := execExpression(q, n.node1)
-		if _,ok := n.tok1.(int); ok && v1 != nil {
-			switch t1 {
-			case T_DURATION: fallthrough
-			case T_INT:   v1 = v1.(Value).Mult(integer(-1))
-			case T_FLOAT: v1 = v1.(Value).Mult(float(-1))
-			}
-		}
+		if _,ok := n.tok1.(int); ok && v1 != nil { v1 = v1.(Value).Mult(integer(-1)) }
 		return t1,v1
 
 	case N_EXPRMULT:

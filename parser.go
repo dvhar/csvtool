@@ -18,7 +18,7 @@
 <predicateCompare>  -> {not} <exprAdd> {not} <relop> <exprAdd> 
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
-<function>          -> (sum|avg|min|max|format|coalesce) ( <exprAdd> )
+<function>          -> <functionname> ( <exprAdd> )
 
 <from>              -> from filename { TODO: joins }
 <where>             -> where <predicates> | ε
@@ -338,6 +338,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		err = nil
 		n.tok2 = 0
 		n.tok3 = getNarrowestType(tok.val,0)
+		Println("value",tok,"initially typed as",n.tok3)
 		if n.tok3.(int) != T_NULL { n.tok1 = tok.val } else { n.tok1 = nil }
 	}
 	q.NextTok()
