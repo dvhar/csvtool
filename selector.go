@@ -97,7 +97,20 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	switch n.label {
 	case N_FUNCTION:
 		t1,v1 := execExpression(q, n.node1)
-		return T_AGGRAGATE, Aggragate{v1,t1,n.tok1.(int)}
+		functionId := n.tok1.(int)
+		//if it's an aggregate function
+		if (functionId & AGG_BIT) != 0 { return T_AGGRAGATE, Aggragate{v1,t1,functionId} }
+		if v1 != nil {
+			switch functionId {
+			case FN_ABS: if v1.(Value).Less(integer(0)) { v1 = v1.(Value).Mult(integer(-1)) }
+			case FN_YEAR:  v1 = v1.(date).val.Year()
+			case FN_MONTH: v1 = v1.(date).val.Month()
+			case FN_WEEK:  v1 = v1.(date).val.YearDay() / 52
+			case FN_DAY:   v1 = v1.(date).val.Weekday()
+			case FN_HOUR:  v1 = v1.(date).val.Hour()
+			}
+		}
+		return t1,v1
 
 	case N_VALUE:
 		//literal

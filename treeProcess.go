@@ -43,9 +43,9 @@ var typeChart = [12][12]int {
 	{5,5, 5,5, 5,5, 3,5, 5,5, 5,5},
 	{5,5, 1,5, 2,5, 3,5, 4,5, 5,5},
 }
-func typeCompute(v1, v2 interface{}, d1, d2 int) int {
-	i1 := 2*d1
-	i2 := 2*d2
+func typeCompute(v1, v2 interface{}, t1, t2 int) int {
+	i1 := 2*t1
+	i2 := 2*t2
 	if v1 != nil { i1++ }
 	if v2 != nil { i2++ }
 	return typeChart[i1][i2]
@@ -80,9 +80,9 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 
 	case N_VALUE:
 		if n.tok2.(int)==2 { //function
-			_, d1, _, err := typeCheck(n.node1)
-			if n.node1.tok1.(int) == FN_COUNT { d1 = T_INT }
-			return n.label,d1,nil,err
+			_, t1, _, err := typeCheck(n.node1)
+			if n.node1.tok1.(int) == FN_COUNT { t1 = T_INT }
+			return n.label,t1,nil,err
 		}
 		if n.tok2.(int)==0 { val = n.tok1 } //literal
 		return n.label, n.tok3.(int), val, nil
@@ -93,9 +93,9 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		case N_EXPRADD:
 			return typeCheck(n.node1)
 		case KW_CASE:
-			n1, d1, v1, err := typeCheck(n.node1)
+			n1, t1, v1, err := typeCheck(n.node1)
 			if err != nil { return 0,0,nil,err }
-			_, d2, v2, err := typeCheck(n.node2)
+			_, t2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			n3, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
@@ -103,19 +103,19 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			//when comparing an intial expression
 			if n1 == N_EXPRADD {
 				//independent type cluster is n.node1 and n.node2.node1.node1, looping with n=n.node2
-				caseWhenExprType := d1
+				caseWhenExprType := t1
 				for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {  //when expression list
 					_,whentype,_,err := typeCheck(whenNode.node1.node1)
 					if err != nil { return 0,0,nil,err }
 					caseWhenExprType = typeCompute(nil,nil,caseWhenExprType,whentype)
 				}
 				n.node2.tok3 = caseWhenExprType
-				thisType = d2
-				if n3>0 { thisType = typeCompute(v2,v3,d2,d3) }
+				thisType = t2
+				if n3>0 { thisType = typeCompute(v2,v3,t2,d3) }
 			//when using predicates
 			} else {
-				thisType = d1
-				if n3>0 { thisType = typeCompute(v1,v3,d1,d3) }
+				thisType = t1
+				if n3>0 { thisType = typeCompute(v1,v3,t1,d3) }
 			}
 			if n1 == N_VALUE { val = v1 }
 			return N_EXPRCASE, thisType, val, nil
@@ -127,18 +127,21 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	case N_WHERE:     fallthrough
 	case N_FUNCTION:  fallthrough
 	case N_SELECTIONS:
-		_, d1, v1, err := typeCheck(n.node1)
+		_, t1, v1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
 		switch n.label {
+		case N_FUNCTION:
+			err := checkFunctionType(n.tok1.(int), t1)
+			if err != nil { return 0,0,nil,err }
 		case N_EXPRNEG:
-			if _,ok:=n.tok1.(int); ok && d1 != T_INT && d1 != T_FLOAT && d1 != T_DURATION {
-				err = errors.New("Minus sign does not work with type "+typeMap[d1]) }
-		case N_COLITEM: n.tok3 = d1; fallthrough
+			if _,ok:=n.tok1.(int); ok && t1 != T_INT && t1 != T_FLOAT && t1 != T_DURATION {
+				err = errors.New("Minus sign does not work with type "+typeMap[t1]) }
+		case N_COLITEM: n.tok3 = t1; fallthrough
 		case N_WHERE:
-			err = enforceType(n.node1, d1)
+			err = enforceType(n.node1, t1)
 		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)
 		}
-		return n.label, d1, v1, err
+		return n.label, t1, v1, err
 
 	//1 2 or 3 type-interdependant nodes
 	case N_EXPRADD:   fallthrough
@@ -146,58 +149,44 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	case N_CWEXPRLIST:fallthrough
 	case N_CPREDLIST: fallthrough
 	case N_PREDCOMP:
-		n1, d1, v1, err := typeCheck(n.node1)
+		n1, t1, v1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
 		if n.label == N_PREDCOMP && n1 == N_PREDICATES { return n.label, 0, nil,err }
-		thisType := d1
+		thisType := t1
 
 		//there is second part but not a third
 		if operator,ok := n.tok1.(int); ok && operator!=KW_BETWEEN {
-			_, d2, v2, err := typeCheck(n.node2)
+			_, t2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
-			thisType = typeCompute(v1,v2,d1,d2)
+			thisType = typeCompute(v1,v2,t1,t2)
 
 			//see if using special rules for time/duration type interaction
-			keep, final := keepSubtreeTypes(d1,d2,operator)
+			keep, final := keepSubtreeTypes(t1,t2,operator)
 			if keep {
 				thisType = final
 				n.tok2 = true
-				err = enforceType(n.node1, d1)
+				err = enforceType(n.node1, t1)
 				if err != nil { return 0,0,nil,err }
-				err = enforceType(n.node2, d2)
+				err = enforceType(n.node2, t2)
 				if err != nil { return 0,0,nil,err }
 			}
 
-			//time subtraction semantics
-			if n.label==N_EXPRADD && operator == SP_PLUS && d1 == T_DATE && d2 == T_DATE {
-				return 0,0,nil, errors.New("Cannot add 2 dates")
+			//check basic operator semantics
+			if n.label == N_EXPRADD || n.label == N_EXPRMULT {
+				err = checkOperatorSemantics(operator, t1, t2, v1, v2)
+				if err != nil { return 0,0,nil,err }
 			}
-			//check addition semantics
-			if n.label==N_EXPRADD && !isOneOfType(d1,d2,T_INT,T_FLOAT) && !(thisType==T_STRING) &&
-				!((d1 == T_DATE && d2 == T_DURATION) || (d1 == T_DURATION && d2 == T_DATE) || (d1 == T_DATE && d2 == T_DATE)) {
-				return 0,0,nil, errors.New("Cannot add or subtract types "+typeMap[d1]+" and "+typeMap[d2]) }
-			//check modulus semantics
-			if n.label==N_EXPRMULT && operator == SP_MOD && (d1!=T_INT || d2!=T_INT) {
-				return 0,0,nil, errors.New("Modulus operator requires integers") }
-			//check multiplication semantics
-			if n.label==N_EXPRMULT && !isOneOfType(d1,d2,T_INT,T_FLOAT) &&
-				!((d1 == T_INT && d2 == T_DURATION) || (d1 == T_DURATION && d2 == T_INT)) &&
-				!((d1 == T_FLOAT && d2 == T_DURATION) || (d1 == T_DURATION && d2 == T_FLOAT)){
-				return 0,0,nil, errors.New("Cannot multiply or divide types "+typeMap[d1]+" and "+typeMap[d2]) }
-			//time division semantics
-			if n.label==N_EXPRMULT && operator == SP_DIV && d1 == T_INT && d2 == T_DURATION {
-				return 0,0,nil, errors.New("Cannot divide integer by time duration")
-			}
+
 			if v2==nil {val = nil}
 		}
 
-		//there is third part because between
+		//there is third part because between - need to add type semantics check for duration interactions
 		if operator,ok := n.tok1.(int); ok && operator == KW_BETWEEN {
-			_, d2, v2, err := typeCheck(n.node2)
+			_, t2, v2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,nil,err }
 			_, d3, v3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,nil,err }
-			thisType = typeCompute(v1,v2,d1,d2)
+			thisType = typeCompute(v1,v2,t1,t2)
 			v12 := v1; if v2 == nil { v12 = nil }
 			thisType = typeCompute(v12,v3,thisType,d3)
 			if v3==nil {v1 = nil}
@@ -295,12 +284,10 @@ func enforceType(n *Node, t int) error {
 	case N_PREDCOMP:
 		if tt, ok := n.tok3.(int); ok { t = tt }
 		fallthrough
-	//subtrees were already enforced if doing operation that preserves subtree types
-	case N_EXPRADD:
-		if _,ok := n.tok2.(bool); ok && n.label == N_EXPRADD { return err }
-		fallthrough
+	case N_EXPRADD: fallthrough
 	case N_EXPRMULT:
-		if _,ok := n.tok2.(bool); ok && n.label == N_EXPRMULT { return err }
+		//subtrees were already enforced if doing operation that preserves subtree types
+		if _,ok := n.tok2.(bool); ok { return err }
 		fallthrough
 	default:
 		err = enforceType(n.node1,t)

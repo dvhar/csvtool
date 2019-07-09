@@ -12,6 +12,7 @@ const (
 	NUM_STATES =  5
 	EOS =         255
 	ERROR =       1<<23
+	AGG_BIT =     1<<26
 	//final bits
 	FINAL =       1<<22
 	KEYBIT =      1<<20
@@ -42,14 +43,20 @@ const (
 	KW_JOIN=      KEYWORD|iota
 	KW_BETWEEN =  RELOP|KEYWORD|iota
 	KW_LIKE =     RELOP|KEYWORD|iota
-	//not scanned as keywords but still need unique vals
-	FN_SUM =      KEYWORD|iota
-	FN_AVG =      KEYWORD|iota
-	FN_MIN =      KEYWORD|iota
-	FN_MAX =      KEYWORD|iota
-	FN_COUNT =    KEYWORD|iota
+	//not scanned as keywords but still using that for unique vals
+	FN_SUM =      KEYWORD|AGG_BIT|iota
+	FN_AVG =      KEYWORD|AGG_BIT|iota
+	FN_MIN =      KEYWORD|AGG_BIT|iota
+	FN_MAX =      KEYWORD|AGG_BIT|iota
+	FN_COUNT =    KEYWORD|AGG_BIT|iota
+	FN_ABS =      KEYWORD|iota
 	FN_FORMAT =   KEYWORD|iota
 	FN_COALESCE = KEYWORD|iota
+	FN_YEAR =     KEYWORD|iota
+	FN_MONTH =    KEYWORD|iota
+	FN_WEEK =     KEYWORD|iota
+	FN_DAY =      KEYWORD|iota
+	FN_HOUR =     KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
 	SPECIAL =      FINAL|SPECIALBIT
@@ -168,8 +175,14 @@ var functionMap = map[string]int {
 	"min" :      FN_MIN,
 	"max" :      FN_MAX,
 	"count" :    FN_COUNT,
+	"abs" :      FN_ABS,
 	"format" :   FN_FORMAT,
 	"coalesce" : FN_COALESCE,
+	"year" :     FN_YEAR,
+	"month" :    FN_MONTH,
+	"week" :     FN_WEEK,
+	"day" :      FN_DAY,
+	"hour" :     FN_HOUR,
 }
 var specialMap = map[string]int {
 	"=" :  SP_EQ,

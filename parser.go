@@ -538,6 +538,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	var err error
 	n.tok1 = functionMap[q.Tok().val]
 	q.NextTok()
+	//count(*)
 	if q.NextTok().id == SP_STAR && n.tok1.(int) == FN_COUNT {
 		n.node1 = &Node{
 			label: N_VALUE,
@@ -546,19 +547,14 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 			tok3: 1,
 		}
 		q.NextTok()
+	//other functions
 	} else {
 		n.node1, err = parseExprAdd(q)
 	}
 	if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
 	q.NextTok()
-	switch n.tok1.(int) {
-		case FN_AVG: fallthrough
-		case FN_SUM: fallthrough
-		case FN_MIN: fallthrough
-		case FN_COUNT: fallthrough
-		case FN_MAX:
-			q.groupby = true
-	}
+	//groupby if aggregate function
+	if (n.tok1.(int) & AGG_BIT) != 0 { q.groupby = true }
 	return n,err
 }
 

@@ -47,6 +47,51 @@ func (q QuerySpecs) PeekTok() *Token {
 }
 func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
 func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
+
+func intInList(x int, i ...int) bool {
+	for j := range i { if x == j { return true } }
+	return false
+}
+
+func checkFunctionType(functionId, typ int) error {
+	err := func(s string) error { return errors.New(s) }
+	switch functionId {
+	case FN_SUM:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only sum numbers") }
+	case FN_AVG:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only average numbers") }
+	case FN_ABS:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only find absolute value of numbers") }
+	case FN_YEAR:  if !intInList(typ, T_DATE) { return err("can only find year of date type") }
+	case FN_MONTH: if !intInList(typ, T_DATE) { return err("can only find month of date type") }
+	case FN_WEEK:  if !intInList(typ, T_DATE) { return err("can only find week of date type") }
+	case FN_DAY:   if !intInList(typ, T_DATE) { return err("can only find day of date type") }
+	case FN_HOUR:  if !intInList(typ, T_DATE) { return err("can only find hour of date/time type") }
+	}
+	return nil
+}
+
+func checkOperatorSemantics(operator, t1, t2 int, v1, v2 interface{}) error {
+	err := func(s string) error { return errors.New(s) }
+	switch operator {
+	case SP_PLUS:
+		if  t1 == T_DATE && t2 == T_DATE { return err("Cannot add 2 dates") }
+		fallthrough
+	case SP_MINUS:
+		if !isOneOfType(t1,t2,T_INT,T_FLOAT) && !(typeCompute(v1,v2,t1,t2)==T_STRING) &&
+			!((t1 == T_DATE && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_DATE) || (t1 == T_DATE && t2 == T_DATE)) {
+			return err("Cannot add or subtract types "+typeMap[t1]+" and "+typeMap[t2])
+	}
+	case SP_MOD: if (t1!=T_INT || t2!=T_INT) { return err("Modulus operator requires integers") }
+	case SP_DIV:
+		if t1 == T_INT && t2 == T_DURATION { return err("Cannot divide integer by time duration") }
+		fallthrough
+	case SP_STAR:
+		if !isOneOfType(t1,t2,T_INT,T_FLOAT) &&
+			!((t1 == T_INT && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_INT)) &&
+			!((t1 == T_FLOAT && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_FLOAT)){
+			return err("Cannot multiply or divide types "+typeMap[t1]+" and "+typeMap[t2]) }
+	}
+	return nil
+}
+
 const (
 	//parse tree node types
 	N_QUERY = iota
@@ -402,10 +447,22 @@ type text string
 type null string
 type liker struct {val *regexp.Regexp}
 
-func (f float) Less(other Value) bool      { return f < other.(float) }
+func (f float) Less(other Value) bool      {
+	switch o := other.(type) {
+		case float: return f < o
+		case integer: return f < float(o)
+	}
+	return false
+}
 func (i integer) Less(other Value) bool    { return i < other.(integer) }
 func (d date) Less(other Value) bool       { return d.val.Before(other.(date).val) }
-func (d duration) Less(other Value) bool   { return d.val < other.(duration).val }
+func (d duration) Less(other Value) bool   {
+	switch o := other.(type) {
+		case duration: return d.val < o.val
+		case integer: return d.val < time.Duration(o)
+	}
+	return false
+}
 func (t text) Less(other Value) bool       { return t < other.(text) }
 func (n null) Less(other Value) bool       { return n < other.(null) }
 func (l liker) Less(other Value) bool      { return false }
@@ -421,9 +478,9 @@ func (l liker) LessEq(other Value) bool    { return false }
 func (f float) Greater(other Value) bool   { if _,ok := other.(null); ok { return true } else {return f > other.(float) } }
 func (i integer) Greater(other Value) bool { if _,ok := other.(null); ok { return true } else {return i > other.(integer) } }
 func (d date) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return d.val.After(other.(date).val) } }
-func (d duration) Greater(other Value) bool{ return d.val > other.(duration).val }
+func (d duration) Greater(other Value) bool{ if _,ok := other.(null); ok { return true } else {return d.val > other.(duration).val } }
 func (t text) Greater(other Value) bool    { if _,ok := other.(null); ok { return true } else {return t > other.(text) } }
-func (n null) Greater(other Value) bool    { if o,ok := other.(null); ok { return n > o } else { return false } }
+func (n null) Greater(other Value) bool    { if o,ok := other.(null); ok { return n > o } else {return false} }
 func (l liker) Greater(other Value) bool   { return false }
 
 func (f float) GreatEq(other Value) bool   { return f >= other.(float) }
@@ -480,6 +537,7 @@ func (l liker) Sub(other Value) Value   { return l }
 func (f float) Mult(other Value) Value  {
 	switch o := other.(type) {
 		case float:    return float(f * o)
+		case integer:    return float(f * float(o))
 		case duration: return duration{time.Duration(f) * o.val}
 	}
 	return f
