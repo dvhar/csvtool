@@ -122,16 +122,28 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		}
 
 	//1 or 2 type-independant nodes
-	case N_EXPRNEG:   fallthrough
-	case N_COLITEM:   fallthrough
-	case N_WHERE:     fallthrough
-	case N_FUNCTION:  fallthrough
+	case N_EXPRESSIONS:fallthrough
+	case N_EXPRNEG:    fallthrough
+	case N_COLITEM:    fallthrough
+	case N_WHERE:      fallthrough
+	case N_FUNCTION:   fallthrough
 	case N_SELECTIONS:
 		_, t1, v1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,nil,err }
 		switch n.label {
 		case N_FUNCTION:
-			err := checkFunctionType(n.tok1.(int), t1)
+			err := checkFunctionParamType(n.tok1.(int), t1)
+			//some functions have a specific return type
+			switch n.tok1.(int) {
+			case FN_YEAR:  fallthrough
+			case FN_MONTH: fallthrough
+			case FN_WEEK:  fallthrough
+			case FN_YDAY:  fallthrough
+			case FN_DAY:   fallthrough
+			case FN_HOUR:  t1 = T_INT
+			case FN_MONTHNAME: fallthrough
+			case FN_DAYNAME: t1 = T_STRING
+			}
 			if err != nil { return 0,0,nil,err }
 		case N_EXPRNEG:
 			if _,ok:=n.tok1.(int); ok && t1 != T_INT && t1 != T_FLOAT && t1 != T_DURATION {
@@ -139,6 +151,9 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		case N_COLITEM: n.tok3 = t1; fallthrough
 		case N_WHERE:
 			err = enforceType(n.node1, t1)
+		case N_EXPRESSIONS:
+			err = enforceType(n.node1, t1)
+			fallthrough
 		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)
 		}
 		return n.label, t1, v1, err
@@ -214,7 +229,8 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		_, thisType, v1, err := typeCheck(n.node2)
 		return n.label, thisType, v1, err
 
-	case N_SELECT: return typeCheck(n.node1)
+	case N_SELECT: fallthrough
+	case N_GROUPBY: return typeCheck(n.node1)
 	}
 	return 0,0,nil,nil
 }
@@ -223,7 +239,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 //modify this to handle 'like' with regular expressions
 func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
-	//db.Print2("enforcer at node",treeMap[n.label])
+	//Println("enforcer at node",treeMap[n.label],"with type",t)
 	var err error
 	var val interface{}
 	switch n.label {
@@ -254,8 +270,23 @@ func enforceType(n *Node, t int) error {
 			}
 			n.tok1 = val
 		}
+		//functions
 		if n.tok2.(int) == 2 {
-			err = enforceType(n.node1, n.tok3.(int))
+			err = enforceType(n.node1, t)
+		}
+		return err
+
+	case N_FUNCTION:
+		switch n.tok1.(int) {
+		case FN_YEAR:      fallthrough
+		case FN_MONTH:     fallthrough
+		case FN_WEEK:      fallthrough
+		case FN_YDAY:      fallthrough
+		case FN_DAY:       fallthrough
+		case FN_MONTHNAME: fallthrough
+		case FN_DAYNAME:   fallthrough
+		case FN_HOUR:  err = enforceType(n.node1, T_DATE)
+		default: err = enforceType(n.node1, t)
 		}
 		return err
 
@@ -354,27 +385,27 @@ func columnNamer(q *QuerySpecs, n *Node) {
 }
 
 //find aggragate functions that will need postprocessing
-func findFunctions(q *QuerySpecs, n *Node) {
+func findAggregateFunctions(q *QuerySpecs, n *Node) {
 	if q.colSpec.functions == nil {q.colSpec.functions = make([]Aggragate, q.colSpec.NewWidth)}
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
-		if fun := findFunction(n.node1); fun != nil {
+		if fun := findAggregateFunction(n.node1); fun != nil {
 			q.colSpec.functions[n.tok1.(int)] = *fun
 			q.colSpec.functions[n.tok1.(int)].typ = q.colSpec.NewTypes[n.tok1.(int)]
 		}
 	}
-	findFunctions(q, n.node1)
-	findFunctions(q, n.node2)
-	findFunctions(q, n.node3)
+	findAggregateFunctions(q, n.node1)
+	findAggregateFunctions(q, n.node2)
+	findAggregateFunctions(q, n.node3)
 }
-func findFunction(n *Node) *Aggragate {
+func findAggregateFunction(n *Node) *Aggragate {
 	if n == nil { return nil }
-	if n.label == N_FUNCTION { return &Aggragate{nil,0,n.tok1.(int)} }
-	a := findFunction(n.node1)
+	if n.label == N_FUNCTION && (n.tok1.(int)&AGG_BIT)!=0 { return &Aggragate{nil,0,n.tok1.(int)} }
+	a := findAggregateFunction(n.node1)
 	if a != nil { return a }
-	a = findFunction(n.node2)
+	a = findAggregateFunction(n.node2)
 	if a != nil { return a }
-	return findFunction(n.node3)
+	return findAggregateFunction(n.node3)
 }
 
 func newColItem(q* QuerySpecs, idx, typ int, name string) {

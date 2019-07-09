@@ -52,7 +52,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	findFunctions(q, n.node1)
+	findAggregateFunctions(q, n.node1)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }

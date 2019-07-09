@@ -3,6 +3,7 @@ import (
 	. "strconv"
 	d "github.com/araddon/dateparse"
 	s "strings"
+	//. "fmt"
 )
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
@@ -98,16 +99,20 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_FUNCTION:
 		t1,v1 := execExpression(q, n.node1)
 		functionId := n.tok1.(int)
-		//if it's an aggregate function
+		//aggregate function
 		if (functionId & AGG_BIT) != 0 { return T_AGGRAGATE, Aggragate{v1,t1,functionId} }
+		//non-aggregate function
 		if v1 != nil {
 			switch functionId {
-			case FN_ABS: if v1.(Value).Less(integer(0)) { v1 = v1.(Value).Mult(integer(-1)) }
-			case FN_YEAR:  v1 = v1.(date).val.Year()
-			case FN_MONTH: v1 = v1.(date).val.Month()
-			case FN_WEEK:  v1 = v1.(date).val.YearDay() / 52
-			case FN_DAY:   v1 = v1.(date).val.Weekday()
-			case FN_HOUR:  v1 = v1.(date).val.Hour()
+			case FN_ABS:   if v1.(Value).Less(integer(0)) { v1 = v1.(Value).Mult(integer(-1)) }
+			case FN_YEAR:  v1 = integer(v1.(date).val.Year())
+			case FN_MONTH: v1 = integer(v1.(date).val.Month())
+			case FN_WEEK:  v1 = integer(v1.(date).val.YearDay() / 7)
+			case FN_YDAY:  v1 = integer(v1.(date).val.YearDay())
+			case FN_DAY:   v1 = integer(v1.(date).val.Weekday())
+			case FN_HOUR:  v1 = integer(v1.(date).val.Hour())
+			case FN_MONTHNAME: v1 = text(v1.(date).val.Month().String())
+			case FN_DAYNAME:   v1 = text(v1.(date).val.Weekday().String())
 			}
 		}
 		return t1,v1

@@ -49,12 +49,12 @@ func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
 func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
 
 func intInList(x int, i ...int) bool {
-	for j := range i { if x == j { return true } }
+	for _,j := range i { if x == j { return true } }
 	return false
 }
 
-func checkFunctionType(functionId, typ int) error {
-	err := func(s string) error { return errors.New(s) }
+func checkFunctionParamType(functionId, typ int) error {
+	err := func(s string) error { return errors.New(s+", not "+typeMap[typ]) }
 	switch functionId {
 	case FN_SUM:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only sum numbers") }
 	case FN_AVG:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only average numbers") }

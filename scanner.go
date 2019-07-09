@@ -54,8 +54,11 @@ const (
 	FN_COALESCE = KEYWORD|iota
 	FN_YEAR =     KEYWORD|iota
 	FN_MONTH =    KEYWORD|iota
+	FN_MONTHNAME= KEYWORD|iota
 	FN_WEEK =     KEYWORD|iota
 	FN_DAY =      KEYWORD|iota
+	FN_DAYNAME =  KEYWORD|iota
+	FN_YDAY =     KEYWORD|iota
 	FN_HOUR =     KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
@@ -180,8 +183,11 @@ var functionMap = map[string]int {
 	"coalesce" : FN_COALESCE,
 	"year" :     FN_YEAR,
 	"month" :    FN_MONTH,
+	"monthname": FN_MONTHNAME,
 	"week" :     FN_WEEK,
 	"day" :      FN_DAY,
+	"dayname" :  FN_DAYNAME,
+	"dayofyear": FN_YDAY,
 	"hour" :     FN_HOUR,
 }
 var specialMap = map[string]int {
