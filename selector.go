@@ -6,14 +6,20 @@ import (
 	//. "fmt"
 )
 
+//return bool for keep going or reached limit
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
-	if execGroupOrNewRow(q,q.tree.node4) { res.Numrows++ }
+
 	execSelections(q, q.tree.node1.node1)
+
+	//add non-grouped row to web return data
 	if q.quantityRetrieved <= q.showLimit && !q.groupby {
 		res.Vals = append(res.Vals, q.toRow)
 		q.quantityRetrieved++
 	}
+
+	//save non-grouped row
 	if q.save && !q.groupby { saver <- saveData{Type : CH_ROW, Row : &q.toRow} ; <-savedLine}
+
 }
 
 func execSelections(q *QuerySpecs, n *Node) {
@@ -52,34 +58,34 @@ func evalWhere(q *QuerySpecs) bool {
 	return evalPredicates(q, node.node1)
 }
 
-//set target row and return bool for newrow or not
+//set target row and return bool for valid row
 func execGroupOrNewRow(q *QuerySpecs, n *Node) bool {
 	//not grouping
-	if !q.groupby { q.toRow = make([]Value, q.colSpec.NewWidth); return true }
+	if !q.groupby { q.toRow = make([]Value, q.colSpec.NewWidth); q.quantityRetrieved++; return true }
 
 	//grouping to a single row because no groupby clause
 	if n == nil {
-		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth); return true }
-		return false
+		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth); q.quantityRetrieved++ }
+		return true
 	}
 	//grouping with groupby clause
-	var newrow bool
-	newrow, q.toRow = execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
-	return newrow
+	return execGroupExpressions(q, n.node1, n.tok1.(map[interface{}]interface{}))
 }
-//return newrow bool and row array
-func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) (bool, []Value) {
+func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{}) bool {
 	_, key := execExpression(q,n.node1)
 	switch n.tok1.(int) {
 	case 0:
 		row,ok := m[key]
 		if ok {
-			return false, row.([]Value)
-		} else {
+			q.toRow = row.([]Value)
+			return true
+		} else if !q.LimitReached() {
+			q.quantityRetrieved++
 			row = make([]Value, q.colSpec.NewWidth)
 			m[key] = row
-			return true, row.([]Value)
-		}
+			q.toRow = row.([]Value)
+			return true
+		} else { return false }
 	case 1:
 		nextMap,ok := m[key]
 		if ok {
@@ -90,7 +96,7 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 			return execGroupExpressions(q, n.node2, nextMap.(map[interface{}]interface{}))
 		}
 	}
-	return false, nil
+	return false
 }
 
 //returns type and value

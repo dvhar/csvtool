@@ -47,6 +47,7 @@ func (q QuerySpecs) PeekTok() *Token {
 }
 func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
 func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
+func (q QuerySpecs) LimitReached() bool { return q.quantityRetrieved >= q.quantityLimit && q.quantityLimit > 0 }
 
 func intInList(x int, i ...int) bool {
 	for _,j := range i { if x == j { return true } }
@@ -203,7 +204,7 @@ func getNarrowestType(value string, startType int) int {
 	} else if _, err := Atoi(entry); err == nil          { startType = max(T_INT, startType)
 	} else if _, err := ParseFloat(entry,64); err == nil { startType = max(T_FLOAT, startType)
 	} else if _,err := d.ParseAny(entry); err == nil     { startType = max(T_DATE, startType)
-	  //sometimes duration can get mistaken for a date
+	  //in case duration gets mistaken for a date
 	   if _,err := parseDuration(entry); err == nil      { startType = max(T_DURATION, startType)}
 	} else if _,err := parseDuration(entry); err == nil  { startType = max(T_DURATION, startType)
 	} else                                               { startType = T_STRING }
@@ -234,7 +235,7 @@ func inferTypes(q *QuerySpecs, f string) error {
 	}
 	return  err
 }
-var durationPattern *regexp.Regexp = regexp.MustCompile(`^(\d+|\d+\.\d+)\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|months|month|years|year|s|m|h|d|w|mo|y)$`)
+var durationPattern *regexp.Regexp = regexp.MustCompile(`^(\d+|\d+\.\d+)\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|years|year|s|m|h|d|w|y)$`)
 func parseDuration(str string) (time.Duration, error) {
 	dur, err := time.ParseDuration(str)
 	if err == nil { return dur, err }

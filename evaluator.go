@@ -88,12 +88,13 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	var reader LineReader
 	reader.Init(q, "_f1")
 	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.fp.Close() }()
-	if q.sortExpr == nil {
-		err = normalQuery(q, &res, &reader)
-	} else {
+	if q.sortExpr != nil && !q.groupby {
 		err = orderedQuery(q, &res, &reader)
+	} else {
+		err = normalQuery(q, &res, &reader)
 	}
 	if err != nil { Println(err); return SingleQueryResult{}, err }
+	res.Numrows = q.quantityRetrieved
 	returnGroupedRows(q, &res)
 	return res, nil
 }
@@ -104,20 +105,23 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 	rowsChecked := 0
 	stop = 0
 	distinctCheck := make(map[interface{}]bool)
-	for ;res.Numrows<reader.limit; {
-		if stop == 1 { stop = 0; messager <- "query cancelled"; break }
+
+	for {
+		if stop == 1 { stop = 0;  break }
+		if q.LimitReached() && !q.groupby { break }
 
 		//read line from csv file
 		q.fromRow,err = reader.Read()
 		if err != nil {break}
 
 		//find matches and retrieve results
-		match := evalWhere(q)
-		if match && evalDistinct(q, distinctCheck) { execSelect(q, res) }
+		if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {
+			execSelect(q, res)
+		}
 
 		//periodic updates
 		rowsChecked++
-		if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(res.Numrows)+" matches so far" }
+		if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(q.quantityRetrieved)+" results so far" }
 	}
 	return nil
 }

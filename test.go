@@ -41,7 +41,6 @@ func runTests(doTest bool){
 	_,_,_ = f2, whereSet, fromSet
 
 	var tests = []Test {
-		/*
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
 		Test{"select top 20 * from"+f1, "select all star", true, selectSet},
 		Test{`select top 20 c5 from`+f1+`where c5 like %ny%`,  "case with multiple predicate types", true, selectSet},
@@ -135,7 +134,6 @@ func runTests(doTest bool){
 		Test{`select count(c1) c5 from`+f1+`group by c5`,"aggregate with multiple groups",true,selectSet},
 		Test{`select top 5 count(c1) c5 * from`+f1+`group by c5`,"limited aggregate with multiple groups",true,selectSet},
 		Test{`select c5 c9 max(c3) as max min(c3) as min avg=avg(c3) caout = count(*) from`+f1+`group by c5 c6`,"nested groups",true,selectSet},
-		*/
 		Test{`select top 20 ((c7+'19 years'*1.2) - 1/1/1997) + c7, c7, c7+'1.2 days', c7+'2 days' from`+f1,"date arithmetic",true,selectSet},
 		Test{`select top 20 c7 + '19 years' + '88 days' + '2 weeks' from`+f1,"more date arithmetic",true,selectSet},
 		Test{`select top 20 count(*), day(c7) c7 from`+f1+`group by day(c8)`,"function needs date not int",false,selectSet},
