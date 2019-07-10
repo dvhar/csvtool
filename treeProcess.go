@@ -8,38 +8,19 @@ import (
 )
 
 //what type results from operation with 2 expressions with various data types and column/literal source
-//null[c,l], int[c,l], float[c,l], date[c,l], string[c,l] in both dimensions
-var typeChartOld = [10][10]int {
-	{4,4,4,4,4,4,4,4,4,4},
-	{4,4,1,1,2,2,3,3,4,4},
-	{4,1,1,1,2,2,3,1,4,1},
-	{4,1,1,1,2,2,3,1,4,4},
-	{4,2,2,2,2,2,3,2,4,2},
-	{4,2,2,2,2,2,3,2,4,4},
-	{4,3,3,3,3,3,3,3,3,3},
-	{4,3,1,1,2,2,3,3,4,4},
-	{4,4,4,4,4,4,3,4,4,4},
-	{4,4,1,4,2,4,3,4,4,4},
-}
+//don't use for types where different operation results in different type
 //null[c,l], int[c,l], float[c,l], date[c,l], duration[c,l], string[c,l] in both dimensions
-//may want to double check time duration interactions
-//doesn't work for types where different operation results in different type
 var typeChart = [12][12]int {
 	{5,5, 5,5, 5,5, 5,5, 5,5, 5,5},
 	{5,5, 1,1, 2,2, 3,3, 4,4, 5,5},
-
 	{5,1, 1,1, 2,2, 3,1, 4,4, 5,1},
 	{5,1, 1,1, 2,2, 3,1, 4,4, 5,5},
-
 	{5,2, 2,2, 2,2, 3,2, 4,2, 5,2},
 	{5,2, 2,2, 2,2, 3,2, 4,4, 5,5},
-
 	{5,3, 3,3, 3,3, 3,3, 3,3, 3,3},
 	{5,3, 1,1, 2,2, 3,3, 3,3, 5,5},
-
 	{5,4, 4,4, 4,4, 3,3, 4,4, 5,4},
 	{5,4, 4,4, 2,4, 3,3, 4,4, 5,5},
-
 	{5,5, 5,5, 5,5, 3,5, 5,5, 5,5},
 	{5,5, 1,5, 2,5, 3,5, 4,5, 5,5},
 }
@@ -139,10 +120,11 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			case FN_MONTH: fallthrough
 			case FN_WEEK:  fallthrough
 			case FN_YDAY:  fallthrough
-			case FN_DAY:   fallthrough
+			case FN_MDAY:  fallthrough
+			case FN_WDAY:   fallthrough
 			case FN_HOUR:  t1 = T_INT
 			case FN_MONTHNAME: fallthrough
-			case FN_DAYNAME: t1 = T_STRING
+			case FN_WDAYNAME: t1 = T_STRING
 			}
 			if err != nil { return 0,0,nil,err }
 		case N_EXPRNEG:
@@ -282,9 +264,10 @@ func enforceType(n *Node, t int) error {
 		case FN_MONTH:     fallthrough
 		case FN_WEEK:      fallthrough
 		case FN_YDAY:      fallthrough
-		case FN_DAY:       fallthrough
+		case FN_MDAY:      fallthrough
+		case FN_WDAY:      fallthrough
 		case FN_MONTHNAME: fallthrough
-		case FN_DAYNAME:   fallthrough
+		case FN_WDAYNAME:  fallthrough
 		case FN_HOUR:  err = enforceType(n.node1, T_DATE)
 		default: err = enforceType(n.node1, t)
 		}

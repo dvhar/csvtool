@@ -109,10 +109,11 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 			case FN_MONTH: v1 = integer(v1.(date).val.Month())
 			case FN_WEEK:  v1 = integer(v1.(date).val.YearDay() / 7)
 			case FN_YDAY:  v1 = integer(v1.(date).val.YearDay())
-			case FN_DAY:   v1 = integer(v1.(date).val.Weekday())
+			case FN_MDAY:  v1 = integer(v1.(date).val.Day())
+			case FN_WDAY:   v1 = integer(v1.(date).val.Weekday())
 			case FN_HOUR:  v1 = integer(v1.(date).val.Hour())
 			case FN_MONTHNAME: v1 = text(v1.(date).val.Month().String())
-			case FN_DAYNAME:   v1 = text(v1.(date).val.Weekday().String())
+			case FN_WDAYNAME:   v1 = text(v1.(date).val.Weekday().String())
 			}
 		}
 		return t1,v1

@@ -137,9 +137,10 @@ func runTests(doTest bool){
 		Test{`select c5 c9 max(c3) as max min(c3) as min avg=avg(c3) caout = count(*) from`+f1+`group by c5 c6`,"nested groups",true,selectSet},
 		*/
 		Test{`select top 20 ((c7+'19 years'*1.2) - 1/1/1997) + c7, c7, c7+'1.2 days', c7+'2 days' from`+f1,"date arithmetic",true,selectSet},
+		Test{`select top 20 c7 + '19 years' + '88 days' + '2 weeks' from`+f1,"more date arithmetic",true,selectSet},
 		Test{`select top 20 count(*), day(c7) c7 from`+f1+`group by day(c8)`,"function needs date not int",false,selectSet},
 		Test{`select top 20 count(*), day(c6) c7 from`+f1+`group by day(c7)`,"function needs date not string",false,selectSet},
-		Test{`select top 20 count(*) hour(c7) day(c7) dayname(c7) dayofyear(c7) week(c7+'8 weeks') month(c7) monthname(c7) year(c7) c7 abs(c8 - 40) as abs from`+f1+`group by day(c7)`,"non-aggregate funcions",true,selectSet},
+		Test{`select top 20 distinct day(c7) dayofweek(c7) dayofmonth(c7) hour(c7) dayname(c7) dayofyear(c7) week(c7+'8 weeks') month(c7) monthname(c7) year(c7) c7 abs(c8 - 40) as abs from`+f1,"non-aggregate funcions",true,selectSet},
 	}
 
 	for _,t := range tests {

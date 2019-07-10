@@ -62,7 +62,7 @@ func checkFunctionParamType(functionId, typ int) error {
 	case FN_YEAR:  if !intInList(typ, T_DATE) { return err("can only find year of date type") }
 	case FN_MONTH: if !intInList(typ, T_DATE) { return err("can only find month of date type") }
 	case FN_WEEK:  if !intInList(typ, T_DATE) { return err("can only find week of date type") }
-	case FN_DAY:   if !intInList(typ, T_DATE) { return err("can only find day of date type") }
+	case FN_WDAY:   if !intInList(typ, T_DATE) { return err("can only find day of date type") }
 	case FN_HOUR:  if !intInList(typ, T_DATE) { return err("can only find hour of date/time type") }
 	}
 	return nil
@@ -76,7 +76,8 @@ func checkOperatorSemantics(operator, t1, t2 int, v1, v2 interface{}) error {
 		fallthrough
 	case SP_MINUS:
 		if !isOneOfType(t1,t2,T_INT,T_FLOAT) && !(typeCompute(v1,v2,t1,t2)==T_STRING) &&
-			!((t1 == T_DATE && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_DATE) || (t1 == T_DATE && t2 == T_DATE)) {
+			!((t1 == T_DATE && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_DATE) ||
+			(t1 == T_DATE && t2 == T_DATE) || t1 == T_DURATION && t2 == T_DURATION) {
 			return err("Cannot add or subtract types "+typeMap[t1]+" and "+typeMap[t2])
 	}
 	case SP_MOD: if (t1!=T_INT || t2!=T_INT) { return err("Modulus operator requires integers") }
@@ -193,35 +194,23 @@ func getColumnIdx(colNames []string, column string) (int, error) {
 var countSelected int
 
 //infer type of single string value
-var LeadingZeroString *regexp.Regexp
+var LeadingZeroString *regexp.Regexp = regexp.MustCompile(`^0\d+$`)
 func getNarrowestType(value string, startType int) int {
 	entry := s.TrimSpace(value)
 	if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
 	  startType = max(T_NULL, startType)
-	} else if LeadingZeroString.MatchString(entry) {
-	  startType = T_STRING
-	} else if _, err := Atoi(entry); err == nil {
-	  startType = max(T_INT, startType)
-	} else if _, err := ParseFloat(entry,64); err == nil {
-	  startType = max(T_FLOAT, startType)
-	} else if _,err := d.ParseAny(entry); err == nil{
-	  startType = max(T_DATE, startType)
+	} else if LeadingZeroString.MatchString(entry)       { startType = T_STRING
+	} else if _, err := Atoi(entry); err == nil          { startType = max(T_INT, startType)
+	} else if _, err := ParseFloat(entry,64); err == nil { startType = max(T_FLOAT, startType)
+	} else if _,err := d.ParseAny(entry); err == nil     { startType = max(T_DATE, startType)
 	  //sometimes duration can get mistaken for a date
-	   if _,err := parseDuration(entry); err == nil {
-		  startType = max(T_DURATION, startType)
-	   }
-	} else if _,err := parseDuration(entry); err == nil {
-	  startType = max(T_DURATION, startType)
-	} else {
-	  startType = T_STRING
-	}
+	   if _,err := parseDuration(entry); err == nil      { startType = max(T_DURATION, startType)}
+	} else if _,err := parseDuration(entry); err == nil  { startType = max(T_DURATION, startType)
+	} else                                               { startType = T_STRING }
 	return startType
 }
 //infer types of all infile columns
 func inferTypes(q *QuerySpecs, f string) error {
-	LeadingZeroString = regexp.MustCompile(`^0\d+$`)
-	//may want to get rid of single letter option for time duration
-	durationPattern = regexp.MustCompile(`^(\d+|\d+\.\d+)\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|months|month|years|year|s|m|h|d|w|mo|y)$`)
 	//open file
 	fp,err := os.Open(q.files[f].fname)
 	if err != nil { return errors.New("problem opening input file") }
@@ -245,7 +234,7 @@ func inferTypes(q *QuerySpecs, f string) error {
 	}
 	return  err
 }
-var durationPattern *regexp.Regexp
+var durationPattern *regexp.Regexp = regexp.MustCompile(`^(\d+|\d+\.\d+)\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|months|month|years|year|s|m|h|d|w|mo|y)$`)
 func parseDuration(str string) (time.Duration, error) {
 	dur, err := time.ParseDuration(str)
 	if err == nil { return dur, err }
@@ -282,9 +271,9 @@ func parseDuration(str string) (time.Duration, error) {
 		case "s":      fallthrough
 		case "second": fallthrough
 		case "seconds":
-			Println("str:",str,"quantity:",quantity)
-			return time.Second * time.Duration(int(quantity)), nil
+			return time.Second * time.Duration(quantity), nil
 	}
+	//find a way to implement month math
 	return 0, errors.New("Error: Unable to calculate months")
 }
 

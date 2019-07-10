@@ -56,9 +56,10 @@ const (
 	FN_MONTH =    KEYWORD|iota
 	FN_MONTHNAME= KEYWORD|iota
 	FN_WEEK =     KEYWORD|iota
-	FN_DAY =      KEYWORD|iota
-	FN_DAYNAME =  KEYWORD|iota
+	FN_WDAY =      KEYWORD|iota
+	FN_WDAYNAME =  KEYWORD|iota
 	FN_YDAY =     KEYWORD|iota
+	FN_MDAY =     KEYWORD|iota
 	FN_HOUR =     KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
@@ -185,9 +186,11 @@ var functionMap = map[string]int {
 	"month" :    FN_MONTH,
 	"monthname": FN_MONTHNAME,
 	"week" :     FN_WEEK,
-	"day" :      FN_DAY,
-	"dayname" :  FN_DAYNAME,
+	"day" :      FN_WDAY,
+	"dayname" :  FN_WDAYNAME,
 	"dayofyear": FN_YDAY,
+	"dayofmonth":FN_MDAY,
+	"dayofweek": FN_WDAY,
 	"hour" :     FN_HOUR,
 }
 var specialMap = map[string]int {
