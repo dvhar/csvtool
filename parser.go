@@ -48,30 +48,40 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 
 	n.node1,err =  parseSelect(q)
 	if err != nil { return n,err }
-	_,_,_,err = typeCheck(n.node1)
-	if err != nil { return n,err }
-	branchShortener(q, n.node1)
-	columnNamer(q, n.node1)
-	findAggregateFunctions(q, n.node1)
 
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
 
 	n.node3,err =  parseWhere(q)
 	if err != nil { return n,err }
+
+	n.node4,err =  parseGroupby(q)
+	if err != nil { return n,err }
+
+	q.sortExpr,err = parseOrder(q)
+	if err != nil { return n,err }
+
+	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
+
+	_,_,_,err = typeCheck(n.node1)
+	if err != nil { return n,err }
+	branchShortener(q, n.node1)
+	columnNamer(q, n.node1)
+	findAggregateFunctions(q, n.node1)
+
 	_,_,_,err = typeCheck(n.node3)
 	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
 
-	n.node4,err =  parseGroupby(q)
-	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node4)
 	if err != nil { return n,err }
 	branchShortener(q, n.node4)
 
-	err =  parseOrder(q)
-	if err != nil { return n,err }
-	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
+	_,sortType,_,er := typeCheck(q.sortExpr)
+	if er != nil { return n,er }
+	err = enforceType(q.sortExpr, sortType)
+	branchShortener(q,q.sortExpr)
+
 	return n,err
 }
 
@@ -513,21 +523,16 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 }
 
 //doesn't add to parse tree yet, juset sets q member
-func parseOrder(q* QuerySpecs) error {
-	var err error
-	if q.Tok().id == EOS { return nil }
+func parseOrder(q* QuerySpecs) (*Node,error) {
+	if q.Tok().id == EOS { return nil,nil }
 	if q.Tok().id == KW_ORDER {
-		if q.NextTok().id != KW_BY { return errors.New("Expected 'by' after 'order'. Found "+q.Tok().val) }
+		if q.NextTok().id != KW_BY { return nil,errors.New("Expected 'by' after 'order'. Found "+q.Tok().val) }
 		q.NextTok()
-		q.sortExpr,err = parseExprAdd(q)
-		if err != nil { return err }
-		_,sortType,_,err := typeCheck(q.sortExpr)
-		if err != nil { return err }
-		err = enforceType(q.sortExpr, sortType)
-		branchShortener(q,q.sortExpr)
+		expr, err := parseExprAdd(q)
 		if q.Tok().id == KW_ORDHOW { q.NextTok(); q.sortWay = 2 }
+		return expr, err
 	}
-	return err
+	return nil,nil
 }
 
 
