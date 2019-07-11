@@ -12,14 +12,10 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 	execSelections(q, q.tree.node1.node1)
 
 	//add non-grouped row to web return data
-	if q.quantityRetrieved <= q.showLimit && !q.groupby {
-		res.Vals = append(res.Vals, q.toRow)
-		q.quantityRetrieved++
-	}
+	if q.quantityRetrieved <= q.showLimit && !q.groupby { res.Vals = append(res.Vals, q.toRow) }
 
 	//save non-grouped row
 	if q.save && !q.groupby { saver <- saveData{Type : CH_ROW, Row : &q.toRow} ; <-savedLine}
-
 }
 
 func execSelections(q *QuerySpecs, n *Node) {
@@ -45,7 +41,7 @@ func execSelections(q *QuerySpecs, n *Node) {
 			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v)
 			case FN_MIN:   if q.toRow[index].Greater(v) { q.toRow[index] = v }
 			case FN_MAX:   if q.toRow[index].Less(v) { q.toRow[index] = v }
-			case FN_COUNT: q.toRow[index] = q.toRow[index].Add(integer(1))
+			case FN_COUNT: if _,ok:= val.(null); !ok { q.toRow[index] = q.toRow[index].Add(integer(1)) }
 			}
 		}
 	}
@@ -79,7 +75,7 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 		if ok {
 			q.toRow = row.([]Value)
 			return true
-		} else if !q.LimitReached() {
+		} else if !q.LimitReached() || q.sortExpr != nil {
 			q.quantityRetrieved++
 			row = make([]Value, q.colSpec.NewWidth)
 			m[key] = row

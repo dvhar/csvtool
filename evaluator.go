@@ -99,7 +99,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	return res, nil
 }
 
-//retrieve results on first pass
+//retrieve results without needing to index the rows
 func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
 	var err error
 	rowsChecked := 0
@@ -179,10 +179,10 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		q.fromRow,err = reader.ReadAt(i)
 		if err != nil { break }
 		if evalDistinct(q, distinctCheck) {
+			execGroupOrNewRow(q,q.tree.node4)
 			execSelect(q, res)
-			res.Numrows++;
-			if res.Numrows >= reader.limit { break }
-			if res.Numrows % 1000 == 0 { messager <- "Retrieving line "+Itoa(res.Numrows) }
+			if q.LimitReached() { break }
+			if q.quantityRetrieved % 1000 == 0 { messager <- "Retrieving line "+Itoa(q.quantityRetrieved) }
 		}
 	}
 	return nil

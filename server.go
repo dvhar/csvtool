@@ -143,9 +143,9 @@ var maxLimit int
 func rowLimit(retData *ReturnData) {
 	maxLimit = 0
 	for i, query := range retData.Entries {
-		Println("numrows:",query.Numrows,"showlim:",query.ShowLimit,"actualLen:",len(query.Vals))
 		if query.Numrows > query.ShowLimit {
 			if query.ShowLimit > maxLimit { maxLimit = query.ShowLimit }
+			if query.ShowLimit > len(query.Vals) { continue }
 			retData.Entries[i].Vals = query.Vals[:query.ShowLimit]
 			retData.Clipped = true
 			runtime.GC()

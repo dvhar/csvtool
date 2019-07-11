@@ -338,7 +338,6 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		err = nil
 		n.tok2 = 0
 		n.tok3 = getNarrowestType(tok.val,0)
-		Println("value",tok,"initially typed as",n.tok3)
 		if n.tok3.(int) != T_NULL { n.tok1 = tok.val } else { n.tok1 = nil }
 	}
 	q.NextTok()
