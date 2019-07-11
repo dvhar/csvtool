@@ -195,16 +195,11 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 			r.Vals = append(r.Vals, row.([]Value))
 			for i,v := range r.Vals[q.quantityRetrieved] {
 				if agg,ok := v.(AverageVal); ok && q.colSpec.functions[i].function == FN_AVG {
-					switch q.colSpec.functions[i].typ {
-					case T_INT:   r.Vals[q.quantityRetrieved][i] = agg.val.Div(integer(agg.count))
-					case T_FLOAT: r.Vals[q.quantityRetrieved][i] = agg.val.Div(float(float64(agg.count)))
-					}
+					r.Vals[q.quantityRetrieved][i] = agg.val.Div(integer(agg.count))
 				}
 			}
-			if q.save  { saver <- saveData{Type : CH_ROW, Row : &r.Vals[q.quantityRetrieved]} ; <-savedLine}
 			q.quantityRetrieved++
-			if q.quantityRetrieved > q.showLimit && !q.save { return }
-			if q.quantityRetrieved > q.showLimit && q.save { r.Vals = r.Vals[0:len(r.Vals)-1] }
+			if q.LimitReached() && !q.save && q.sortExpr==nil { return }
 		}
 	case 1: for _,v := range m { groupRetriever(q, n.node2, v.(map[interface{}]interface{}), r) }
 	}
@@ -220,4 +215,20 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 		root = &Node{ tok1: map1, node1: &Node{ tok1: 0}}
 	}
 	groupRetriever(q, root.node1, root.tok1.(map[interface{}]interface{}), res)
+	//sort groups
+	if q.sortExpr != nil {
+		messager <- "Sorting Rows..."
+		sort.Slice(res.Vals, func(i, j int) bool {
+			ret := res.Vals[i][q.colSpec.NewWidth-1].Greater(res.Vals[j][q.colSpec.NewWidth-1])
+			if q.sortWay == 2 { return !ret }
+			return ret
+		})
+		//remove sort value and excess rows when done
+		for i,_ := range res.Vals { res.Vals[i] = res.Vals[i][0:q.colSpec.NewWidth-1] }
+		if q.quantityLimit > 0 && q.quantityLimit <= len(res.Vals) { res.Vals = res.Vals[0:q.quantityLimit] }
+	}
+	//save groups to file
+	if q.save  {
+		for _,v := range res.Vals { saver <- saveData{Type : CH_ROW, Row : &v} ; <-savedLine }
+	}
 }

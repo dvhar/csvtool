@@ -48,16 +48,12 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 
 	n.node1,err =  parseSelect(q)
 	if err != nil { return n,err }
-
 	n.node2, err = parseFrom(q)
 	if err != nil { return n,err }
-
 	n.node3,err =  parseWhere(q)
 	if err != nil { return n,err }
-
 	n.node4,err =  parseGroupby(q)
 	if err != nil { return n,err }
-
 	q.sortExpr,err = parseOrder(q)
 	if err != nil { return n,err }
 
@@ -76,16 +72,19 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		}
 	}
 
+	//process selections
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
 	findAggregateFunctions(q, n.node1)
 
+	//process 'where' section
 	_,_,_,err = typeCheck(n.node3)
 	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
 
+	//process groups
 	_,_,_,err = typeCheck(n.node4)
 	if err != nil { return n,err }
 	branchShortener(q, n.node4)

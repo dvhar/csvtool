@@ -556,8 +556,20 @@ func (t text) Mult(other Value) Value     { return t }
 func (n null) Mult(other Value) Value     { return n }
 func (l liker) Mult(other Value) Value    { return l }
 
-func (f float) Div(other Value) Value    { return float(f / other.(float)) }
-func (i integer) Div(other Value) Value  { return integer(i / other.(integer)) }
+func (f float) Div(other Value) Value    {
+	switch o := other.(type) {
+		case float:   return float(f / o)
+		case integer: return float(f / float(o))
+	}
+	return f
+}
+func (i integer) Div(other Value) Value  {
+	switch o := other.(type) {
+		case integer: return integer(i / o)
+		case float:   return integer(i / integer(o))
+	}
+	return i
+}
 func (d date) Div(other Value) Value     { return d }
 func (d duration) Div(other Value) Value {
 	switch o := other.(type) {
