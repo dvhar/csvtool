@@ -42,7 +42,6 @@ func runTests(doTest bool){
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
-		//Test{"select top 20 from"+f1+"order by c5", "select all", true, selectSet},
 		Test{"select top 20 * from"+f1, "select all star", true, selectSet},
 		Test{`select top 20 c5 from`+f1+`where c5 like %ny%`,  "case with multiple predicate types", true, selectSet},
 		Test{`select top 20 c4 'Issue Date' c8+c12+10 as int-sum 'c8-int'=c8 c12 as 'c12-int' 
@@ -140,6 +139,7 @@ func runTests(doTest bool){
 		Test{`select top 20 count(*), day(c7) c7 from`+f1+`group by day(c8)`,"function needs date not int",false,selectSet},
 		Test{`select top 20 count(*), day(c6) c7 from`+f1+`group by day(c7)`,"function needs date not string",false,selectSet},
 		Test{`select top 20 distinct day(c7) dayofweek(c7) dayofmonth(c7) hour(c7) dayname(c7) dayofyear(c7) week(c7+'8 weeks') month(c7) monthname(c7) year(c7) c7 abs(c8 - 40) as abs from`+f1,"non-aggregate funcions",true,selectSet},
+		Test{"select top 20 from"+f1+"order by c5", "select all", true, selectSet},
 	}
 
 	for _,t := range tests {

@@ -162,7 +162,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	}
 
 	//sort matching line positions
-	messager <- "Sorting Rows..."
+	if !(*testing) { messager <- "Sorting Rows..." }
 	sort.Slice(reader.valPositions, func(i, j int) bool {
 		if reader.valPositions[i].val == nil && reader.valPositions[j].val == nil { return false
 		} else if reader.valPositions[i].val == nil { return false
