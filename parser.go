@@ -63,6 +63,19 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
 
+	//add sort expression to selections if grouping
+	if q.sortExpr!=nil && q.groupby {
+		nn := n.node1.node1
+		for ; nn.node2 != nil; nn = nn.node2 {}
+		nn.node2 = &Node{
+			label:N_SELECTIONS,
+			node1: &Node{
+				label: N_COLITEM,
+				node1: q.sortExpr,
+			},
+		}
+	}
+
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
@@ -77,10 +90,13 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	branchShortener(q, n.node4)
 
-	_,sortType,_,er := typeCheck(q.sortExpr)
-	if er != nil { return n,er }
-	err = enforceType(q.sortExpr, sortType)
-	branchShortener(q,q.sortExpr)
+	//process sort expression separately if not grouping
+	if !(q.sortExpr!=nil && q.groupby) {
+		_,sortType,_,er := typeCheck(q.sortExpr)
+		if er != nil { return n,er }
+		err = enforceType(q.sortExpr, sortType)
+		branchShortener(q,q.sortExpr)
+	}
 
 	return n,err
 }

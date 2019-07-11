@@ -42,7 +42,7 @@ func runTests(doTest bool){
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
-		Test{"select top 20 from"+f1+"order by c5", "select all", true, selectSet},
+		//Test{"select top 20 from"+f1+"order by c5", "select all", true, selectSet},
 		Test{"select top 20 * from"+f1, "select all star", true, selectSet},
 		Test{`select top 20 c5 from`+f1+`where c5 like %ny%`,  "case with multiple predicate types", true, selectSet},
 		Test{`select top 20 c4 'Issue Date' c8+c12+10 as int-sum 'c8-int'=c8 c12 as 'c12-int' 
