@@ -45,7 +45,7 @@ export class Help extends React.Component {
 				<br/><br/>
 				Examples:
 				<blockquote>
-				{"select c1+23, c1*c2, c1 / c2, c1 - c2, c1 % 2, (c1 - 23)*(c2+34) from /home/user/pets.csv"}
+				{"select birthdate+'3 weeks', c1*c2, c1 / c2, c1 - c2, c1 % 2, (c1 - 23)*(c2+34) from /home/user/pets.csv"}
 				<br/>
 				{"select case when c1*2<10 then dog when c1*10>=10.2 then cat else monkey end from /home/user/pets.csv"}
 				<br/>
@@ -58,7 +58,7 @@ export class Help extends React.Component {
 				</blockquote>
 				{"The 'abs' function can be used to get the absolute value of a number."}
 				<h4>Aggregate functions</h4>
-				{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiply expressions."}
+				{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions. Aggregate functions cannot yet be used as a part of a calculation, so things like sum(column1)+sum(column2) won't work. If you select a non-aggregate value (like just a column) along with some aggregates, the non-aggregate result will just be the last one that it found."}
 				<blockquote>
 				sum  avg  min  max  count
 				</blockquote>
