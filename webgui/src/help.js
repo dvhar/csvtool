@@ -15,7 +15,7 @@ export class Help extends React.Component {
 			{"After running a query, hit the save button. Navigate to where you want to save, type in the file name, and hit the save button to the right. All the queries on the page will run again, but this time they will be saved to csv files. If there are multiple queries on the page, you still only need to specify one file and a number will be added to the filename for each one."}
 			<h3>How to use the query language</h3>
 			<hr/>
-			{"This program uses a custom version of SQL based on TSQL. Some features like Joins and Aggregate Functions are not implemented yet."}
+			{"This program uses a custom version of SQL based on TSQL. Some features like Joins are not implemented yet."}
 			<blockquote>
 				<h4>Specifying a file</h4>
 				{"Click 'Browse Files' to find files, and double click one to add it to the query. You can query different files at the same time by separating queries with a semicolon."}
@@ -42,6 +42,7 @@ export class Help extends React.Component {
 				</blockquote>
 				<h4>Selecting more complex expression</h4>
 				{"Use + - * / % operators to add, subtract, multiply, divide, and modulus expressions. -, %, and / need to have spaces around them or else they will be considered part of the text. You can combine them with parentheses. You can also use case expressions."}
+				<br/><br/>
 				Examples:
 				<blockquote>
 				{"select c1+23, c1*c2, c1 / c2, c1 - c2, c1 % 2, (c1 - 23)*(c2+34) from /home/user/pets.csv"}
@@ -50,8 +51,23 @@ export class Help extends React.Component {
 				<br/>
 				{"select case c1 / c4 when (c3+c3)*2 then dog when c1*10 then cat end from /home/user/pets.csv"}
 				</blockquote>
-				<h4>selecting rows with a distinct value</h4>
-				{"Put the 'distinct' keyword in front of the expression that you want to be distinct. Put 'hidden' after 'distinct' to effect the results without displaying that value."}
+				<h4>Non-aggregate functions</h4>
+				{"These functions can be used to get certain pieces of information from a date value:"}
+				<blockquote>
+				year month monthname week day dayname dayofyear dayofmonth dayofweek hour
+				</blockquote>
+				{"The 'abs' function can be used to get the absolute value of a number."}
+				<h4>Aggregate functions</h4>
+				{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiply expressions."}
+				<blockquote>
+				sum  avg  min  max  count
+				</blockquote>
+				Example of functions:
+				<blockquote>
+				{"select count(*), sum('visit duration'), avg(cost) as ouch, monthname(date), week(date) from /home/user/pets.csv group by month(date) week(date) order by avg(cost)"}
+				</blockquote>
+				<h4>Selecting rows with a distinct value</h4>
+				{"Put the 'distinct' keyword in front of the expression that you want to be distinct. Put 'hidden' after 'distinct' if you don't want that value to show up in the results."}
 				<br/><br/>
 				Examples:
 				<blockquote>
@@ -80,13 +96,11 @@ export class Help extends React.Component {
 				{"select from /home/user/pets.csv where (c1 < c13 or fuzzy = very) and not (c3 = null or weight >= 50 or name not like a_b%)"}
 				</blockquote>
 				<h4>Sorting results</h4>
-				{"Use 'order by', followed by one column or expression, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified."}
+				{"Use 'order by' at the end of the query, followed by one column or expression, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified."}
 				<br/><br/>
 				Examples:
 				<blockquote>
-				{"select from /home/user/pets.csv where dog = husky order by age"}
-				<br/>
-				{"select from /home/user/pets.csv order by age asc"}
+				{"select from /home/user/pets.csv where dog = husky order by age asc"}
 				<br/>
 				{"select from /home/user/pets.csv order by c2*c3"}
 				</blockquote>
@@ -103,7 +117,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.31 - 6/22/2019
+			version 0.40 - 7/11/2019
 			<hr/>
 			<br/><br/>
 			</div>

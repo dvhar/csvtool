@@ -164,9 +164,6 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	//sort matching line positions
 	if !(*testing) { messager <- "Sorting Rows..." }
 	sort.Slice(reader.valPositions, func(i, j int) bool {
-		if reader.valPositions[i].val == nil && reader.valPositions[j].val == nil { return false
-		} else if reader.valPositions[i].val == nil { return false
-		} else if reader.valPositions[j].val == nil { return true }
 		ret := reader.valPositions[i].val.Greater(reader.valPositions[j].val)
 		if q.sortWay == 2 { return !ret }
 		return ret
@@ -217,7 +214,7 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	groupRetriever(q, root.node1, root.tok1.(map[interface{}]interface{}), res)
 	//sort groups
 	if q.sortExpr != nil {
-		messager <- "Sorting Rows..."
+		if !(*testing) { messager <- "Sorting Rows..." }
 		sort.Slice(res.Vals, func(i, j int) bool {
 			ret := res.Vals[i][q.colSpec.NewWidth-1].Greater(res.Vals[j][q.colSpec.NewWidth-1])
 			if q.sortWay == 2 { return !ret }

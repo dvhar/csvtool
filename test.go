@@ -140,6 +140,7 @@ func runTests(doTest bool){
 		Test{`select top 20 count(*), day(c6) c7 from`+f1+`group by day(c7)`,"function needs date not string",false,selectSet},
 		Test{`select top 20 distinct day(c7) dayofweek(c7) dayofmonth(c7) hour(c7) dayname(c7) dayofyear(c7) week(c7+'8 weeks') month(c7) monthname(c7) year(c7) c7 abs(c8 - 40) as abs from`+f1,"non-aggregate funcions",true,selectSet},
 		Test{"select top 20 from"+f1+"order by c5", "select all", true, selectSet},
+		Test{`select top 20 monthname(c7) dayname(c7) week(c7) sum(c3) c5 from`+f1+`group by month(c7) week(c7) order by c5 asc `,"group sort",true,selectSet},
 	}
 
 	for _,t := range tests {

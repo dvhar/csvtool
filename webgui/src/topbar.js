@@ -91,7 +91,7 @@ class FileSelector extends React.Component {
 					var qtext = document.getElementById("textBoxId");
 					var start = qtext.value.substring(0,qtext.selectionStart);
 					var end = qtext.value.substring(qtext.selectionEnd, 10000000);
-					qtext.value = start +' '+ this.props.path +' '+ end;
+					qtext.value = start +" '"+ this.props.path +"' "+ end;
 					this.props.updateTopMessage("Added file to query");
 				}
 			}} 
