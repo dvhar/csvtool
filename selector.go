@@ -22,10 +22,9 @@ func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	index := n.tok1.(int)
 	typ,val := execExpression(q, n.node1.node1)
-	if val == nil { val = null("") }
 	if typ != T_AGGRAGATE{
 		q.toRow[index] = val.(Value)
-	} else if val.(Aggragate).val != nil {
+	} else if _,ok := val.(Aggragate).val.(null); !ok {
 		v := val.(Aggragate).val.(Value)
 		//first entry to aggragate target
 		if q.toRow[index] == nil {
@@ -104,7 +103,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		//aggregate function
 		if (functionId & AGG_BIT) != 0 { return T_AGGRAGATE, Aggragate{v1,t1,functionId} }
 		//non-aggregate function
-		if v1 != nil {
+		if _,ok:=v1.(null);!ok {
 			switch functionId {
 			case FN_ABS:   if v1.(Value).Less(integer(0)) { v1 = v1.(Value).Mult(integer(-1)) }
 			case FN_YEAR:  v1 = integer(v1.(date).val.Year())
@@ -128,29 +127,28 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		} else if n.tok2.(int) == 1 {
 			var val Value
 			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
-			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), nil }
+			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), null("") }
 			switch n.tok3.(int) {
 				case T_INT:	     a,_ := Atoi(cell);            val = integer(a)
 				case T_FLOAT:    a,_ := ParseFloat(cell,64);   val = float(a)
 				case T_DATE:     a,_ := d.ParseAny(cell);      val = date{a}
 				case T_DURATION: a,_ := parseDuration(cell); val = duration{a}
-				case T_NULL:   val = nil
+				case T_NULL:   val = null(cell)
 				case T_STRING: val = text(cell)
 			}
+			if val == nil { val = null("") }
 			return n.tok3.(int), val
 		}
 
 	case N_EXPRNEG:
 		t1,v1 := execExpression(q, n.node1)
-		if _,ok := n.tok1.(int); ok && v1 != nil { v1 = v1.(Value).Mult(integer(-1)) }
+		if _,ok := n.tok1.(int); ok { v1 = v1.(Value).Mult(integer(-1)) }
 		return t1,v1
 
 	case N_EXPRMULT:
 		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
-			if v1 == nil { return t1,v1 }
 			_,v2 := execExpression(q, n.node2)
-			if v2 == nil { return t1,v2 }
 			switch op {
 			case SP_STAR: v1=v1.(Value).Mult(v2.(Value))
 			case SP_DIV:  v1=v1.(Value).Div(v2.(Value))
@@ -162,9 +160,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_EXPRADD:
 		t1,v1 := execExpression(q, n.node1)
 		if op,ok := n.tok1.(int); ok {
-			if v1 == nil { return t1,v1 }
 			_,v2 := execExpression(q, n.node2)
-			if v2 == nil { return t1,v2 }
 			switch op {
 			case SP_PLUS:   v1=v1.(Value).Add(v2.(Value))
 			case SP_MINUS:  v1=v1.(Value).Sub(v2.(Value))
@@ -179,22 +175,22 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		case KW_WHEN:
 			t1,v1 := execCasePredList(q, n.node1)
 			if t1==-1 && n.node3!=nil { return execExpression(q, n.node3) }
-			if t1==-1 { return 0,nil }
+			if t1==-1 { return 0,null("") }
 			return t1,v1
 		//case expression list
 		case N_EXPRADD:
 			_,v1 := execExpression(q, n.node1)
 			t2,v2 := execCaseExprList(q, n.node2, v1)
 			if t2==-1 && n.node3!=nil { return execExpression(q, n.node3) }
-			if t2==-1 { return 0,nil }
+			if t2==-1 { return 0,null("") }
 			return t2,v2
 		}
 	}
-	return 0,nil
+	return 0,null("")
 }
 
 func execCasePredList(q *QuerySpecs, n *Node) (int,interface{}) {
-	if n==nil { return -1,nil }
+	if n==nil { return -1,null("") }
 	switch n.label {
 	case N_CPREDLIST:
 		typ, v1 := execCasePredList(q, n.node1)
@@ -203,11 +199,11 @@ func execCasePredList(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_CPRED:
 		if evalPredicates(q,n.node1) { return execExpression(q, n.node2) }
 	}
-	return -1,nil
+	return -1,null("")
 }
 
 func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interface{}) {
-	if n==nil { return -1,nil }
+	if n==nil { return -1,null("") }
 	switch n.label {
 	case N_CWEXPRLIST:
 		typ, v1 := execCaseExprList(q, n.node1, testVal)
@@ -215,10 +211,9 @@ func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interfac
 		return typ,v1
 	case N_CWEXPR:
 		_,v1 := execExpression(q, n.node1)
-		if (v1 != nil && testVal != nil && v1.(Value).Equal(testVal.(Value))) ||
-			v1 == nil && testVal == nil { return execExpression(q, n.node2) }
+		if v1.(Value).Equal(testVal.(Value)) { return execExpression(q, n.node2) }
 	}
-	return -1,nil
+	return -1,null("")
 }
 
 func evalPredicates(q *QuerySpecs, n *Node) bool {
@@ -243,32 +238,26 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 	case N_PREDCOMP:
 		_,val1 := execExpression(q, n.node1)
 		_,val2 := execExpression(q, n.node2)
-		if val1 == nil || val2 == nil {
-			switch n.tok1.(int) {
-			case SP_NOEQ: negate ^= 1; fallthrough
-			case SP_EQ:  match = (val1 == nil && val2 == nil)
-			default: match = false
-			}
-		} else {
-			expr1 := val1.(Value)
-			expr2 := val2.(Value)
-			switch n.tok1.(int) {
-			case KW_LIKE:    match = expr2.Equal(expr1)
-			case SP_NOEQ:    negate ^= 1; fallthrough
-			case SP_EQ:      match = expr1.Equal(expr2)
-			case SP_LESSEQ:  match = expr1.LessEq(expr2)
-			case SP_GREAT:   match = expr1.Greater(expr2)
-			case SP_GREATEQ: match = expr1.GreatEq(expr2)
-			case SP_LESS:    match = expr1.Less(expr2)
-			case KW_BETWEEN:
-				_,val3 := execExpression(q, n.node3)
-				if val3 == nil { match = false; break }
-				expr3 := val3.(Value)
-				if expr1.GreatEq(expr2) {
-					match = expr1.Less(expr3)
-				} else {
-					match = expr1.GreatEq(expr3)
-				}
+		expr1 := val1.(Value)
+		expr2 := val2.(Value)
+		switch n.tok1.(int) {
+		case KW_LIKE:    match = expr2.Equal(expr1)
+		case SP_NOEQ:    negate ^= 1; fallthrough
+		case SP_EQ:      match = expr1.Equal(expr2)
+		case SP_LESSEQ:  match = expr1.LessEq(expr2)
+		case SP_GREAT:   match = expr1.Greater(expr2)
+		case SP_GREATEQ: match = expr1.GreatEq(expr2)
+		case SP_LESS:    match = expr1.Less(expr2)
+		case KW_BETWEEN:
+			if _,ok:=val1.(null);ok{return false}
+			if _,ok:=val2.(null);ok{return false}
+			_,val3 := execExpression(q, n.node3)
+			if _,ok:=val3.(null);ok{return false}
+			expr3 := val3.(Value)
+			if expr1.GreatEq(expr2) {
+				match = expr1.Less(expr3)
+			} else {
+				match = expr1.GreatEq(expr3)
 			}
 		}
 	}

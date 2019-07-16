@@ -64,7 +64,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		nn := n.node1.node1
 		for ; nn.node2 != nil; nn = nn.node2 {}
 		nn.node2 = &Node{
-			label:N_SELECTIONS,
+			label: N_SELECTIONS,
 			node1: &Node{
 				label: N_COLITEM,
 				node1: q.sortExpr,
@@ -363,7 +363,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		err = nil
 		n.tok2 = 0
 		n.tok3 = getNarrowestType(tok.val,0)
-		if n.tok3.(int) != T_NULL { n.tok1 = tok.val } else { n.tok1 = nil }
+		n.tok1 = tok.val
 	}
 	q.NextTok()
 	if n.tok2.(int)==1 { n.tok3 = fdata.types[n.tok1.(int)] }
@@ -418,7 +418,6 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
-//modify this to immediatly compile a regular expression for 'like' relop
 //tok1 is [relop, paren] for comparison or more predicates
 //tok2 is negation
 //tok3 will be independant type

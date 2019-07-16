@@ -230,25 +230,28 @@ func enforceType(n *Node, t int) error {
 		n.tok3 = t
 		if n.tok2.(int) == 0 {
 			if _,ok := n.tok1.(liker); ok { return err } //don't retype regex
-			switch t {
-			case T_INT:
-				val,err = Atoi(n.tok1.(string))
-				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as integer") }
-				val = integer(val.(int))
-			case T_FLOAT:
-				val,err = ParseFloat(n.tok1.(string),64)
-				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as floating point number") }
-				val = float(val.(float64))
-			case T_DATE:
-				val,err = d.ParseAny(n.tok1.(string))
-				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
-				val = date{val.(time.Time)}
-			case T_DURATION:
-				val,err = parseDuration(n.tok1.(string))
-				if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as time duration") }
-				val = duration{val.(time.Duration)}
-			case T_NULL:   val = null(n.tok1.(string))
-			case T_STRING: val = text(n.tok1.(string))
+			if n.tok1.(string) == "null" { val = null("")
+			} else {
+				switch t {
+				case T_INT:
+					val,err = Atoi(n.tok1.(string))
+					if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as integer") }
+					val = integer(val.(int))
+				case T_FLOAT:
+					val,err = ParseFloat(n.tok1.(string),64)
+					if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as floating point number") }
+					val = float(val.(float64))
+				case T_DATE:
+					val,err = d.ParseAny(n.tok1.(string))
+					if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as date") }
+					val = date{val.(time.Time)}
+				case T_DURATION:
+					val,err = parseDuration(n.tok1.(string))
+					if err != nil { return errors.New("Could not parse "+n.tok1.(string)+" as time duration") }
+					val = duration{val.(time.Duration)}
+				case T_NULL:   val = null(n.tok1.(string))
+				case T_STRING: val = text(n.tok1.(string))
+				}
 			}
 			n.tok1 = val
 		}
