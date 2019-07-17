@@ -606,7 +606,7 @@ func (d date) String() string     { return d.val.Format("2006-01-02 15:04:05") }
 func (d duration) String() string { return d.val.String() }
 func (t text) String() string     { return string(t) }
 func (n null) String() string     { return string(n) }
-func (l liker) String() string    { return Sprint(l) }
+func (l liker) String() string    { return Sprint(l.val) }
 
 func (f float) MarshalJSON() ([]byte,error)    { return json.Marshal(f.String()) }
 func (i integer) MarshalJSON() ([]byte,error)  { return json.Marshal(i.String())}

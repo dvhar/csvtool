@@ -124,7 +124,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), null("") }
 			switch n.tok3.(int) {
-				case T_INT:	     a,_ := Atoi(cell);            val = integer(a)
+				case T_INT:      a,_ := Atoi(cell);            val = integer(a)
 				case T_FLOAT:    a,_ := ParseFloat(cell,64);   val = float(a)
 				case T_DATE:     a,_ := d.ParseAny(cell);      val = date{a}
 				case T_DURATION: a,_ := parseDuration(cell);   val = duration{a}
