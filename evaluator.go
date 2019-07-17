@@ -30,9 +30,8 @@ type ValPos struct {
 	pos int64
 	val Value
 }
-func (l*LineReader) SavePos(value interface{}) {
-	if value == nil { value = null("") }
-	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value.(Value)})
+func (l*LineReader) SavePos(value Value) {
+	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
 }
 func (l*LineReader) PrepareReRead() {
 	l.lineBytes = make([]byte, l.maxLineSize)
@@ -146,7 +145,6 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	rowsChecked := 0
 	var match bool
 	var err error
-	var sortExpr interface{}
 	//initial scan to find line positions
 	for {
 		if stop == 1 { break }
@@ -156,7 +154,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 		if err != nil {break}
 		match = evalWhere(q)
 		if match {
-			_,sortExpr = execExpression(q, q.sortExpr)
+			_,sortExpr := execExpression(q, q.sortExpr)
 			reader.SavePos(sortExpr)
 		}
 	}

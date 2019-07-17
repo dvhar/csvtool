@@ -22,23 +22,22 @@ func execSelections(q *QuerySpecs, n *Node) {
 	index := n.tok1.(int)
 	_,val := execExpression(q, n.node1.node1)
 	if n.tok4 == nil{
-		q.toRow[index] = val.(Value)
+		q.toRow[index] = val
 	} else if _,ok := val.(null); !ok {
-		v := val.(Value)
 		//first entry to aggragate target
 		if q.toRow[index] == nil {
 			switch n.tok4.(int) {
 			case FN_COUNT: q.toRow[index] = integer(1)
-			case FN_AVG:   q.toRow[index] = AverageVal{v, 1}
-			default: q.toRow[index] = v
+			case FN_AVG:   q.toRow[index] = AverageVal{val, 1}
+			default: q.toRow[index] = val
 			}
 		//update target with new value
 		} else {
 			switch n.tok4.(int) {
 			case FN_AVG:   fallthrough
-			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v)
-			case FN_MIN:   if q.toRow[index].Greater(v) { q.toRow[index] = v }
-			case FN_MAX:   if q.toRow[index].Less(v) { q.toRow[index] = v }
+			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(val)
+			case FN_MIN:   if q.toRow[index].Greater(val) { q.toRow[index] = val }
+			case FN_MAX:   if q.toRow[index].Less(val) { q.toRow[index] = val }
 			case FN_COUNT: if _,ok:= val.(null); !ok { q.toRow[index] = q.toRow[index].Add(integer(1)) }
 			}
 		}
@@ -94,14 +93,14 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 }
 
 //returns type and value
-func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
+func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 	switch n.label {
 	case N_FUNCTION:
 		t1,v1 := execExpression(q, n.node1)
 		//non-aggregate function
 		if _,ok:=v1.(null);!ok {
 			switch n.tok1.(int) {
-			case FN_ABS:        if v1.(Value).Less(integer(0)) { v1 = v1.(Value).Mult(integer(-1)) }
+			case FN_ABS:        if v1.Less(integer(0)) { v1 = v1.Mult(integer(-1)) }
 			case FN_YEAR:       v1 = integer(v1.(date).val.Year())
 			case FN_MONTH:      v1 = integer(v1.(date).val.Month())
 			case FN_WEEK:       v1 = integer(v1.(date).val.YearDay() / 7)
@@ -118,7 +117,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	case N_VALUE:
 		//literal
 		if n.tok2.(int) == 0 {
-			return n.tok3.(int), n.tok1
+			return n.tok3.(int), n.tok1.(Value)
 		//column value
 		} else if n.tok2.(int) == 1 {
 			var val Value
@@ -138,7 +137,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 
 	case N_EXPRNEG:
 		t1,v1 := execExpression(q, n.node1)
-		if _,ok := n.tok1.(int); ok { v1 = v1.(Value).Mult(integer(-1)) }
+		if _,ok := n.tok1.(int); ok { v1 = v1.Mult(integer(-1)) }
 		return t1,v1
 
 	case N_EXPRMULT:
@@ -146,9 +145,9 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		if op,ok := n.tok1.(int); ok {
 			_,v2 := execExpression(q, n.node2)
 			switch op {
-			case SP_STAR: v1=v1.(Value).Mult(v2.(Value))
-			case SP_DIV:  v1=v1.(Value).Div(v2.(Value))
-			case SP_MOD:  v1=v1.(Value).Mod(v2.(Value))
+			case SP_STAR: v1=v1.Mult(v2)
+			case SP_DIV:  v1=v1.Div(v2)
+			case SP_MOD:  v1=v1.Mod(v2)
 			}
 		}
 		return t1,v1
@@ -158,8 +157,8 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 		if op,ok := n.tok1.(int); ok {
 			_,v2 := execExpression(q, n.node2)
 			switch op {
-			case SP_PLUS:   v1=v1.(Value).Add(v2.(Value))
-			case SP_MINUS:  v1=v1.(Value).Sub(v2.(Value))
+			case SP_PLUS:   v1=v1.Add(v2)
+			case SP_MINUS:  v1=v1.Sub(v2)
 			}
 		}
 		return t1,v1
@@ -185,7 +184,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	return 0,null("")
 }
 
-func execCasePredList(q *QuerySpecs, n *Node) (int,interface{}) {
+func execCasePredList(q *QuerySpecs, n *Node) (int,Value) {
 	if n==nil { return -1,null("") }
 	switch n.label {
 	case N_CPREDLIST:
@@ -198,7 +197,7 @@ func execCasePredList(q *QuerySpecs, n *Node) (int,interface{}) {
 	return -1,null("")
 }
 
-func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interface{}) {
+func execCaseExprList(q *QuerySpecs, n *Node, testVal Value) (int,Value) {
 	if n==nil { return -1,null("") }
 	switch n.label {
 	case N_CWEXPRLIST:
@@ -207,7 +206,7 @@ func execCaseExprList(q *QuerySpecs, n *Node, testVal interface{}) (int,interfac
 		return typ,v1
 	case N_CWEXPR:
 		_,v1 := execExpression(q, n.node1)
-		if v1.(Value).Equal(testVal.(Value)) { return execExpression(q, n.node2) }
+		if v1.Equal(testVal) { return execExpression(q, n.node2) }
 	}
 	return -1,null("")
 }
@@ -232,10 +231,8 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		return match
 
 	case N_PREDCOMP:
-		_,val1 := execExpression(q, n.node1)
-		_,val2 := execExpression(q, n.node2)
-		expr1 := val1.(Value)
-		expr2 := val2.(Value)
+		_,expr1 := execExpression(q, n.node1)
+		_,expr2 := execExpression(q, n.node2)
 		switch n.tok1.(int) {
 		case KW_LIKE:    match = expr2.Equal(expr1)
 		case SP_NOEQ:    negate ^= 1; fallthrough
@@ -245,11 +242,10 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		case SP_GREATEQ: match = expr1.GreatEq(expr2)
 		case SP_LESS:    match = expr1.Less(expr2)
 		case KW_BETWEEN:
-			if _,ok:=val1.(null);ok{return false}
-			if _,ok:=val2.(null);ok{return false}
-			_,val3 := execExpression(q, n.node3)
-			if _,ok:=val3.(null);ok{return false}
-			expr3 := val3.(Value)
+			if _,ok:=expr1.(null);ok{return false}
+			if _,ok:=expr2.(null);ok{return false}
+			_,expr3 := execExpression(q, n.node3)
+			if _,ok:=expr3.(null);ok{return false}
 			if expr1.GreatEq(expr2) {
 				match = expr1.Less(expr3)
 			} else {
