@@ -65,6 +65,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		for ; nn.node2 != nil; nn = nn.node2 {}
 		nn.node2 = &Node{
 			label: N_SELECTIONS,
+			tok3: 0,
 			node1: &Node{
 				label: N_COLITEM,
 				node1: q.sortExpr,
@@ -118,13 +119,13 @@ func parseSelect(q* QuerySpecs) (*Node,error) {
 //node2 is chain of selections for all infile columns
 func selectAll(q* QuerySpecs) (*Node,error) {
 	var err error
-	n := &Node{label:N_SELECTIONS}
+	n := &Node{label:N_SELECTIONS,tok3:0}
 	file := q.files["_f1"]
 	firstSelection := n
 	var lastSelection *Node
 	for i:= range file.names {
 		n.tok2  = file.names[i]
-		n.node2 = &Node{label:N_SELECTIONS}
+		n.node2 = &Node{label:N_SELECTIONS,tok3:0}
 		n.node1 = &Node{
 			label: N_COLITEM,
 			tok1: file.names[i],
@@ -148,12 +149,13 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 //node2 is next selection
 //tok1 is destination column index
 //tok2 will be destination column name
-//tok3 is external use of subtree
+//tok3 is bit array - 1 and 2 are distinct
 func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
 	var hidden bool
 	if q.Tok().id == SP_COMMA { q.NextTok() }
+	n.tok3 = 0
 	switch q.Tok().id {
 	case SP_STAR:
 		q.NextTok()

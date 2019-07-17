@@ -161,6 +161,7 @@ type Node struct {
 	tok1 interface{}
 	tok2 interface{}
 	tok3 interface{}
+	tok4 interface{}
 	node1 *Node
 	node2 *Node
 	node3 *Node

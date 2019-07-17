@@ -346,9 +346,10 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 		n.tok1 == nil &&
 		n.node1.label == N_VALUE &&
 		n.node1.tok2.(int) == 1 { n.tok1 = q.files["_f1"].names[n.node1.tok1.(int)] }
-	if t,ok := n.tok3.(int); ok && t&1==1 && n.label==N_SELECTIONS {
+	//set 'distinct' expression and maybe hide it
+	if n.label==N_SELECTIONS && n.tok3.(int)&1==1 {
 		q.distinctExpr = n.node1.node1
-		if t&2!=0 { return n.node2 }
+		if n.tok3.(int)&2!=0 { return n.node2 }
 	}
 	return n
 }
@@ -376,6 +377,7 @@ func findAggregateFunctions(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
 		if fun := findAggregateFunction(n.node1); fun != nil {
+			n.tok4 = fun.function
 			q.colSpec.functions[n.tok1.(int)] = *fun
 			q.colSpec.functions[n.tok1.(int)].typ = q.colSpec.NewTypes[n.tok1.(int)]
 		}

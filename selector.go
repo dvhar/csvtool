@@ -6,7 +6,6 @@ import (
 	//. "fmt"
 )
 
-//return bool for keep going or reached limit
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 
 	execSelections(q, q.tree.node1.node1)
@@ -21,21 +20,21 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	index := n.tok1.(int)
-	typ,val := execExpression(q, n.node1.node1)
-	if typ != T_AGGRAGATE{
+	_,val := execExpression(q, n.node1.node1)
+	if n.tok4 == nil{
 		q.toRow[index] = val.(Value)
-	} else if _,ok := val.(Aggragate).val.(null); !ok {
-		v := val.(Aggragate).val.(Value)
+	} else if _,ok := val.(null); !ok {
+		v := val.(Value)
 		//first entry to aggragate target
 		if q.toRow[index] == nil {
-			switch val.(Aggragate).function {
+			switch n.tok4.(int) {
 			case FN_COUNT: q.toRow[index] = integer(1)
 			case FN_AVG:   q.toRow[index] = AverageVal{v, 1}
 			default: q.toRow[index] = v
 			}
 		//update target with new value
 		} else {
-			switch val.(Aggragate).function {
+			switch n.tok4.(int) {
 			case FN_AVG:   fallthrough
 			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v)
 			case FN_MIN:   if q.toRow[index].Greater(v) { q.toRow[index] = v }
@@ -99,21 +98,18 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 	switch n.label {
 	case N_FUNCTION:
 		t1,v1 := execExpression(q, n.node1)
-		functionId := n.tok1.(int)
-		//aggregate function
-		if (functionId & AGG_BIT) != 0 { return T_AGGRAGATE, Aggragate{v1,t1,functionId} }
 		//non-aggregate function
 		if _,ok:=v1.(null);!ok {
-			switch functionId {
-			case FN_ABS:   if v1.(Value).Less(integer(0)) { v1 = v1.(Value).Mult(integer(-1)) }
-			case FN_YEAR:  v1 = integer(v1.(date).val.Year())
-			case FN_MONTH: v1 = integer(v1.(date).val.Month())
-			case FN_WEEK:  v1 = integer(v1.(date).val.YearDay() / 7)
-			case FN_YDAY:  v1 = integer(v1.(date).val.YearDay())
-			case FN_MDAY:  v1 = integer(v1.(date).val.Day())
-			case FN_WDAY:   v1 = integer(v1.(date).val.Weekday())
-			case FN_HOUR:  v1 = integer(v1.(date).val.Hour())
-			case FN_MONTHNAME: v1 = text(v1.(date).val.Month().String())
+			switch n.tok1.(int) {
+			case FN_ABS:        if v1.(Value).Less(integer(0)) { v1 = v1.(Value).Mult(integer(-1)) }
+			case FN_YEAR:       v1 = integer(v1.(date).val.Year())
+			case FN_MONTH:      v1 = integer(v1.(date).val.Month())
+			case FN_WEEK:       v1 = integer(v1.(date).val.YearDay() / 7)
+			case FN_YDAY:       v1 = integer(v1.(date).val.YearDay())
+			case FN_MDAY:       v1 = integer(v1.(date).val.Day())
+			case FN_WDAY:       v1 = integer(v1.(date).val.Weekday())
+			case FN_HOUR:       v1 = integer(v1.(date).val.Hour())
+			case FN_MONTHNAME:  v1 = text(v1.(date).val.Month().String())
 			case FN_WDAYNAME:   v1 = text(v1.(date).val.Weekday().String())
 			}
 		}
@@ -132,7 +128,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,interface{}) {
 				case T_INT:	     a,_ := Atoi(cell);            val = integer(a)
 				case T_FLOAT:    a,_ := ParseFloat(cell,64);   val = float(a)
 				case T_DATE:     a,_ := d.ParseAny(cell);      val = date{a}
-				case T_DURATION: a,_ := parseDuration(cell); val = duration{a}
+				case T_DURATION: a,_ := parseDuration(cell);   val = duration{a}
 				case T_NULL:   val = null(cell)
 				case T_STRING: val = text(cell)
 			}
