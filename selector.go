@@ -20,7 +20,7 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	index := n.tok1.(int)
-	_,val := execExpression(q, n.node1.node1)
+	_,val := execExpression(q, n.node1)
 	if n.tok4 == nil{
 		q.toRow[index] = val
 	} else if _,ok := val.(null); !ok {

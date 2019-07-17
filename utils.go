@@ -102,7 +102,6 @@ const (
 	N_FROM
 	N_WHERE
 	N_ORDER
-	N_COLITEM
 	N_EXPRADD
 	N_EXPRMULT
 	N_EXPRNEG
@@ -126,7 +125,6 @@ var treeMap = map[int]string {
 	N_FROM:       "N_FROM",
 	N_WHERE:      "N_WHERE",
 	N_ORDER:      "N_ORDER",
-	N_COLITEM:    "N_COLITEM",
 	N_EXPRADD:    "N_EXPRADD",
 	N_EXPRMULT:   "N_EXPRMULT",
 	N_EXPRNEG:    "N_EXPRNEG",
@@ -162,6 +160,7 @@ type Node struct {
 	tok2 interface{}
 	tok3 interface{}
 	tok4 interface{}
+	tok5 interface{}
 	node1 *Node
 	node2 *Node
 	node3 *Node

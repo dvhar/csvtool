@@ -1,8 +1,7 @@
 /*
 <query>             -> <Select> <from> <where> <groupby> <orderby>
 <Select>            -> {c|n} Select { <top> } <Selections>
-<Selections>        -> * <Selections> | <columnItem> <Selections> | ε
-<columnItem>        -> <exprAdd> | <exprAdd> as <alias> | <alias> = <exprAdd>
+<Selections>        -> * <Selections> | {alias =} <exprAdd> {as alias} <Selections> | ε
 <exprAdd>           -> <exprMult> ( + | - ) <exprAdd> | <exprMult>
 <exprMult>          -> <exprNeg> ( * | / | % ) <exprMult> | <exprNeg>
 <exprNeg>           -> { - } <exprCase>
@@ -66,10 +65,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		nn.node2 = &Node{
 			label: N_SELECTIONS,
 			tok3: 0,
-			node1: &Node{
-				label: N_COLITEM,
-				node1: q.sortExpr,
-			},
+			node1: q.sortExpr,
 		}
 	}
 
@@ -127,15 +123,10 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 		n.tok2  = file.names[i]
 		n.node2 = &Node{label:N_SELECTIONS,tok3:0}
 		n.node1 = &Node{
-			label: N_COLITEM,
-			tok1: file.names[i],
+			label: N_VALUE,
+			tok1: i,
+			tok2: 1,
 			tok3: file.types[i],
-			node1: &Node{
-				label: N_VALUE,
-				tok1: i,
-				tok2: 1,
-				tok3: file.types[i],
-			},
 		}
 		countSelected++
 		lastSelection = n
@@ -145,11 +136,13 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 	return firstSelection,err
 }
 
-//node1 is column item
+//node1 is expression
 //node2 is next selection
 //tok1 is destination column index
 //tok2 will be destination column name
 //tok3 is bit array - 1 and 2 are distinct
+//tok4 will be aggregate function
+//tok5 will be type
 func parseSelections(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECTIONS}
 	var err error
@@ -172,7 +165,21 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case SP_MINUS:    fallthrough
 	case SP_LPAREN:
 		if !hidden { countSelected++ }
-		n.node1,err = parseColumnItem(q)
+		//alias = expression
+		if q.PeekTok().id == SP_EQ {
+			if q.Tok().id != WORD { return n,errors.New("Alias must be a word. Found "+q.Tok().val) }
+			n.tok2 = q.Tok().val
+			q.NextTok()
+			q.NextTok()
+			n.node1,err = parseExprAdd(q)
+		//expression
+		} else {
+			n.node1,err = parseExprAdd(q)
+			if q.Tok().id == KW_AS {
+				n.tok2 = q.NextTok().val
+				q.NextTok()
+			}
+		}
 		if err != nil { return n,err }
 		n.node2,err = parseSelections(q)
 		return n,err
@@ -183,31 +190,6 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	default: return n,errors.New("Expected a new selection or 'from' clause. Found "+q.Tok().val)
 	}
 	return n,err
-}
-
-//tok1 is alias
-//tok2 is external usage of expression
-//tok3 will be type
-//node1 is expression
-func parseColumnItem(q* QuerySpecs) (*Node,error) {
-	n := &Node{label:N_COLITEM}
-	var err error
-	//alias = expression
-	if q.PeekTok().id == SP_EQ {
-		if q.Tok().id != WORD { return n,errors.New("Alias must be a word. Found "+q.Tok().val) }
-		n.tok1 = q.Tok().val
-		q.NextTok()
-		q.NextTok()
-		n.node1,err = parseExprAdd(q)
-	//expression
-	} else {
-		n.node1,err = parseExprAdd(q)
-		if q.Tok().id == KW_AS {
-			n.tok1 = q.NextTok().val
-			q.NextTok()
-		}
-	}
-	return n, err
 }
 
 //node1 is exprMult

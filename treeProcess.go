@@ -105,7 +105,6 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 	//1 or 2 type-independant nodes
 	case N_EXPRESSIONS:fallthrough
 	case N_EXPRNEG:    fallthrough
-	case N_COLITEM:    fallthrough
 	case N_WHERE:      fallthrough
 	case N_FUNCTION:   fallthrough
 	case N_SELECTIONS:
@@ -130,13 +129,16 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 		case N_EXPRNEG:
 			if _,ok:=n.tok1.(int); ok && t1 != T_INT && t1 != T_FLOAT && t1 != T_DURATION {
 				err = errors.New("Minus sign does not work with type "+typeMap[t1]) }
-		case N_COLITEM: n.tok3 = t1; fallthrough
 		case N_WHERE:
 			err = enforceType(n.node1, t1)
 		case N_EXPRESSIONS:
 			err = enforceType(n.node1, t1)
 			fallthrough
-		case N_SELECTIONS: _, _, _, err = typeCheck(n.node2)
+		case N_SELECTIONS:
+			n.tok5 = t1
+			err = enforceType(n.node1, t1)
+			if err != nil { return 0,0,nil,err }
+			_, _, _, err = typeCheck(n.node2)
 		}
 		return n.label, t1, v1, err
 
@@ -341,11 +343,6 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 		(n.tok1.(int) == WORD || n.tok1.(int) == N_EXPRADD) { return n.node1 }
 	//value node leads to function
 	if n.label == N_VALUE && n.tok2.(int) == 2 { return n.node1 }
-	//give node its name if just a column
-	if n.label == N_COLITEM &&
-		n.tok1 == nil &&
-		n.node1.label == N_VALUE &&
-		n.node1.tok2.(int) == 1 { n.tok1 = q.files["_f1"].names[n.node1.tok1.(int)] }
 	//set 'distinct' expression and maybe hide it
 	if n.label==N_SELECTIONS && n.tok3.(int)&1==1 {
 		q.distinctExpr = n.node1.node1
@@ -358,12 +355,10 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	if n.label == N_SELECTIONS &&
-		n.node1.label == N_COLITEM {
+	if n.label == N_SELECTIONS {
 			n.tok1 = colIdx
-			if n.node1.tok1 != nil { n.tok2 = n.node1.tok1
-			} else { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
-			newColItem(q, n.tok1.(int), n.node1.tok3.(int), n.tok2.(string))
+			if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
+			newColItem(q, n.tok1.(int), n.tok5.(int), n.tok2.(string))
 			colIdx++
 		}
 	columnNamer(q, n.node1)
