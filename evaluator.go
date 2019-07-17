@@ -219,8 +219,8 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 			return ret
 		})
 		//remove sort value and excess rows when done
-		for i,_ := range res.Vals { res.Vals[i] = res.Vals[i][0:q.colSpec.NewWidth-1] }
 		if q.quantityLimit > 0 && q.quantityLimit <= len(res.Vals) { res.Vals = res.Vals[0:q.quantityLimit] }
+		for i,_ := range res.Vals { res.Vals[i] = res.Vals[i][0:q.colSpec.NewWidth-1] }
 	}
 	//save groups to file
 	if q.save  {
