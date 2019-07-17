@@ -1,6 +1,6 @@
 /*
 <query>             -> <Select> <from> <where> <groupby> <orderby>
-<Select>            -> {c|n} Select { <top> } <Selections>
+<Select>            -> {c} Select { top # } <Selections>
 <Selections>        -> * <Selections> | {alias =} <exprAdd> {as alias} <Selections> | ε
 <exprAdd>           -> <exprMult> ( + | - ) <exprAdd> | <exprMult>
 <exprMult>          -> <exprNeg> ( * | / | % ) <exprMult> | <exprNeg>
@@ -102,7 +102,6 @@ func parseSelect(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
 	if q.Tok().val == "c" { q.intColumn = true; q.NextTok() }
-	if q.Tok().val == "n" { q.intColumn = false; q.NextTok() }
 	if q.Tok().id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)

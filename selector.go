@@ -163,7 +163,6 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 		}
 		return t1,v1
 
-	//optimizer means N_EXPRCASE is only present if actual case statement
 	case N_EXPRCASE:
 		switch n.tok2.(int) {
 		//case predicate list

@@ -133,7 +133,7 @@ func typeCheck(n *Node) (int, int, interface{}, error) {  //returns nodetype, da
 			err = enforceType(n.node1, t1)
 		case N_EXPRESSIONS:
 			err = enforceType(n.node1, t1)
-			fallthrough
+			_, _, _, err = typeCheck(n.node2)
 		case N_SELECTIONS:
 			n.tok5 = t1
 			err = enforceType(n.node1, t1)
@@ -319,7 +319,7 @@ func enforceType(n *Node, t int) error {
 }
 
 //remove useless nodes from parse tree
-//would like to eventually use bytecode engince, but for now just optimizes the tree a little for the traversers
+//would like to eventually use bytecode engine, but for now just optimizes the tree a little for the traversers
 func branchShortener(q *QuerySpecs, n *Node) *Node {
 	colIdx=0
 	if n == nil { return n }
@@ -356,11 +356,11 @@ var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
-			n.tok1 = colIdx
-			if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
-			newColItem(q, n.tok1.(int), n.tok5.(int), n.tok2.(string))
-			colIdx++
-		}
+		n.tok1 = colIdx
+		if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
+		newColItem(q, n.tok1.(int), n.tok5.(int), n.tok2.(string))
+		colIdx++
+	}
 	columnNamer(q, n.node1)
 	columnNamer(q, n.node2)
 	columnNamer(q, n.node3)
