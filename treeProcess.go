@@ -368,26 +368,21 @@ func columnNamer(q *QuerySpecs, n *Node) {
 
 //find aggragate functions that will need postprocessing
 func findAggregateFunctions(q *QuerySpecs, n *Node) {
-	if q.colSpec.functions == nil {q.colSpec.functions = make([]Aggragate, q.colSpec.NewWidth)}
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
-		if fun := findAggregateFunction(n.node1); fun != nil {
-			n.tok4 = fun.function
-			q.colSpec.functions[n.tok1.(int)] = *fun
-			q.colSpec.functions[n.tok1.(int)].typ = q.colSpec.NewTypes[n.tok1.(int)]
-		}
+		if fun := findAggregateFunction(n.node1); fun != 0 { n.tok4 = fun }
 	}
 	findAggregateFunctions(q, n.node1)
 	findAggregateFunctions(q, n.node2)
 	findAggregateFunctions(q, n.node3)
 }
-func findAggregateFunction(n *Node) *Aggragate {
-	if n == nil { return nil }
-	if n.label == N_FUNCTION && (n.tok1.(int)&AGG_BIT)!=0 { return &Aggragate{nil,0,n.tok1.(int)} }
+func findAggregateFunction(n *Node) int {
+	if n == nil { return 0 }
+	if n.label == N_FUNCTION && (n.tok1.(int)&AGG_BIT)!=0 { return n.tok1.(int) }
 	a := findAggregateFunction(n.node1)
-	if a != nil { return a }
+	if a != 0 { return a }
 	a = findAggregateFunction(n.node2)
-	if a != nil { return a }
+	if a != 0 { return a }
 	return findAggregateFunction(n.node3)
 }
 

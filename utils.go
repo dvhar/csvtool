@@ -171,7 +171,6 @@ type Columns struct {
 	NewTypes []int
 	NewPos []int
 	NewWidth int
-	functions []Aggragate
 }
 const (
 	T_NULL = iota
@@ -180,7 +179,6 @@ const (
 	T_DATE
 	T_DURATION
 	T_STRING
-	T_AGGRAGATE
 )
 func max(a int, b int) int {
 	if a>b { return a }
@@ -395,11 +393,6 @@ type sockDirMessage struct {
 	Type int
 	Dir Directory
 }
-type Aggragate struct {
-	val interface{}
-	typ int
-	function int
-}
 
 //interface to simplify operations with various datatypes
 type Value interface {
@@ -419,11 +412,11 @@ type Value interface {
 
 type AverageVal struct {
 	val Value
-	count int
+	count integer
 }
 func (a AverageVal) Add(other Value) Value       { return AverageVal{ a.val.Add(other), a.count + 1, } }
-func (a AverageVal) String() string              { return a.val.String() }
-func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.val.String()) }
+func (a AverageVal) String() string              { return a.Eval().String() }
+func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.String()) }
 func (a AverageVal) Greater(other Value) bool    { return false }
 func (a AverageVal) GreatEq(other Value) bool    { return false }
 func (a AverageVal) Less(other Value) bool       { return false }
@@ -433,6 +426,7 @@ func (a AverageVal) Sub(other Value) Value       { return a }
 func (a AverageVal) Mult(other Value) Value      { return a }
 func (a AverageVal) Div(other Value) Value       { return a }
 func (a AverageVal) Mod(other Value) Value       { return a }
+func (a AverageVal) Eval() Value                 { return a.val.Div(a.count) }
 
 type float float64
 type integer int

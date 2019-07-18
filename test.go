@@ -108,10 +108,8 @@ func runTests(doTest bool){
 			"predicate case with mixed types", true, whereSet},
 		Test{`select from /home/bort/file.csv`, "no file", false, fromSet},
 		Test{`select top 5 1 2 3 '1' '2' '3' from`+f1, "select numbers default", true, selectSet},
-		Test{`n select top 5 1 2 3 '1' '2' '3' from`+f1, "select numbers n", true, selectSet},
 		Test{`c select top 5 1 2 3 '1' '2' '3' from`+f1, "select numbers c", true, selectSet},
 		Test{`select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# default", true, selectSet},
-		Test{`n select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# n", true, selectSet},
 		Test{`c select top 5 1 2 3 '1' '2' '3' c1 c2 c3 from`+f1, "select numbers with c# c", true, selectSet},
 		Test{`select top 20 c1 c2 c37 c40 from`+f1+`where c1 = c2 or c37 = c40`, "where cols = each other", true, whereSet},
 		Test{`select top 20 c38 from`+f1+`where c38 % 2 = 0`, "modulus", true, whereSet},
@@ -125,11 +123,6 @@ func runTests(doTest bool){
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null and c33 = null)`,"not and",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null or c33 = null)`,"not or",true,whereSet},
 		Test{`select top 10 c32 c33 from`+f1+`where not (c32 = null xor c33 = null)`,"not xor",true,whereSet},
-		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1+`group by c5`,"aggregate with groupings",true,selectSet},
-		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1,"aggregate with one group",true,selectSet},
-		Test{`select count(c1) c5 from`+f1+`group by c5`,"aggregate with multiple groups",true,selectSet},
-		Test{`select top 5 count(c1) c5 * from`+f1+`group by c5`,"limited aggregate with multiple groups",true,selectSet},
-		Test{`select c5 c9 max(c3) as max min(c3) as min avg=avg(c3) caout = count(*) from`+f1+`group by c5 c6`,"nested groups",true,selectSet},
 		Test{`select top 20 ((c7+'19 years'*1.2) - 1/1/1997) + c7, c7, c7+'1.2 days', c7+'2 days' from`+f1,"date arithmetic",true,selectSet},
 		Test{`select top 20 c7 + '19 years' + '88 days' + '2 weeks' from`+f1,"more date arithmetic",true,selectSet},
 		Test{`select top 20 count(*), day(c7) c7 from`+f1+`group by day(c8)`,"function needs date not int",false,selectSet},
@@ -141,6 +134,11 @@ func runTests(doTest bool){
 		Test{`c select top 2000 42 26 from`+f1+`where 42=null*2`, "cant multiply null", false, whereSet},
 		Test{`select top 20 c37 from`+f1+`where c37 = null`, "where int = null", true, whereSet},
 		Test{`select top 20 c1 c2 from`+f1+`where c1 = null and c2 <> null`, "where float = null and not null", true, whereSet},
+		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1,"aggregate with one group",true,selectSet},
+		Test{`select count(c1) c5 from`+f1+`group by c5`,"aggregate with multiple groups",true,selectSet},
+		Test{`select top 5 count(c1) c5 * from`+f1+`group by c5`,"limited aggregate with multiple groups",true,selectSet},
+		Test{`select c5 c9 max(c3) as max min(c3) as min avg=avg(c3) caout = count(*) from`+f1+`group by c5 c6`,"nested groups",true,selectSet},
+		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1+`group by c5`,"aggregate with groupings",true,selectSet},
 	}
 
 	for _,t := range tests {
@@ -161,7 +159,6 @@ func runOneTestQuery(query string) error {
 	q := QuerySpecs{ queryString : query, }
 	res, err := csvQuery(&q)
 	if err != nil { return err }
-	Println("aggregates:",q.colSpec.functions)
 	Println("number of colums:",res.Numcols)
 	Println("number of rows:",res.Numrows)
 	Println("types:",res.Types)

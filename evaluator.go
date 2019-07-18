@@ -188,11 +188,6 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 	case 0:
 		for _,row := range m {
 			r.Vals = append(r.Vals, row.([]Value))
-			for i,v := range r.Vals[q.quantityRetrieved] {
-				if agg,ok := v.(AverageVal); ok && q.colSpec.functions[i].function == FN_AVG {
-					r.Vals[q.quantityRetrieved][i] = agg.val.Div(integer(agg.count))
-				}
-			}
 			q.quantityRetrieved++
 			if q.LimitReached() && !q.save && q.sortExpr==nil { return }
 		}
