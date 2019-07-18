@@ -29,11 +29,13 @@ type QuerySpecs struct {
 	sortWay int
 	save bool
 	showLimit int
+	stage int
 	tree *Node
 	files map[string]*FileData
 	numfiles int
 	fromRow []string
 	toRow []Value
+	midRow []Value
 	intColumn bool
 	groupby bool
 }

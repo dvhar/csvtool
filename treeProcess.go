@@ -354,9 +354,9 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
-		n.tok1 = q.colSpec.NewWidth
+		if n.tok1 == nil { n.tok1 = q.colSpec.NewWidth }
 		if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
-		newColItem(q, n.tok1.(int), n.tok5.(int), n.tok2.(string))
+		newColItem(q, n.tok5.(int), n.tok2.(string))
 	}
 	columnNamer(q, n.node1)
 	columnNamer(q, n.node2)
@@ -372,8 +372,8 @@ func findAggregateFunctions(q *QuerySpecs, n *Node) {
 		if fun != 0 { n.tok4 = fun }
 		//not agg function, but returning value alongside aggregates
 		if fun == 0 && q.groupby {
+			n.tok1 = q.colSpec.AggregateCount
 			q.colSpec.AggregateCount++
-			n.tok4 = 0
 		}
 	}
 	//tell agg function node which intermediate index it has
@@ -395,11 +395,11 @@ func findAggregateFunction(n *Node) int {
 	return findAggregateFunction(n.node3)
 }
 
-func newColItem(q* QuerySpecs, idx, typ int, name string) {
+func newColItem(q* QuerySpecs, typ int, name string) {
 	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
 	q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
-	q.colSpec.NewPos = append(q.colSpec.NewPos, idx+1)
 	q.colSpec.NewWidth++
+	q.colSpec.NewPos = append(q.colSpec.NewPos, q.colSpec.NewWidth)
 }
 
 func isOneOfType(test1, test2, type1, type2 int) bool {

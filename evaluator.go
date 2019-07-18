@@ -187,7 +187,10 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 	switch n.tok1.(int) {
 	case 0:
 		for _,row := range m {
-			r.Vals = append(r.Vals, row.([]Value))
+			q.midRow = row.([]Value)
+			q.toRow = make([]Value, q.colSpec.NewWidth)
+			execSelect(q,r)
+			r.Vals = append(r.Vals, q.toRow)
 			q.quantityRetrieved++
 			if q.LimitReached() && !q.save && q.sortExpr==nil { return }
 		}
@@ -197,6 +200,7 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	if !q.groupby { return }
 	root := q.tree.node4
+	q.stage = 1
 	q.quantityRetrieved = 0
 	//make map for single group so it gets processed with that system
 	if root == nil {
