@@ -19,7 +19,7 @@ func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 
 func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
-	index := n.tok1.(int)
+	index := n.tok1.([]int)[q.stage]
 	var val Value
 
 	//reading from csv file
@@ -32,7 +32,7 @@ func execSelections(q *QuerySpecs, n *Node) {
 	} else {
 		//expression was already evaluated
 		if n.tok4 == nil {
-			q.toRow[index] = q.midRow[index]
+			q.toRow[index] = q.midRow[n.tok1.([]int)[0]]
 		//finish aggregate expression
 		} else {
 			_,val = execExpression(q, n.node1)
@@ -96,7 +96,11 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 
 	case N_FUNCTION:
 		//return earlier aggregated value if in group retrieval stage
-		if q.stage == 1 { return N_FUNCTION, q.midRow[n.tok2.(int)] }
+		if q.stage == 1 {
+			agg := q.midRow[n.tok2.(int)]
+			if avg,ok := agg.(AverageVal);ok { return 1, avg.Eval() }
+			return 1, agg
+		}
 
 		//values have not been aggregated yet
 		t1,v1 := execExpression(q, n.node1)

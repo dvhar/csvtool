@@ -138,7 +138,7 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 
 //node1 is expression
 //node2 is next selection
-//tok1 is destination column index
+//tok1 is destination column indexes
 //tok2 will be destination column name
 //tok3 is bit array - 1 and 2 are distinct
 //tok4 will be aggregate function

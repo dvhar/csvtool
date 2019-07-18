@@ -354,8 +354,8 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
-		if n.tok1 == nil { n.tok1 = q.colSpec.NewWidth }
-		if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
+		n.tok1 = []int{q.colSpec.NewWidth,q.colSpec.NewWidth}
+		if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.([]int)[0]+1) }
 		newColItem(q, n.tok5.(int), n.tok2.(string))
 	}
 	columnNamer(q, n.node1)
@@ -372,7 +372,7 @@ func findAggregateFunctions(q *QuerySpecs, n *Node) {
 		if fun != 0 { n.tok4 = fun }
 		//not agg function, but returning value alongside aggregates
 		if fun == 0 && q.groupby {
-			n.tok1 = q.colSpec.AggregateCount
+			n.tok1 = []int{q.colSpec.AggregateCount,n.tok1.([]int)[1]}
 			q.colSpec.AggregateCount++
 		}
 	}

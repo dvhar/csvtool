@@ -186,11 +186,12 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *SingleQueryResult){
 	switch n.tok1.(int) {
 	case 0:
-		for _,row := range m {
+		for k,row := range m {
 			q.midRow = row.([]Value)
 			q.toRow = make([]Value, q.colSpec.NewWidth)
 			execSelect(q,r)
 			r.Vals = append(r.Vals, q.toRow)
+			m[k] = nil
 			q.quantityRetrieved++
 			if q.LimitReached() && !q.save && q.sortExpr==nil { return }
 		}
