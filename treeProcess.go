@@ -321,7 +321,6 @@ func enforceType(n *Node, t int) error {
 //remove useless nodes from parse tree
 //would like to eventually use bytecode engine, but for now just optimizes the tree a little for the traversers
 func branchShortener(q *QuerySpecs, n *Node) *Node {
-	colIdx=0
 	if n == nil { return n }
 	n.node1 = branchShortener(q, n.node1)
 	n.node2 = branchShortener(q, n.node2)
@@ -352,25 +351,35 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 }
 
 //get column names and put in array
-var colIdx int
 func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
-		n.tok1 = colIdx
+		n.tok1 = q.colSpec.NewWidth
 		if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.(int)+1) }
 		newColItem(q, n.tok1.(int), n.tok5.(int), n.tok2.(string))
-		colIdx++
 	}
 	columnNamer(q, n.node1)
 	columnNamer(q, n.node2)
 	columnNamer(q, n.node3)
 }
 
-//find aggragate functions that will need postprocessing
+//find and record aggragate functions
 func findAggregateFunctions(q *QuerySpecs, n *Node) {
 	if n == nil { return }
+	//tell selections node about found aggregate
 	if n.label == N_SELECTIONS {
-		if fun := findAggregateFunction(n.node1); fun != 0 { n.tok4 = fun }
+		fun := findAggregateFunction(n.node1)
+		if fun != 0 { n.tok4 = fun }
+		//not agg function, but returning value alongside aggregates
+		if fun == 0 && q.groupby {
+			q.colSpec.AggregateCount++
+			n.tok4 = 0
+		}
+	}
+	//tell agg function node which intermediate index it has
+	if n.label == N_FUNCTION && (n.tok1.(int)&AGG_BIT)!=0 {
+		n.tok2 = q.colSpec.AggregateCount
+		q.colSpec.AggregateCount++
 	}
 	findAggregateFunctions(q, n.node1)
 	findAggregateFunctions(q, n.node2)

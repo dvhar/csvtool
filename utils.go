@@ -171,6 +171,7 @@ type Columns struct {
 	NewTypes []int
 	NewPos []int
 	NewWidth int
+	AggregateCount int
 }
 const (
 	T_NULL = iota

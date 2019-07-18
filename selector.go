@@ -21,26 +21,8 @@ func execSelections(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	index := n.tok1.(int)
 	_,val := execExpression(q, n.node1)
-	if n.tok4 == nil{
+	if n.tok4 == nil || n.tok4.(int) == 0 {
 		q.toRow[index] = val
-	} else if _,ok := val.(null); !ok {
-		//first entry to aggragate target
-		if q.toRow[index] == nil {
-			switch n.tok4.(int) {
-			case FN_COUNT: q.toRow[index] = integer(1)
-			case FN_AVG:   q.toRow[index] = AverageVal{val, 1}
-			default: q.toRow[index] = val
-			}
-		//update target with new value
-		} else {
-			switch n.tok4.(int) {
-			case FN_AVG:   fallthrough
-			case FN_SUM:   q.toRow[index] = q.toRow[index].Add(val)
-			case FN_MIN:   if q.toRow[index].Greater(val) { q.toRow[index] = val }
-			case FN_MAX:   if q.toRow[index].Less(val) { q.toRow[index] = val }
-			case FN_COUNT: if _,ok:= val.(null); !ok { q.toRow[index] = q.toRow[index].Add(integer(1)) }
-			}
-		}
 	}
 	execSelections(q, n.node2)
 }
@@ -58,7 +40,7 @@ func execGroupOrNewRow(q *QuerySpecs, n *Node) bool {
 
 	//grouping to a single row because no groupby clause
 	if n == nil {
-		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.NewWidth); q.quantityRetrieved++ }
+		if q.toRow == nil { q.toRow = make([]Value, q.colSpec.AggregateCount); q.quantityRetrieved++ }
 		return true
 	}
 	//grouping with groupby clause
@@ -74,7 +56,7 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 			return true
 		} else if !q.LimitReached() || q.sortExpr != nil {
 			q.quantityRetrieved++
-			row = make([]Value, q.colSpec.NewWidth)
+			row = make([]Value, q.colSpec.AggregateCount)
 			m[key] = row
 			q.toRow = row.([]Value)
 			return true
@@ -95,21 +77,44 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 //returns type and value
 func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 	switch n.label {
+
 	case N_FUNCTION:
 		t1,v1 := execExpression(q, n.node1)
-		//non-aggregate function
 		if _,ok:=v1.(null);!ok {
-			switch n.tok1.(int) {
-			case FN_ABS:        if v1.Less(integer(0)) { v1 = v1.Mult(integer(-1)) }
-			case FN_YEAR:       v1 = integer(v1.(date).val.Year())
-			case FN_MONTH:      v1 = integer(v1.(date).val.Month())
-			case FN_WEEK:       v1 = integer(v1.(date).val.YearDay() / 7)
-			case FN_YDAY:       v1 = integer(v1.(date).val.YearDay())
-			case FN_MDAY:       v1 = integer(v1.(date).val.Day())
-			case FN_WDAY:       v1 = integer(v1.(date).val.Weekday())
-			case FN_HOUR:       v1 = integer(v1.(date).val.Hour())
-			case FN_MONTHNAME:  v1 = text(v1.(date).val.Month().String())
-			case FN_WDAYNAME:   v1 = text(v1.(date).val.Weekday().String())
+			//non-aggregate function
+			if n.tok2==nil {
+				switch n.tok1.(int) {
+				case FN_ABS:        if v1.Less(integer(0)) { v1 = v1.Mult(integer(-1)) }
+				case FN_YEAR:       v1 = integer(v1.(date).val.Year())
+				case FN_MONTH:      v1 = integer(v1.(date).val.Month())
+				case FN_WEEK:       v1 = integer(v1.(date).val.YearDay() / 7)
+				case FN_YDAY:       v1 = integer(v1.(date).val.YearDay())
+				case FN_MDAY:       v1 = integer(v1.(date).val.Day())
+				case FN_WDAY:       v1 = integer(v1.(date).val.Weekday())
+				case FN_HOUR:       v1 = integer(v1.(date).val.Hour())
+				case FN_MONTHNAME:  v1 = text(v1.(date).val.Month().String())
+				case FN_WDAYNAME:   v1 = text(v1.(date).val.Weekday().String())
+				}
+			//aggregate functions
+			} else {
+				index := n.tok2.(int)
+				//first entry to aggragate target
+				if q.toRow[index] == nil {
+					switch n.tok1.(int) {
+					case FN_COUNT: q.toRow[index] = integer(1)
+					case FN_AVG:   q.toRow[index] = AverageVal{v1, 1}
+					default: q.toRow[index] = v1
+					}
+				//update target with new value
+				} else {
+					switch n.tok1.(int) {
+					case FN_AVG:   fallthrough
+					case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v1)
+					case FN_MIN:   if q.toRow[index].Greater(v1) { q.toRow[index] = v1 }
+					case FN_MAX:   if q.toRow[index].Less(v1) { q.toRow[index] = v1 }
+					case FN_COUNT: if _,ok:= v1.(null); !ok { q.toRow[index] = q.toRow[index].Add(integer(1)) }
+					}
+				}
 			}
 		}
 		return t1,v1

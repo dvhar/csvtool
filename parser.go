@@ -39,6 +39,7 @@ import (
 func parseQuery(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_QUERY}
 	n.tok1 = q
+	//reset some global vars before parsing each query
 	lineNo = 1
 	err := scanTokens(q)
 	if err != nil { return n,err }
@@ -534,6 +535,7 @@ func parseOrder(q* QuerySpecs) (*Node,error) {
 
 
 //tok1 is function id
+//tok2 will be intermediate index if aggragate
 //node1 is expression in parens
 func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
