@@ -364,8 +364,10 @@ func columnNamer(q *QuerySpecs, n *Node) {
 }
 
 //find and record aggragate functions
-func findAggregateFunctions(q *QuerySpecs, n *Node) {
-	if n == nil { return }
+//first ret is found aggregate, second is found too many
+func findAggregateFunctions(q *QuerySpecs, n *Node) (bool,bool) {
+	if n == nil { return false, false }
+	found := false
 	//tell selections node about found aggregate
 	if n.label == N_SELECTIONS {
 		fun := findAggregateFunction(n.node1)
@@ -380,10 +382,15 @@ func findAggregateFunctions(q *QuerySpecs, n *Node) {
 	if n.label == N_FUNCTION && (n.tok1.(int)&AGG_BIT)!=0 {
 		n.tok2 = q.colSpec.AggregateCount
 		q.colSpec.AggregateCount++
+		found = true
 	}
-	findAggregateFunctions(q, n.node1)
-	findAggregateFunctions(q, n.node2)
-	findAggregateFunctions(q, n.node3)
+	f1,e1 := findAggregateFunctions(q, n.node1)
+	if found && f1 { return true, true }
+	f2,e2 := findAggregateFunctions(q, n.node2)
+	if found && f2 { return true, true }
+	f3,e3 := findAggregateFunctions(q, n.node3)
+	if found && f3 { return true, true }
+	return found||f1||f2||f3, e1||e2||e3
 }
 func findAggregateFunction(n *Node) int {
 	if n == nil { return 0 }

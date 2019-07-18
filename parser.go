@@ -75,7 +75,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
-	findAggregateFunctions(q, n.node1)
+	_,f := findAggregateFunctions(q, n.node1)
+	if f { return n,errors.New("Cannot have aggregate function inside an aggregate function") }
 
 	//process 'where' section
 	_,_,_,err = typeCheck(n.node3)
