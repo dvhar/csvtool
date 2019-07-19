@@ -147,6 +147,10 @@ func runTests(doTest bool){
 		Test{`select top 20 from`+f1+`where max(c1) between c1 and max(c2)`,"aggregate between error",false,selectSet},
 		Test{`select top 20 from`+f1+`where c1 between max(c1) and max(c2)`,"aggregate between error",false,selectSet},
 		Test{`select top 20 from`+f1+`where c1 between c1 and max(c2)`,"aggregate between error",false,selectSet},
+		Test{`select top 20 case c1 when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select top 20 case max(c1) when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select top 20 case max(c1) when c2 then a when c2 then b end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select top 20 case c1 when c2 then a else max(c2) end from`+f1,"aggregate case error",false,selectSet},
 	}
 
 	for _,t := range tests {

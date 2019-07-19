@@ -74,29 +74,39 @@ func typeCheck(n *Node) (int, int, bool, bool, error) {  //returns nodetype, dat
 		case N_EXPRADD:
 			return typeCheck(n.node1)
 		case KW_CASE:
+			//need to do aggregate semantics for case expression
 			n1, t1, l1, a1, err := typeCheck(n.node1)
 			if err != nil { return 0,0,false, false,err }
-			_, t2, l2, _, err := typeCheck(n.node2)
+			_, t2, l2, a2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,false, false,err }
-			n3, d3, l3, _, err := typeCheck(n.node3)
+			n3, d3, l3, a3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,false, false,err }
 			var thisType int
 			//when comparing an intial expression
 			if n1 == N_EXPRADD {
+				if err=aggSemantics(a1,a2,l1,l2);err != nil { return 0,0,false,false,err }
 				//independent type cluster is n.node1 and n.node2.node1.node1, looping with n=n.node2
 				caseWhenExprType := t1
 				for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {  //when expression list
-					_,whentype,_, _,err := typeCheck(whenNode.node1.node1)
+					_,whentype, l3, al,err := typeCheck(whenNode.node1.node1)
+					if err=aggSemantics(a1,al,false,l3);err != nil { return 0,0,false,false,err }
+					a1 = a1 || al
 					if err != nil { return 0,0,false, false,err }
 					caseWhenExprType = typeCompute(false,false,caseWhenExprType,whentype)
 				}
 				n.node2.tok3 = caseWhenExprType
 				thisType = t2
-				if n3>0 { thisType = typeCompute(l2,l3,t2,d3) }
+				if n3>0 {
+					thisType = typeCompute(l2,l3,t2,d3)
+					if err=aggSemantics(a2,a3,l2,l3);err != nil { return 0,0,false,false,err }
+				}
 			//when using predicates
 			} else {
 				thisType = t1
-				if n3>0 { thisType = typeCompute(l1,l3,t1,d3) }
+				if n3>0 {
+					thisType = typeCompute(l1,l3,t1,d3)
+					if err=aggSemantics(a1,a3,l1,l3);err != nil { return 0,0,false,false,err }
+				}
 			}
 			if n1 == N_VALUE { literal = l1 }
 			return N_EXPRCASE, thisType, literal, a1, nil
