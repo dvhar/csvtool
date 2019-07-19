@@ -71,14 +71,14 @@ func checkFunctionParamType(functionId, typ int) error {
 	return nil
 }
 
-func checkOperatorSemantics(operator, t1, t2 int, v1, v2 interface{}) error {
+func checkOperatorSemantics(operator, t1, t2 int, l1, l2 bool) error {
 	err := func(s string) error { return errors.New(s) }
 	switch operator {
 	case SP_PLUS:
 		if  t1 == T_DATE && t2 == T_DATE { return err("Cannot add 2 dates") }
 		fallthrough
 	case SP_MINUS:
-		if !isOneOfType(t1,t2,T_INT,T_FLOAT) && !(typeCompute(v1,v2,t1,t2)==T_STRING) &&
+		if !isOneOfType(t1,t2,T_INT,T_FLOAT) && !(typeCompute(l1,l2,t1,t2)==T_STRING) &&
 			!((t1 == T_DATE && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_DATE) ||
 			(t1 == T_DATE && t2 == T_DATE) || t1 == T_DURATION && t2 == T_DURATION) {
 			return err("Cannot add or subtract types "+typeMap[t1]+" and "+typeMap[t2])
