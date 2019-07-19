@@ -159,8 +159,7 @@ func typeCheck(n *Node) (int, int, bool, bool, error) {  //returns nodetype, dat
 			_, t2, l2, a2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,false, false,err }
 			thisType = typeCompute(l1,l2,t1,t2)
-			Println(treeMap[n.label],a1,a2,l1,l2)
-			if aggSemantics(a1,a2,l1,l2) { return 0,0,false,false,errors.New("Aggregates can only be combined with other aggregtes or literals") }
+			if err=aggSemantics(a1,a2,l1,l2);err != nil { return 0,0,false,false,err }
 			a1 = a1 || a2
 
 			//see if using special rules for time/duration type interaction
@@ -185,11 +184,15 @@ func typeCheck(n *Node) (int, int, bool, bool, error) {  //returns nodetype, dat
 
 		//there is third part because between - need to add type semantics check for duration interactions
 		if operator,ok := n.tok1.(int); ok && operator == KW_BETWEEN {
-			_, t2, l2, _, err := typeCheck(n.node2)
+			_, t2, l2, a2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,false, false,err }
-			_, d3, l3, _, err := typeCheck(n.node3)
+			_, d3, l3, a3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,false, false,err }
 			thisType = typeCompute(l1,l2,t1,t2)
+			if err=aggSemantics(a1,a2,l1,l2);err != nil { return 0,0,false,false,err }
+			a1 = a1 || a2
+			if err=aggSemantics(a1,a3,l1&&l2,l2);err != nil { return 0,0,false,false,err }
+			a1 = a1 || a3
 			l12 := l1; if l2 == false { l12 = false }
 			thisType = typeCompute(l12,l3,thisType,d3)
 			if l3==false {l1 = false}
@@ -416,9 +419,9 @@ func isOneOfType(test1, test2, type1, type2 int) bool {
 }
 
 //aggregate operation semantics
-func aggSemantics(a1,a2,l1,l2 bool) bool {
-	if (a1 && !(a2 || l2)) || (a2 && !(a1 || l1)) { return true }
-	return false
+func aggSemantics(a1,a2,l1,l2 bool) error {
+	if (a1 && !(a2 || l2)) || (a2 && !(a1 || l1)) { return errors.New("Aggregates can only be combined with other aggregates or literals") }
+	return nil
 }
 
 //print parse tree for debuggging
