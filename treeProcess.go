@@ -51,23 +51,22 @@ func keepSubtreeTypes(t1, t2, op int) (bool,int) {
 	return false, 0
 }
 
-//type checker
-//only return val if expression is a literal
+//type and semantics checker
 var caseWhenExprType int
-func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype, value(if literal), err
-	if n == nil { return 0,0,false,nil }
+func typeCheck(n *Node) (int, int, bool, bool, error) {  //returns nodetype, datatype, literal, aggregate, err
+	if n == nil { return 0,0,false, false,nil }
 	var literal bool
 
 	switch n.label {
 
 	case N_VALUE:
 		if n.tok2.(int)==2 { //function
-			_, t1, _, err := typeCheck(n.node1)
+			_, t1, _, a1, err := typeCheck(n.node1)
 			if n.node1.tok1.(int) == FN_COUNT { t1 = T_INT }
-			return n.label,t1,false,err
+			return n.label,t1,false, a1,err
 		}
 		if n.tok2.(int)==0 { literal = true } //literal
-		return n.label, n.tok3.(int), literal, nil
+		return n.label, n.tok3.(int), literal, false, nil
 
 	case N_EXPRCASE:
 		switch n.tok1.(int) {
@@ -75,20 +74,20 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		case N_EXPRADD:
 			return typeCheck(n.node1)
 		case KW_CASE:
-			n1, t1, l1, err := typeCheck(n.node1)
-			if err != nil { return 0,0,false,err }
-			_, t2, l2, err := typeCheck(n.node2)
-			if err != nil { return 0,0,false,err }
-			n3, d3, l3, err := typeCheck(n.node3)
-			if err != nil { return 0,0,false,err }
+			n1, t1, l1, a1, err := typeCheck(n.node1)
+			if err != nil { return 0,0,false, false,err }
+			_, t2, l2, _, err := typeCheck(n.node2)
+			if err != nil { return 0,0,false, false,err }
+			n3, d3, l3, _, err := typeCheck(n.node3)
+			if err != nil { return 0,0,false, false,err }
 			var thisType int
 			//when comparing an intial expression
 			if n1 == N_EXPRADD {
 				//independent type cluster is n.node1 and n.node2.node1.node1, looping with n=n.node2
 				caseWhenExprType := t1
 				for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {  //when expression list
-					_,whentype,_,err := typeCheck(whenNode.node1.node1)
-					if err != nil { return 0,0,false,err }
+					_,whentype,_, _,err := typeCheck(whenNode.node1.node1)
+					if err != nil { return 0,0,false, false,err }
 					caseWhenExprType = typeCompute(false,false,caseWhenExprType,whentype)
 				}
 				n.node2.tok3 = caseWhenExprType
@@ -100,7 +99,7 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 				if n3>0 { thisType = typeCompute(l1,l3,t1,d3) }
 			}
 			if n1 == N_VALUE { literal = l1 }
-			return N_EXPRCASE, thisType, literal, nil
+			return N_EXPRCASE, thisType, literal, a1, nil
 		}
 
 	//1 or 2 type-independant nodes
@@ -109,8 +108,8 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 	case N_WHERE:      fallthrough
 	case N_FUNCTION:   fallthrough
 	case N_SELECTIONS:
-		_, t1, l1, err := typeCheck(n.node1)
-		if err != nil { return 0,0,false,err }
+		_, t1, l1, a1, err := typeCheck(n.node1)
+		if err != nil { return 0,0,false, false,err }
 		switch n.label {
 		case N_FUNCTION:
 			err := checkFunctionParamType(n.tok1.(int), t1)
@@ -126,7 +125,8 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 			case FN_MONTHNAME: fallthrough
 			case FN_WDAYNAME: t1 = T_STRING
 			}
-			if err != nil { return 0,0,false,err }
+			if (n.tok1.(int) & AGG_BIT) != 0 { a1 = true }
+			if err != nil { return 0,0,false, false,err }
 		case N_EXPRNEG:
 			if _,ok:=n.tok1.(int); ok && t1 != T_INT && t1 != T_FLOAT && t1 != T_DURATION {
 				err = errors.New("Minus sign does not work with type "+typeMap[t1]) }
@@ -134,14 +134,14 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 			err = enforceType(n.node1, t1)
 		case N_EXPRESSIONS:
 			err = enforceType(n.node1, t1)
-			_, _, _, err = typeCheck(n.node2)
+			_, _, _, _, err = typeCheck(n.node2)
 		case N_SELECTIONS:
 			n.tok5 = t1
 			err = enforceType(n.node1, t1)
-			if err != nil { return 0,0,false,err }
-			_, _, _, err = typeCheck(n.node2)
+			if err != nil { return 0,0,false, false,err }
+			_, _, _, _, err = typeCheck(n.node2)
 		}
-		return n.label, t1, l1, err
+		return n.label, t1, l1, a1, err
 
 	//1 2 or 3 type-interdependant nodes
 	case N_EXPRADD:   fallthrough
@@ -149,16 +149,19 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 	case N_CWEXPRLIST:fallthrough
 	case N_CPREDLIST: fallthrough
 	case N_PREDCOMP:
-		n1, t1, l1, err := typeCheck(n.node1)
-		if err != nil { return 0,0,false,err }
-		if n.label == N_PREDCOMP && n1 == N_PREDICATES { return n.label, 0, false,err }
+		n1, t1, l1, a1, err := typeCheck(n.node1)
+		if err != nil { return 0,0,false, false,err }
+		if n.label == N_PREDCOMP && n1 == N_PREDICATES { return n.label, 0, false, false,err }
 		thisType := t1
 
 		//there is second part but not a third
 		if operator,ok := n.tok1.(int); ok && operator!=KW_BETWEEN {
-			_, t2, l2, err := typeCheck(n.node2)
-			if err != nil { return 0,0,false,err }
+			_, t2, l2, a2, err := typeCheck(n.node2)
+			if err != nil { return 0,0,false, false,err }
 			thisType = typeCompute(l1,l2,t1,t2)
+			Println(treeMap[n.label],a1,a2,l1,l2)
+			if aggSemantics(a1,a2,l1,l2) { return 0,0,false,false,errors.New("Aggregates can only be combined with other aggregtes or literals") }
+			a1 = a1 || a2
 
 			//see if using special rules for time/duration type interaction
 			keep, final := keepSubtreeTypes(t1,t2,operator)
@@ -166,15 +169,15 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 				thisType = final
 				n.tok2 = true
 				err = enforceType(n.node1, t1)
-				if err != nil { return 0,0,false,err }
+				if err != nil { return 0,0,false, false,err }
 				err = enforceType(n.node2, t2)
-				if err != nil { return 0,0,false,err }
+				if err != nil { return 0,0,false, false,err }
 			}
 
 			//check basic operator semantics
 			if n.label == N_EXPRADD || n.label == N_EXPRMULT {
 				err = checkOperatorSemantics(operator, t1, t2, l1, l2)
-				if err != nil { return 0,0,false,err }
+				if err != nil { return 0,0,false, false,err }
 			}
 
 			if l2==false {literal = false}
@@ -182,10 +185,10 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 
 		//there is third part because between - need to add type semantics check for duration interactions
 		if operator,ok := n.tok1.(int); ok && operator == KW_BETWEEN {
-			_, t2, l2, err := typeCheck(n.node2)
-			if err != nil { return 0,0,false,err }
-			_, d3, l3, err := typeCheck(n.node3)
-			if err != nil { return 0,0,false,err }
+			_, t2, l2, _, err := typeCheck(n.node2)
+			if err != nil { return 0,0,false, false,err }
+			_, d3, l3, _, err := typeCheck(n.node3)
+			if err != nil { return 0,0,false, false,err }
 			thisType = typeCompute(l1,l2,t1,t2)
 			l12 := l1; if l2 == false { l12 = false }
 			thisType = typeCompute(l12,l3,thisType,d3)
@@ -193,31 +196,31 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		}
 		//predicate comparisions are typed independantly, so leave type in tok3
 		if n.label == N_PREDCOMP { n.tok3 = thisType }
-		return n.label, thisType, l1, err
+		return n.label, thisType, l1, a1, err
 
 	//case 'when' expression needs to match others but isn't node's return type
 	case N_CWEXPR:
-		_, thisType, _, err := typeCheck(n.node2)
-		return n.label, thisType, false, err
+		_, thisType, _, _, err := typeCheck(n.node2)
+		return n.label, thisType, false, false, err
 
 	//only evalutates a boolean, subtrees are typed independantly
 	case N_PREDICATES:
-		_, _, _, err := typeCheck(n.node1)
-		if err != nil { return 0,0,false,err }
-		_, _, _, err = typeCheck(n.node2)
-		return n.label, 0, false, err
+		_, _, _, _, err := typeCheck(n.node1)
+		if err != nil { return 0,0,false, false,err }
+		_, _, _, _, err = typeCheck(n.node2)
+		return n.label, 0, false, false, err
 
 	//each predicate condition 
 	case N_CPRED:
-		_, _, _, err := typeCheck(n.node1)
-		if err != nil { return 0,0,false,err }
-		_, thisType, l1, err := typeCheck(n.node2)
-		return n.label, thisType, l1, err
+		_, _, _, _, err := typeCheck(n.node1)
+		if err != nil { return 0,0,false, false,err }
+		_, thisType, l1, _, err := typeCheck(n.node2)
+		return n.label, thisType, l1, false, err
 
 	case N_SELECT: fallthrough
 	case N_GROUPBY: return typeCheck(n.node1)
 	}
-	return 0,0,false,nil
+	return 0,0,false, false,nil
 }
 
 //parse subtree values as a type
@@ -410,6 +413,12 @@ func newColItem(q* QuerySpecs, typ int, name string) {
 
 func isOneOfType(test1, test2, type1, type2 int) bool {
 	return (test1 == type1 || test1 == type2) && (test2 == type1 || test2 == type2)
+}
+
+//aggregate operation semantics
+func aggSemantics(a1,a2,l1,l2 bool) bool {
+	if (a1 && !(a2 || l2)) || (a2 && !(a1 || l1)) { return true }
+	return false
 }
 
 //print parse tree for debuggging

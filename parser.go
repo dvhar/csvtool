@@ -71,7 +71,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	}
 
 	//process selections
-	_,_,_,err = typeCheck(n.node1)
+	_,_,_,_,err = typeCheck(n.node1)
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
@@ -79,18 +79,18 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if f { return n,errors.New("Cannot have aggregate function inside an aggregate function") }
 
 	//process 'where' section
-	_,_,_,err = typeCheck(n.node3)
+	_,_,_,_,err = typeCheck(n.node3)
 	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
 
 	//process groups
-	_,_,_,err = typeCheck(n.node4)
+	_,_,_,_,err = typeCheck(n.node4)
 	if err != nil { return n,err }
 	branchShortener(q, n.node4)
 
 	//process sort expression separately if not grouping
 	if !(q.sortExpr!=nil && q.groupby) {
-		_,sortType,_,er := typeCheck(q.sortExpr)
+		_,sortType,_,_,er := typeCheck(q.sortExpr)
 		if er != nil { return n,er }
 		err = enforceType(q.sortExpr, sortType)
 		branchShortener(q,q.sortExpr)
