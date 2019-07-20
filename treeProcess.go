@@ -52,7 +52,6 @@ func keepSubtreeTypes(t1, t2, op int) (bool,int) {
 }
 
 //type checker
-//only return val if expression is a literal
 var caseWhenExprType int
 func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype, value(if literal), err
 	if n == nil { return 0,0,false,nil }
@@ -218,6 +217,62 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 	case N_GROUPBY: return typeCheck(n.node1)
 	}
 	return 0,0,false,nil
+}
+
+//aggregate semantics checker
+func aggCheck(n *Node) (int, bool, bool, error) {  //returns node, literal, aggregate, error
+	if n == nil { return 0, false, false, nil }
+
+	switch n.label {
+
+	case N_SELECT:
+	case N_SELECTIONS:
+	case N_FUNCTION:
+		if (n.tok1.(int) & AGG_BIT) != 0 { return 1,false,true,nil }  //aggregate
+		return aggCheck(n.node1)
+	case N_VALUE:
+		if n.tok2.(int)==2 { aggCheck(n.node1) } //function
+		if n.tok2.(int)==0 { return 1, true, false, nil } //literal
+		return 1, false, false, nil //neither
+
+	case N_EXPRCASE:
+		switch n.tok1.(int) {
+		//just an expression
+		case WORD:  fallthrough
+		case N_EXPRADD:
+			return aggCheck(n.node1)
+		case KW_CASE:
+			n1, l1, a1, err := typeCheck(n.node1)
+			n2, l2, a2, err := typeCheck(n.node2)
+			n3, l3, a3, err := typeCheck(n.node3)
+			//when comparing an intial expression
+			if n1 == N_EXPRADD {
+				for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {
+				}
+			//when using predicates
+			} else {
+			}
+			if n3>0 {}
+			return 1,false,false,nil
+		}
+	case N_EXPRESSIONS:fallthrough
+	case N_EXPRNEG:    fallthrough
+	case N_EXPRADD:    fallthrough
+	case N_EXPRMULT:   fallthrough
+	case N_CWEXPRLIST: fallthrough
+	case N_CPREDLIST:  fallthrough
+	case N_PREDCOMP:   fallthrough
+	case N_CWEXPR:     fallthrough
+	case N_PREDICATES: fallthrough
+	case N_CPRED:
+			n1, l1, a1, err := aggCheck(n.node1)
+			n2, l2, a2, err := aggCheck(n.node2)
+			n3, l3, a3, err := aggCheck(n.node3)
+			if n1!=0 && n2==0 && n3==0 { return n1,l1,a1,err }
+			if n1!=0 && n3!=0 && n3==0 {
+			}
+	}
+	return 1,false, false, nil
 }
 
 //parse subtree values as a type

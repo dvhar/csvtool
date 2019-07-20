@@ -141,6 +141,16 @@ func runTests(doTest bool){
 		Test{`select max(c3) as max min(c3) as min sum(c3) as sum avg(c3) as avg count(c3) as cnt c3 from`+f1+`group by c5`,"aggregate with groupings",true,selectSet},
 		Test{`select top 20 count(c1) + count(c2) count(c1) count(c2) sum(c1+c2) + avg(c1+c2) avg(c1+c2) c7 from`+f1+`group by month(c7) order by c7`,"expression of aggregates",true,selectSet},
 		Test{`select top 20 max(min(c1)) from`+f1+`group by month(c7) order by c7`,"nested aggregate error",false,selectSet},
+		Test{`select top 20 max(c1)+c2*4 from`+f1,"aggregate add error",false,selectSet},
+        Test{`select top 20 max(c1)*(c2+5) from`+f1,"aggregate mult error",false,selectSet},
+        Test{`select top 20 from`+f1+`where max(c1) between min(c1) and c2`,"aggregate between error",false,selectSet},
+        Test{`select top 20 from`+f1+`where max(c1) between c1 and max(c2)`,"aggregate between error",false,selectSet},
+        Test{`select top 20 from`+f1+`where c1 between max(c1) and max(c2)`,"aggregate between error",false,selectSet},
+        Test{`select top 20 from`+f1+`where c1 between c1 and max(c2)`,"aggregate between error",false,selectSet},
+        Test{`select top 20 case c1 when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
+        Test{`select top 20 case max(c1) when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
+        Test{`select top 20 case max(c1) when c2 then a when c2 then b end from`+f1,"aggregate case error",false,selectSet},
+        Test{`select top 20 case c1 when c2 then a else max(c2) end from`+f1,"aggregate case error",false,selectSet},
 	}
 
 	for _,t := range tests {
