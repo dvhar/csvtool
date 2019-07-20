@@ -125,7 +125,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 				//first entry to aggragate target
 				if q.toRow[index] == nil {
 					switch n.tok1.(int) {
-					case FN_COUNT: q.toRow[index] = integer(1)
+					case FN_COUNT: q.toRow[index] = float(1)
 					case FN_AVG:   q.toRow[index] = AverageVal{v1, 1}
 					default: q.toRow[index] = v1
 					}
@@ -136,7 +136,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 					case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v1)
 					case FN_MIN:   if q.toRow[index].Greater(v1) { q.toRow[index] = v1 }
 					case FN_MAX:   if q.toRow[index].Less(v1) { q.toRow[index] = v1 }
-					case FN_COUNT: if _,ok:= v1.(null); !ok { q.toRow[index] = q.toRow[index].Add(integer(1)) }
+					case FN_COUNT: if _,ok:= v1.(null); !ok { q.toRow[index] = q.toRow[index].Add(float(1)) }
 					}
 				}
 			}
