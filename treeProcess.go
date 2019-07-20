@@ -220,59 +220,42 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 }
 
 //aggregate semantics checker
-func aggCheck(n *Node) (int, bool, bool, error) {  //returns node, literal, aggregate, error
-	if n == nil { return 0, false, false, nil }
-
+func aggCheck(n *Node) (bool, bool, bool, error) {  //returns node, literal, aggregate, error
+	if n == nil { return true, false, false, nil }
 	switch n.label {
-
-	case N_SELECT:
 	case N_SELECTIONS:
+		_,_,_, err := aggCheck(n.node1)
+		if err != nil { return true,false,false,err }
+		return aggCheck(n.node2)
 	case N_FUNCTION:
-		if (n.tok1.(int) & AGG_BIT) != 0 { return 1,false,true,nil }  //aggregate
+		if (n.tok1.(int) & AGG_BIT) != 0 { return true,false,true,nil }  //aggregate
 		return aggCheck(n.node1)
 	case N_VALUE:
 		if n.tok2.(int)==2 { aggCheck(n.node1) } //function
-		if n.tok2.(int)==0 { return 1, true, false, nil } //literal
-		return 1, false, false, nil //neither
-
-	case N_EXPRCASE:
-		switch n.tok1.(int) {
-		//just an expression
-		case WORD:  fallthrough
-		case N_EXPRADD:
-			return aggCheck(n.node1)
-		case KW_CASE:
-			n1, l1, a1, err := typeCheck(n.node1)
-			n2, l2, a2, err := typeCheck(n.node2)
-			n3, l3, a3, err := typeCheck(n.node3)
-			//when comparing an intial expression
-			if n1 == N_EXPRADD {
-				for whenNode := n.node2; whenNode.node2 != nil; whenNode = whenNode.node2 {
-				}
-			//when using predicates
-			} else {
-			}
-			if n3>0 {}
-			return 1,false,false,nil
-		}
-	case N_EXPRESSIONS:fallthrough
-	case N_EXPRNEG:    fallthrough
-	case N_EXPRADD:    fallthrough
-	case N_EXPRMULT:   fallthrough
-	case N_CWEXPRLIST: fallthrough
-	case N_CPREDLIST:  fallthrough
-	case N_PREDCOMP:   fallthrough
-	case N_CWEXPR:     fallthrough
-	case N_PREDICATES: fallthrough
-	case N_CPRED:
+		if n.tok2.(int)==0 { return true, true, false, nil } //literal
+		return true, false, false, nil //neither
+	default:
 			n1, l1, a1, err := aggCheck(n.node1)
 			n2, l2, a2, err := aggCheck(n.node2)
 			n3, l3, a3, err := aggCheck(n.node3)
-			if n1!=0 && n2==0 && n3==0 { return n1,l1,a1,err }
-			if n1!=0 && n3!=0 && n3==0 {
+			if n1 && !n2 && !n3 { return n1,l1,a1,err }  //single node
+			if n1 && n3 && !n3 {  //1st and 2nd nodes
+				if err:=aggregateCombo(a1,a2,l1,l2);err!=nil { return true,false,false,err }
+				return true, a1||a2, l1&&l2, nil
+			}
+			if n1 && !n3 && n3 {  //1st and 3rd nodes
+				if err:=aggregateCombo(a1,a3,l1,l3);err!=nil { return true,false,false,err }
+				return true, a1||a3, l1&&l3, nil
+			}
+			if n1 && n3 && n3 { //all 3 nodes
+				if err:=aggregateCombo(a1,a2,l1,l2);err!=nil { return true,false,false,err }
+				a1 = a1 || a2
+				l1 = l1 && l2
+				if err:=aggregateCombo(a1,a3,l1,l3);err!=nil { return true,false,false,err }
+				return true, a1||a3, l1&&l3, nil
 			}
 	}
-	return 1,false, false, nil
+	return aggCheck(n.node1)
 }
 
 //parse subtree values as a type
@@ -465,6 +448,11 @@ func newColItem(q* QuerySpecs, typ int, name string) {
 
 func isOneOfType(test1, test2, type1, type2 int) bool {
 	return (test1 == type1 || test1 == type2) && (test2 == type1 || test2 == type2)
+}
+
+func aggregateCombo(a1,a2,l1,l2 bool) error {
+	if (a1 && !(a2 || l2)) || (a2 && !(a1 || l1)) { return errors.New("Aggregates can only be in operations with other aggregates or literals") }
+	return nil
 }
 
 //print parse tree for debuggging

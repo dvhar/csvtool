@@ -71,6 +71,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	}
 
 	//process selections
+	_,_,_,err = aggCheck(n.node1)
+	if err != nil { return n,err }
 	_,_,_,err = typeCheck(n.node1)
 	if err != nil { return n,err }
 	branchShortener(q, n.node1)
