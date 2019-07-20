@@ -221,8 +221,10 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 
 //aggregate semantics checker
 func aggCheck(n *Node) (bool, bool, bool, error) {  //returns node, literal, aggregate, error
-	if n == nil { return true, false, false, nil }
+	if n == nil { return false, false, false, nil }
 	switch n.label {
+	case N_SELECT:
+		return  aggCheck(n.node1)
 	case N_SELECTIONS:
 		_,_,_, err := aggCheck(n.node1)
 		if err != nil { return true,false,false,err }
@@ -231,28 +233,31 @@ func aggCheck(n *Node) (bool, bool, bool, error) {  //returns node, literal, agg
 		if (n.tok1.(int) & AGG_BIT) != 0 { return true,false,true,nil }  //aggregate
 		return aggCheck(n.node1)
 	case N_VALUE:
-		if n.tok2.(int)==2 { aggCheck(n.node1) } //function
+		if n.tok2.(int)==2 { return aggCheck(n.node1) } //function
 		if n.tok2.(int)==0 { return true, true, false, nil } //literal
 		return true, false, false, nil //neither
 	default:
 			n1, l1, a1, err := aggCheck(n.node1)
+			if err != nil { return true,false,true,err }
 			n2, l2, a2, err := aggCheck(n.node2)
+			if err != nil { return true,false,true,err }
 			n3, l3, a3, err := aggCheck(n.node3)
+			if err != nil { return true,false,true,err }
 			if n1 && !n2 && !n3 { return n1,l1,a1,err }  //single node
-			if n1 && n3 && !n3 {  //1st and 2nd nodes
+			if n1 && n2 && !n3 {  //1st and 2nd nodes
 				if err:=aggregateCombo(a1,a2,l1,l2);err!=nil { return true,false,false,err }
-				return true, a1||a2, l1&&l2, nil
+				return true, l1&&l2, a1||a2, nil
 			}
-			if n1 && !n3 && n3 {  //1st and 3rd nodes
+			if n1 && !n2 && n3 {  //1st and 3rd nodes
 				if err:=aggregateCombo(a1,a3,l1,l3);err!=nil { return true,false,false,err }
-				return true, a1||a3, l1&&l3, nil
+				return true, l1&&l3, a1||a3, nil
 			}
-			if n1 && n3 && n3 { //all 3 nodes
+			if n1 && n2 && n3 { //all 3 nodes
 				if err:=aggregateCombo(a1,a2,l1,l2);err!=nil { return true,false,false,err }
 				a1 = a1 || a2
 				l1 = l1 && l2
 				if err:=aggregateCombo(a1,a3,l1,l3);err!=nil { return true,false,false,err }
-				return true, a1||a3, l1&&l3, nil
+				return true, l1&&l3, a1||a3, nil
 			}
 	}
 	return aggCheck(n.node1)
