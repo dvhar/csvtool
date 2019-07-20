@@ -45,7 +45,7 @@ func runTests(doTest bool){
 		Test{"select top 20 * from"+f1, "select all star", true, selectSet},
 		Test{`select top 20 c5 from`+f1+`where c5 like '%ny%'`,  "case with multiple predicate types", true, selectSet},
 		Test{`select top 20 c4 'Issue Date' c8+c12+10 as 'int-sum' 'c8-int'=c8 c12 as 'c12-int' 
-			c1+c2+10.2 as 'flt-add' c1*c2*10.2 as 'flt-mult' c2 / c1 / 10.2 as 'flt-div' c2 - c1 - 10.2 as 'flt-sub'
+			c1+c2+10.2 as 'flt-add' c1*c2*10.2 as 'flt-mult' c2 / c1 / 10.2 as 'flt-div' c2-c1-10.2 as 'flt-sub'
 			from`+f1, "simple expressions and aliases", true, selectSet},
 		Test{`select top 20
 			floaty = case c8
@@ -80,9 +80,9 @@ func runTests(doTest bool){
 		Test{`select top 20 caseexpr=case c5
 			when NY then new+york when MA then massechuestsskjsdlkj when VA then virginia when NJ then Jersy
 			else flyover end from`+f1, "expression case with actual results", true, selectSet},
-		Test{`select top 20 - c1 - c2 as confusing - c8 (- c2)+c8 from`+f1, "negations", true, selectSet},
-		Test{`select top 20 c1 c2 from`+f1+`where c2 < 10*c1`, "compare floats, mix with int", true, whereSet},
-		Test{`select top 20 c13 c14 from`+f1+`where c13 != c14`, "compare two ints with != operators", true, whereSet},
+		Test{`select top 20-c1-c2 as confusing -c8 (-c2)+c8 from`+f1, "negations", true, selectSet},
+		Test{`select top 20 c1 c2 from`+f1+`where c2<10*c1`, "compare floats, mix with int", true, whereSet},
+		Test{`select top 20 c13 c14 from`+f1+`where c13!=c14`, "compare two ints with != operators", true, whereSet},
 		Test{`select top 20 c13 c14 from`+f1+`where c13 <> c14`, "compare two ints with <> operator", true, whereSet},
 		Test{`select top 20 c13 c14 from`+f1+`where c13 = c14`, "compare two ints", true, whereSet},
 		Test{`select top 20 c5 c6 from`+f1+`where c5 like ny and c6 not like '%pas%'`, "like and not like", true, whereSet},

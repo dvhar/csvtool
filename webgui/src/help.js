@@ -24,11 +24,11 @@ export class Help extends React.Component {
 				<br/><br/>
 				Example: selecting columns 1-3, dogs, and cats from a file<br/>
 				<blockquote>
-					{"select c1 c2 c3 dogs cats from /home/user/pets.csv"}
+					{"select c1 c2 c3 dogs cats from '/home/user/pets.csv'"}
 					<br/>
-					{"select c1 c2 c3 dogs cats from C:\\users\\dave\\pets.csv"}
+					{"select c1 c2 c3 dogs cats from 'C:\\users\\dave\\pets.csv'"}
 					<br/>
-					{"c select 1 2 3 dogs cats from C:\\users\\dave\\pets.csv"}
+					{"c select 1 2 3 dogs cats from 'C:\\users\\dave\\pets.csv'"}
 				</blockquote>
 				<h4>Selecting all columns</h4>
 				{"'select * ' works how you'd expect. If you don't specify any columns at all, it will also select all. "}
@@ -36,20 +36,20 @@ export class Help extends React.Component {
 				Examples:
 				<br/>
 				<blockquote>
-				{"select * from /home/user/pets.csv"}
+				{"select * from '/home/user/pets.csv'"}
 				<br/>
-				{"select from /home/user/pets.csv"}
+				{"select from '/home/user/pets.csv'"}
 				</blockquote>
 				<h4>Selecting more complex expression</h4>
-				{"Use + - * / % operators to add, subtract, multiply, divide, and modulus expressions. -, %, and / need to have spaces around them or else they will be considered part of the text. You can combine them with parentheses. You can also use case expressions."}
+				{"Use + - * / % operators to add, subtract, multiply, divide, and modulus expressions. You can combine them with parentheses. You can also use case expressions."}
 				<br/><br/>
 				Examples:
 				<blockquote>
-				{"select birthdate+'3 weeks', c1*c2, c1 / c2, c1 - c2, c1 % 2, (c1 - 23)*(c2+34) from /home/user/pets.csv"}
+				{"select birthdate+'3 weeks', c1*c2, c1/c2, c1-c2, c1%2, (c1-23)*(c2+34) from '/home/user/pets.csv'"}
 				<br/>
-				{"select case when c1*2<10 then dog when c1*10>=10.2 then cat else monkey end from /home/user/pets.csv"}
+				{"select case when c1*2<10 then dog when c1*10>=10.2 then cat else monkey end from '/home/user/pets.csv'"}
 				<br/>
-				{"select case c1 / c4 when (c3+c3)*2 then dog when c1*10 then cat end from /home/user/pets.csv"}
+				{"select case c1 / c4 when (c3+c3)*2 then dog when c1*10 then cat end from '/home/user/pets.csv'"}
 				</blockquote>
 				<h4>Non-aggregate functions</h4>
 				{"These functions can be used to get certain pieces of information from a date value:"}
@@ -64,45 +64,45 @@ export class Help extends React.Component {
 				</blockquote>
 				Example of functions:
 				<blockquote>
-				{"select count(*), sum('visit duration'), avg(revenue) - avg(cost) as profit, monthname(date), week(date) from /home/user/pets.csv group by month(date) week(date) order by avg(cost)"}
+				{"select count(*), sum('visit duration'), avg(revenue)-avg(cost) as profit, monthname(date), week(date) from '/home/user/pets.csv' group by month(date) week(date) order by avg(cost)"}
 				</blockquote>
 				<h4>Selecting rows with a distinct value</h4>
 				{"Put the 'distinct' keyword in front of the expression that you want to be distinct. Put 'hidden' after 'distinct' if you don't want that value to show up in the results."}
 				<br/><br/>
 				Examples:
 				<blockquote>
-					{"select distinct c3*c3 from /home/user/pets.csv"}
+					{"select distinct c3*c3 from '/home/user/pets.csv'"}
 					<br/>
-					{"select c1 c2 c3 distinct dogs cats from /home/user/pets.csv"}
+					{"select c1 c2 c3 distinct dogs cats from '/home/user/pets.csv'"}
 					<br/>
-					{"select distinct hidden dogs * from /home/user/pets.csv"}
+					{"select distinct hidden dogs * from '/home/user/pets.csv'"}
 				</blockquote>
 				<h4>Selecting a number of rows</h4>
 				{"Use the 'top' keyword after 'select'. Be careful not to confuse the number after 'top' for part of an expression."}
 				<br/><br/>
 				Examples: selecting columns 1-3, dogs, and cats from a file, but only fetch 100 results.<br/>
 				<blockquote>
-					{"select top 100 c1 c2 c3 dogs cats from /home/user/pets.csv"}
+					{"select top 100 c1 c2 c3 dogs cats from '/home/user/pets.csv'"}
 				</blockquote>
 				<h4>Selecting rows that match a certain condition</h4>
-				 {"Use any combinatin of '[expression] [relational operator] [expression]', parentheses, 'and', 'or', 'not', and 'between'. Dates are handled nicely, so 'May 18 1955' is the same as 5/18/1955. Empty entries evaluate to 'null'."}
+				 {"Use any combinatin of '[expression] [relational operator] [expression]', parentheses, 'and', 'or', 'not', and 'between'. Dates are handled nicely, so 'May 18 1955' is the same as '5/18/1955'. Empty entries evaluate to 'null'."}
 				<br/><br/>
 				{"Valid relational operators are =,  !=,  <>,  >,  <,  >=,  <=, like, and between. '!' is evaluated the same as 'not', and can be put in front of a relational operator or a whole comparison."}
 				<br/><br/>
 				Examples:
 				<blockquote>
-				{"select from /home/user/pets.csv where dateOfBirth < 'april 10 1980' or age between (c3 - 19)*1.2 and 30"}
+				{"select from '/home/user/pets.csv' where dateOfBirth < 'april 10 1980' or age between (c3-19)*1.2 and 30"}
 				<br/>
-				{"select from /home/user/pets.csv where (c1 < c13 or fuzzy = very) and not (c3 = null or weight >= 50 or name not like a_b%)"}
+				{"select from '/home/user/pets.csv' where (c1 < c13 or fuzzy = very) and not (c3 = null or weight >= 50 or name not like 'a_b%')"}
 				</blockquote>
 				<h4>Sorting results</h4>
 				{"Use 'order by' at the end of the query, followed by one column or expression, followed optionally by 'asc'. Sorts by descending values unless 'asc' is specified."}
 				<br/><br/>
 				Examples:
 				<blockquote>
-				{"select from /home/user/pets.csv where dog = husky order by age asc"}
+				{"select from '/home/user/pets.csv' where dog = husky order by age asc"}
 				<br/>
-				{"select from /home/user/pets.csv order by c2*c3"}
+				{"select from '/home/user/pets.csv' order by c2*c3"}
 				</blockquote>
 			</blockquote>
 			<h3>Ending queries early, viewing older queries, and exiting</h3>
@@ -117,7 +117,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.44 - 7/19/2019
+			version 0.45 - 7/19/2019
 			<hr/>
 			<br/><br/>
 			</div>
