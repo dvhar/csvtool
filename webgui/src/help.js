@@ -58,13 +58,13 @@ export class Help extends React.Component {
 				</blockquote>
 				{"The 'abs' function can be used to get the absolute value of a number."}
 				<h4>Aggregate functions</h4>
-				{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions. Aggregate functions cannot yet be used as a part of a calculation, so things like sum(column1)+sum(column2) won't work. If you select a non-aggregate value (like just a column) along with some aggregates, the non-aggregate result will just be the last one that it found."}
+				{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions."}
 				<blockquote>
 				sum  avg  min  max  count
 				</blockquote>
 				Example of functions:
 				<blockquote>
-				{"select count(*), sum('visit duration'), avg(cost) as ouch, monthname(date), week(date) from /home/user/pets.csv group by month(date) week(date) order by avg(cost)"}
+				{"select count(*), sum('visit duration'), avg(revenue) - avg(cost) as profit, monthname(date), week(date) from /home/user/pets.csv group by month(date) week(date) order by avg(cost)"}
 				</blockquote>
 				<h4>Selecting rows with a distinct value</h4>
 				{"Put the 'distinct' keyword in front of the expression that you want to be distinct. Put 'hidden' after 'distinct' if you don't want that value to show up in the results."}
@@ -117,7 +117,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.40 - 7/11/2019
+			version 0.44 - 7/19/2019
 			<hr/>
 			<br/><br/>
 			</div>

@@ -142,9 +142,9 @@ var enumMap = map[int]string {
 	STATE_WORD :    "STATE_WORD",
 }
 //characters of special tokens
-var specials = []int{ '*','=','!','<','>','\'','"','(',')',',','+' }
+var specials = []int{ '*','=','!','<','>','\'','"','(',')',',','+','-','%','/' }
 //non-alphanumeric characters of words
-var others = []int{ '/','\\',':','-','_','.','%','[',']','^' }
+var others = []int{ '\\',':','_','.','[',']','^' }
 var keywordMap = map[string]int {
 	"and" :       KW_AND,
 	"or" :        KW_OR,
@@ -167,9 +167,6 @@ var keywordMap = map[string]int {
 	"end" :       KW_END,
 	"join" :      KW_JOIN,
 	"not" :       SP_NEGATE,
-	"-" :         SP_MINUS,
-	"%" :         SP_MOD,
-	"/" :         SP_DIV,
 }
 //functions are normal words to avoid taking up too many words
 //use map when parsing not scanning
@@ -208,6 +205,9 @@ var specialMap = map[string]int {
 	")" :  SP_RPAREN,
 	"*" :  SP_STAR,
 	"+" :  SP_PLUS,
+	"-" :  SP_MINUS,
+	"%" :  SP_MOD,
+	"/" :  SP_DIV,
 }
 var table [NUM_STATES][256]int
 var tabinit bool = false

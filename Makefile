@@ -7,7 +7,7 @@ all: rice-box.go
 
 rice-box.go:
 	rice embed-go
-	zip -r ./csv.zip ./*.go
+	zip -r ./csv.zip ./*.go ./demo.png
 	scp csv.zip dave@davosaur.com:/home/dave/h/csvci/
 
 #cql.exe: $(DEPS) rice-box.go

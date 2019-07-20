@@ -61,20 +61,22 @@ class TopDropdown extends React.Component {
 		var dropdownContents = {
 			nothing : <></>,
 			saveShow : ( <Browser
-							 dirlist = {this.props.saveDirlist}
-							 send = {this.props.sendSocket}
-							 changePath = {this.props.changeSavePath}
-							 submitQuery = {this.props.submitQuery}
-							 currentQuery = {this.props.currentQuery}
-							 type = {"save"}
-						  /> ),
+							dirlist = {this.props.saveDirlist}
+							send = {this.props.sendSocket}
+							changePath = {this.props.changeSavePath}
+							changeTopDrop = {this.props.changeTopDrop}
+							submitQuery = {this.props.submitQuery}
+							currentQuery = {this.props.currentQuery}
+							type = {"save"}
+						/> ),
 			browseShow : ( <Browser
-							   dirlist = {this.props.openDirlist}
-							   updateTopMessage = {this.props.updateTopMessage}
-							   send = {this.props.sendSocket}
-							   changePath = {this.props.changeOpenPath}
-							   type = {"open"}
-							/> ),
+							dirlist = {this.props.openDirlist}
+							updateTopMessage = {this.props.updateTopMessage}
+							changeTopDrop = {this.props.changeTopDrop}
+							send = {this.props.sendSocket}
+							changePath = {this.props.changeOpenPath}
+							type = {"open"}
+						/> ),
 
 		}
 		return dropdownContents[this.props.section];
@@ -93,6 +95,7 @@ class FileSelector extends React.Component {
 					var end = qtext.value.substring(qtext.selectionEnd, 10000000);
 					qtext.value = start +" '"+ this.props.path +"' "+ end;
 					this.props.updateTopMessage("Added file to query");
+					this.props.changeTopDrop("nothing");
 				}
 			}} 
 			>{this.props.path}</span>
@@ -124,6 +127,7 @@ class Browser extends React.Component {
 		if (this.props.dirlist.Files) return (
 		this.props.dirlist.Files.map(path => <FileSelector 
 			path={path}
+			changeTopDrop = {this.props.changeTopDrop}
 			type={this.props.type}
 			updateTopMessage = {this.props.updateTopMessage}
 		/>)
