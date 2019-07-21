@@ -1,5 +1,5 @@
 /*
-<query>             -> <Select> <from> <where> <groupby> <orderby>
+<query>             -> <Select> <from> <where> <groupby> <having> <orderby>
 <Select>            -> {c} Select { top # } <Selections>
 <Selections>        -> * <Selections> | {alias =} <exprAdd> {as alias} <Selections> | ε
 <exprAdd>           -> <exprMult> ( + | - ) <exprAdd> | <exprMult>
@@ -21,6 +21,7 @@
 
 <from>              -> from filename { TODO: joins }
 <where>             -> where <predicates> | ε
+<having>            -> having <predicates> | ε
 <groupby>           -> group by <expressions> | ε
 <expressions>       -> <exprAdd> { <expressions> }
 <orderby>           -> order by <exprAdd> | ε
@@ -53,6 +54,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	n.node3,err =  parseWhere(q)
 	if err != nil { return n,err }
 	n.node4,err =  parseGroupby(q)
+	if err != nil { return n,err }
+	n.node5,err =  parseHaving(q)
 	if err != nil { return n,err }
 	q.sortExpr,err = parseOrder(q)
 	if err != nil { return n,err }
@@ -90,6 +93,13 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	_,_,_,err = typeCheck(n.node4)
 	if err != nil { return n,err }
 	branchShortener(q, n.node4)
+
+	//process 'having' section
+	_,_,_,err = aggCheck(n.node5)
+	if err != nil { return n,err }
+	_,_,_,err = typeCheck(n.node5)
+	if err != nil { return n,err }
+	branchShortener(q, n.node5.node1)
 
 	//process sort expression separately if not grouping
 	if !(q.sortExpr!=nil && q.groupby) {
@@ -519,6 +529,16 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 	n := &Node{label:N_WHERE}
 	var err error
 	if q.Tok().id != KW_WHERE { return n,nil }
+	q.NextTok()
+	n.node1,err = parsePredicates(q)
+	return n,err
+}
+
+//node1 is conditions
+func parseHaving(q*QuerySpecs) (*Node,error) {
+	n := &Node{label:N_WHERE}
+	var err error
+	if q.Tok().id != KW_HAVING { return n,nil }
 	q.NextTok()
 	n.node1,err = parsePredicates(q)
 	return n,err

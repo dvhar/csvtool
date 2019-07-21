@@ -49,6 +49,12 @@ func evalWhere(q *QuerySpecs) bool {
 	return evalPredicates(q, node.node1)
 }
 
+func evalHaving(q *QuerySpecs) bool {
+	node := q.tree.node5
+	if node.node1 == nil { return true }
+	return evalPredicates(q, node.node1)
+}
+
 //set target row and return bool for valid row
 func execGroupOrNewRow(q *QuerySpecs, n *Node) bool {
 	//not grouping

@@ -188,12 +188,14 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 	case 0:
 		for k,row := range m {
 			q.midRow = row.([]Value)
-			q.toRow = make([]Value, q.colSpec.NewWidth)
-			execSelect(q,r)
-			r.Vals = append(r.Vals, q.toRow)
-			m[k] = nil
-			q.quantityRetrieved++
-			if q.LimitReached() && !q.save && q.sortExpr==nil { return }
+			if evalHaving(q) {
+				q.toRow = make([]Value, q.colSpec.NewWidth)
+				execSelect(q,r)
+				r.Vals = append(r.Vals, q.toRow)
+				m[k] = nil
+				q.quantityRetrieved++
+				if q.LimitReached() && !q.save && q.sortExpr==nil { return }
+			}
 		}
 	case 1: for _,v := range m { groupRetriever(q, n.node2, v.(map[interface{}]interface{}), r) }
 	}
