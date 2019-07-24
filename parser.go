@@ -72,6 +72,9 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 			node1: q.sortExpr,
 		}
 	}
+	findHavingAggregates(q, n, n.node5)
+
+	treePrint(n.node1,0)
 
 	//process selections
 	_,_,_,err = aggCheck(n.node1)
@@ -93,13 +96,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	_,_,_,err = typeCheck(n.node4)
 	if err != nil { return n,err }
 	branchShortener(q, n.node4)
-
-	//process 'having' section
-	_,_,_,err = aggCheck(n.node5)
-	if err != nil { return n,err }
-	_,_,_,err = typeCheck(n.node5)
-	if err != nil { return n,err }
-	branchShortener(q, n.node5.node1)
 
 	//process sort expression separately if not grouping
 	if !(q.sortExpr!=nil && q.groupby) {

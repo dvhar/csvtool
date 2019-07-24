@@ -443,6 +443,21 @@ func findAggregateFunction(n *Node) int {
 	if a != 0 { return a }
 	return findAggregateFunction(n.node3)
 }
+func findHavingAggregates(q *QuerySpecs, selections *Node, n *Node) {
+	if n == nil { return }
+	if n.label == N_EXPRADD {
+		nn := selections.node1.node1
+		for ; nn.node2 != nil; nn = nn.node2 {}
+		nn.node2 = &Node{
+			label: N_SELECTIONS,
+			tok3: 0,
+			node1: n,
+		}
+	}
+	findHavingAggregates(q, selections, n.node1)
+	findHavingAggregates(q, selections, n.node2)
+	findHavingAggregates(q, selections, n.node3)
+}
 
 func newColItem(q* QuerySpecs, typ int, name string) {
 	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
