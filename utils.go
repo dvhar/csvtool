@@ -448,7 +448,13 @@ func (f float) Less(other Value) bool      {
 }
 func (i integer) Less(other Value) bool    { if _,ok:=other.(integer);!ok  {return false};return i < other.(integer) }
 func (d date) Less(other Value) bool       { if _,ok:=other.(date);!ok     {return false};return d.val.Before(other.(date).val) }
-func (d duration) Less(other Value) bool   { if _,ok:=other.(duration);!ok {return false};return d.val < other.(duration).val }
+func (d duration) Less(other Value) bool   {
+	switch o := other.(type) {
+		case duration: return d.val < o.val
+		case integer:  return d.val < time.Duration(o) //for abs()
+	}
+	return false
+}
 func (t text) Less(other Value) bool       { if _,ok:=other.(text);!ok     {return false};return t < other.(text) }
 func (n null) Less(other Value) bool       { if _,ok:=other.(null);ok      {return false};return true }
 func (l liker) Less(other Value) bool      { return false }
