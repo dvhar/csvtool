@@ -443,20 +443,36 @@ func findAggregateFunction(n *Node) int {
 	if a != 0 { return a }
 	return findAggregateFunction(n.node3)
 }
-func findHavingAggregates(q *QuerySpecs, selections *Node, n *Node) {
-	if n == nil { return }
-	if n.label == N_EXPRADD {
-		nn := selections.node1.node1
-		for ; nn.node2 != nil; nn = nn.node2 {}
-		nn.node2 = &Node{
-			label: N_SELECTIONS,
-			tok3: 0,
-			node1: n,
+func findHavingAggregates(q *QuerySpecs, selections *Node, n *Node) error {
+	if n == nil { return nil }
+	//found expression in predicate comparison
+	if n.label == N_PREDCOMP && n.node2 != nil {
+		for _,compExpr := range []*Node{ n.node1, n.node2, n.node3 } {
+			a := findAggregateFunction(compExpr)
+			//add aggregate expression to selections for midrow
+			if a > 0 {
+				nn := selections.node1.node1
+				for ; nn.node2 != nil; nn = nn.node2 {}
+				nn.node2 = &Node{
+					label: N_SELECTIONS,
+					tok3: 0,
+					node1: compExpr,
+				}
+			//process literals here since they're not copied to midrow
+			} else {
+				_,_,_,err := aggCheck(compExpr)
+				if err != nil { return err }
+				_,_,_,err = typeCheck(compExpr)
+				if err != nil { return err }
+				branchShortener(q,compExpr)
+			}
 		}
+
 	}
 	findHavingAggregates(q, selections, n.node1)
 	findHavingAggregates(q, selections, n.node2)
 	findHavingAggregates(q, selections, n.node3)
+	return nil
 }
 
 func newColItem(q* QuerySpecs, typ int, name string) {

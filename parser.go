@@ -76,6 +76,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 
 	treePrint(n.node1,0)
 
+	Println("preprocess having:")
+	treePrint(n.node5,0)
 	//process selections
 	_,_,_,err = aggCheck(n.node1)
 	if err != nil { return n,err }
@@ -85,6 +87,10 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	columnNamer(q, n.node1)
 	_,f := findAggregateFunctions(q, n.node1)
 	if f { return n,errors.New("Cannot have aggregate function inside an aggregate function") }
+	Println("selections:")
+	treePrint(n.node1,0)
+	Println("having:")
+	treePrint(n.node5,0)
 
 	//process 'where' section
 	if e := findAggregateFunction(n.node3);e >0 { return n,errors.New("Cannot have aggregate function in 'where' clause") }
