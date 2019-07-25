@@ -264,7 +264,6 @@ func aggCheck(n *Node) (bool, bool, bool, error) {  //returns node, literal, agg
 }
 
 //parse subtree values as a type
-//modify this to handle 'like' with regular expressions
 func enforceType(n *Node, t int) error {
 	if n == nil { return nil }
 	//Println("enforcer at node",treeMap[n.label],"with type",t)
@@ -399,7 +398,15 @@ func columnNamer(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	if n.label == N_SELECTIONS {
 		n.tok1 = []int{q.colSpec.NewWidth,q.colSpec.NewWidth}
-		if n.tok2 == nil { n.tok2 = Sprintf("col%d",n.tok1.([]int)[0]+1) }
+		if n.tok2 == nil {
+			//if just selecting column, use that name
+			if n.node1.label == N_VALUE && n.node1.tok2.(int)==1 {
+				n.tok2 = q.files["_f1"].names[n.node1.tok1.(int)]
+			//give column numeric name if not already named
+			} else {
+				n.tok2 = Sprintf("col%d",n.tok1.([]int)[0]+1)
+			}
+		}
 		newColItem(q, n.tok5.(int), n.tok2.(string))
 	}
 	columnNamer(q, n.node1)

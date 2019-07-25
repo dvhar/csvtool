@@ -15,6 +15,7 @@ import (
 var localPort = flag.String("port", "8060", "Change localhost port")
 var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
 var testing = flag.Bool("test",false, "run tests and then exit")
+var persistent = flag.Bool("stay",false, "don't stop server when browser closes")
 
 
 
@@ -63,6 +64,7 @@ func main() {
 
 	//exit program if it goes 10 seconds without being viewed in a browser
 	go func(){
+		if *persistent { return }
 		ticker := time.NewTicker(time.Second)
 		counter := 0
 		for {

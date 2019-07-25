@@ -124,7 +124,6 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 	firstSelection := n
 	var lastSelection *Node
 	for i:= range file.names {
-		n.tok2  = file.names[i]
 		n.node2 = &Node{label:N_SELECTIONS,tok3:0}
 		n.node1 = &Node{
 			label: N_VALUE,
@@ -540,6 +539,7 @@ func parseOrder(q* QuerySpecs) (*Node,error) {
 
 //tok1 is function id
 //tok2 will be intermediate index if aggragate
+//tok3 is distinct map for count
 //node1 is expression in parens
 func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
@@ -557,6 +557,10 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 		q.NextTok()
 	//other functions
 	} else {
+		if q.Tok().val == "distinct" {
+			n.tok3 = make(map[Value]bool)
+			q.NextTok()
+		}
 		n.node1, err = parseExprAdd(q)
 	}
 	if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
