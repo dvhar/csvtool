@@ -136,9 +136,7 @@ func runCommand() {
 	if *flags.command == "" { return }
 	q := QuerySpecs{ queryString : *flags.command, save : true }
 	saver <- saveData{ Type : CH_SAVPREP }
-	println("trying query")
 	csvQuery(&q)
-	println("don3")
 	saver <- saveData{ Type : CH_NEXT }
 	os.Exit(0)
 }
