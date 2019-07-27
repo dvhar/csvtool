@@ -62,7 +62,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
 
-	//add sort expression to selections if grouping
+	//add 'having' and 'order by' expressions to selections if grouping
 	if q.sortExpr!=nil && q.groupby {
 		nn := n.node1.node1
 		for ; nn.node2 != nil; nn = nn.node2 {}
@@ -74,10 +74,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	}
 	findHavingAggregates(q, n, n.node5)
 
-	treePrint(n.node1,0)
-
-	Println("preprocess having:")
-	treePrint(n.node5,0)
 	//process selections
 	_,_,_,err = aggCheck(n.node1)
 	if err != nil { return n,err }
@@ -87,10 +83,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	columnNamer(q, n.node1)
 	_,f := findAggregateFunctions(q, n.node1)
 	if f { return n,errors.New("Cannot have aggregate function inside an aggregate function") }
-	Println("selections:")
-	treePrint(n.node1,0)
-	Println("having:")
-	treePrint(n.node5,0)
 
 	//process 'where' section
 	if e := findAggregateFunction(n.node3);e >0 { return n,errors.New("Cannot have aggregate function in 'where' clause") }

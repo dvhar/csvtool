@@ -151,6 +151,7 @@ func runTests(){
         Test{`select top 20 case max(c1) when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
         Test{`select top 20 case max(c1) when c2 then a when c2 then b end from`+f1,"aggregate case error",false,selectSet},
         Test{`select top 20 case c1 when c2 then a else max(c2) end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select count(*) month('Issue Date') from`+f1+`group by month('Issue Date') having count(*) between 80 and 100`,"having clause",true,whereSet},
 	}
 
 	for _,t := range tests {

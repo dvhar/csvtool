@@ -35,6 +35,7 @@ type QuerySpecs struct {
 	fromRow []string
 	toRow []Value
 	midRow []Value
+	midExess int
 	intColumn bool
 	groupby bool
 }
