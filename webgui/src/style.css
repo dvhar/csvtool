@@ -1,7 +1,6 @@
 html {
   min-height: 100%;
-  background-color: #DDDDDD;
-  background: linear-gradient(to bottom, #997d60 0%, #dab78c 45%, #c3a996 100%);
+  background-color: #ffffff;
   background-attachment: fixed; }
 
 .absolute-pos {
@@ -41,8 +40,8 @@ html {
   display: inline-block;
   min-width: 12em;
   padding: .2em .2em;
-  background: #2989d8;
-  background: linear-gradient(to bottom, #2989d8 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
+  background: #091928;
+  background: linear-gradient(to bottom, #091928 1%, #207cca 22%, #207cca 22%, #7db9e8 100%); }
 
 .commandtitle {
   margin: auto; }
@@ -73,10 +72,12 @@ html {
   min-width: 12em;
   background-color: #EEEEEE;
   padding: .2em .2em;
-  background: linear-gradient(to bottom, #3b1212 0%, #71280b 50%, #752201 51%, #bf6e4e 100%); }
+  background-color: #091928;
+  background: linear-gradient(to bottom, #091928, #207cca); }
 
 .tableModDrop {
-  background: linear-gradient(to bottom, #3b1212 0%, #71280b 50%, #752201 51%, #bf6e4e 100%); }
+  background: #207cca;
+  background: linear-gradient(to bottom, #207cca 1%, #7db9e8 22%, #7db9e8 22%, #7db9e8 100%); }
 
 .tableModButton {
   width: 15em;
@@ -135,8 +136,7 @@ html {
   text-align: center; }
 
 .topBar {
-  background: #ffe889;
-  background: linear-gradient(to bottom, #3b1212 0%, #71280b 50%, #752201 51%, #bf6e4e 100%);
+  background: #091928;
   min-height: 2em;
   padding: 0.2em;
   display: flex;

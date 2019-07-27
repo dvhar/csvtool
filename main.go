@@ -29,7 +29,7 @@ var browsersOpen = 0
 var slash string
 
 func main() {
-	println("version 0.45 - 7/19/2019")
+	println("version 0.46 - 7/25/2019")
 	flag.Parse()
 	runTests(*testing)
 	messager = make(chan string)
