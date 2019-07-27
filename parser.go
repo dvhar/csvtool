@@ -68,7 +68,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		for ; nn.node2 != nil; nn = nn.node2 {}
 		nn.node2 = &Node{
 			label: N_SELECTIONS,
-			tok3: 0,
+			tok3: 1<<4,
 			node1: q.sortExpr,
 		}
 	}

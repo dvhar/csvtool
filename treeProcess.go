@@ -409,7 +409,7 @@ func columnNamer(q *QuerySpecs, n *Node) {
 				n.tok2 = Sprintf("col%d",n.tok1.([]int)[0]+1)
 			}
 		}
-		newColItem(q, n.tok5.(int), n.tok2.(string))
+		newColItem(q, n.tok5.(int), n.tok2.(string), n.tok3.(int))
 	}
 	columnNamer(q, n.node1)
 	columnNamer(q, n.node2)
@@ -490,7 +490,7 @@ func findHavingAggregates(q *QuerySpecs, selections *Node, n *Node) error {
 					for ; nn.node2 != nil; nn = nn.node2 {}
 					nn.node2 = &Node{
 						label: N_SELECTIONS,
-						tok3: 1<<3, // 1<<3 means selection was already processed
+						tok3: (1<<3)|(1<<4), // 1<<3 means selection was already processed, 1<<4 means exclude from results
 						tok5: thisType,
 						node1: n,
 					}
@@ -504,9 +504,11 @@ func findHavingAggregates(q *QuerySpecs, selections *Node, n *Node) error {
 	return nil
 }
 
-func newColItem(q* QuerySpecs, typ int, name string) {
-	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
-	q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
+func newColItem(q* QuerySpecs, typ int, name string, info int) {
+	if (info & (1<<4)) == 0 {
+		q.colSpec.NewNames = append(q.colSpec.NewNames, name)
+		q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
+	}
 	q.colSpec.NewWidth++
 	q.colSpec.NewPos = append(q.colSpec.NewPos, q.colSpec.NewWidth)
 }
