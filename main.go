@@ -11,14 +11,9 @@ import (
 	"os"
 )
 
-//command line flags
-var localPort = flag.String("port", "8060", "Change localhost port")
-var danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
-var testing = flag.Bool("test",false, "run tests and then exit")
-var persistent = flag.Bool("stay",false, "don't stop server when browser closes")
 
 
-
+var flags Flags
 var FPaths FilePaths
 var messager chan string
 var saver chan saveData
@@ -29,9 +24,17 @@ var browsersOpen = 0
 var slash string
 
 func main() {
-	println("version 0.46 - 7/25/2019")
+
+	flags.localPort = flag.String("port", "8060", "Change localhost port")
+	flags.danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
+	flags.testing = flag.Bool("test",false, "run tests and then exit")
+	flags.persistent = flag.Bool("stay",false, "don't stop server when browser closes")
+	flags.command = flag.String("c","", "run query from command line argument")
 	flag.Parse()
-	runTests(*testing)
+
+	if *flags.command == "" { println("version 0.47 - 7/26/2019") }
+	runTests()
+
 	messager = make(chan string)
 	fileclick = make(chan string)
 	directory = make(chan Directory)
@@ -51,20 +54,20 @@ func main() {
 	}
 
 	//set up server url
-	println("Starting server")
 	host := "localhost"
-	port := ":" + *localPort
-	if *danger { host = "" }
+	port := ":" + *flags.localPort
+	if *flags.danger { host = "" }
 	serverUrl := host + port
 
 
 	//start server
+	runCommand()
 	done := make(chan bool)
 	go httpserver(serverUrl, done)
 
 	//exit program if it goes 10 seconds without being viewed in a browser
 	go func(){
-		if *persistent { return }
+		if *flags.persistent { return }
 		ticker := time.NewTicker(time.Second)
 		counter := 0
 		for {
@@ -125,4 +128,13 @@ func runQueries(req *webQueryRequest) ([]SingleQueryResult, error) {
 		}
 	}
 	return results, nil
+}
+
+func runCommand() {
+	if *flags.command == "" { return }
+	q := QuerySpecs{ queryString : *flags.command, save : true }
+	saver <- saveData{ Type : CH_SAVPREP }
+	csvQuery(&q)
+	saver <- saveData{ Type : CH_NEXT }
+	os.Exit(0)
 }
