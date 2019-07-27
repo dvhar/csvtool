@@ -405,4 +405,10 @@ type Flags struct {
 }
 
 func (f Flags) gui() bool { return *f.command == "" && *f.testing == false }
-func message(s string) { if flags.gui() { messager <- s } }
+func message(s string) {
+	if flags.gui() {
+		messager <- s
+	} else {
+		print("\r"+s)
+	}
+}
