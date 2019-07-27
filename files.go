@@ -40,7 +40,7 @@ func realtimeCsvSaver() {
 				numRecieved = 0
 				state = 1
 			} else {
-				messager <- Sprint(err)
+				message(Sprint(err))
 			}
 
 		case CH_HEADER:
@@ -76,7 +76,7 @@ func realtimeCsvSaver() {
 		case CH_DONE:
 			state = 0
 		}
-		if err != nil { messager <- Sprint(err) }
+		if err != nil { message(Sprint(err)) }
 	}
 }
 
@@ -122,7 +122,7 @@ func fileBrowser(pathRequest Directory) {
 	files, _ := filepath.Glob(path+slash+"*")
 	_, err := os.Open(path)
 	if err != nil {
-		messager <- "invalid path: "+path
+		message("invalid path: "+path)
 		return
 	}
 	thisDir := Directory{Path: path+slash, Parent: filepath.Dir(path), Mode: pathRequest.Mode}

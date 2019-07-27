@@ -120,7 +120,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 
 		//periodic updates
 		rowsChecked++
-		if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked)+", "+Itoa(q.quantityRetrieved)+" results so far" }
+		if rowsChecked % 10000 == 0 { message("Scanning line "+Itoa(rowsChecked)+", "+Itoa(q.quantityRetrieved)+" results so far") }
 	}
 	return nil
 }
@@ -149,7 +149,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	for {
 		if stop == 1 { break }
 		rowsChecked++
-		if rowsChecked % 10000 == 0 { messager <- "Scanning line "+Itoa(rowsChecked) }
+		if rowsChecked % 10000 == 0 { message("Scanning line "+Itoa(rowsChecked)) }
 		q.fromRow,err = reader.Read()
 		if err != nil {break}
 		match = evalWhere(q)
@@ -160,7 +160,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	}
 
 	//sort matching line positions
-	if !(*flags.testing) { messager <- "Sorting Rows..." }
+	message("Sorting Rows...")
 	sort.Slice(reader.valPositions, func(i, j int) bool {
 		ret := reader.valPositions[i].val.Greater(reader.valPositions[j].val)
 		if q.sortWay == 2 { return !ret }
@@ -170,14 +170,14 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 	//go back and retrieve lines in the right order
 	reader.PrepareReRead()
 	for i := range reader.valPositions {
-		if stop == 1 { stop = 0; messager <- "query cancelled"; break }
+		if stop == 1 { stop = 0; message("query cancelled"); break }
 		q.fromRow,err = reader.ReadAt(i)
 		if err != nil { break }
 		if evalDistinct(q, distinctCheck) {
 			execGroupOrNewRow(q,q.tree.node4)
 			execSelect(q, res)
 			if q.LimitReached() { break }
-			if q.quantityRetrieved % 1000 == 0 { messager <- "Retrieving line "+Itoa(q.quantityRetrieved) }
+			if q.quantityRetrieved % 1000 == 0 { message("Retrieving line "+Itoa(q.quantityRetrieved)) }
 		}
 	}
 	return nil
@@ -212,7 +212,7 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	groupRetriever(q, root.node1, root.tok1.(map[interface{}]interface{}), res)
 	//sort groups
 	if q.sortExpr != nil {
-		if !(*flags.testing) { messager <- "Sorting Rows..." }
+		message("Sorting Rows...")
 		sort.Slice(res.Vals, func(i, j int) bool {
 			ret := res.Vals[i][q.colSpec.NewWidth-1].Greater(res.Vals[j][q.colSpec.NewWidth-1])
 			if q.sortWay == 2 { return !ret }
