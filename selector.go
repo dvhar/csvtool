@@ -3,7 +3,8 @@ import (
 	. "strconv"
 	d "github.com/araddon/dateparse"
 	s "strings"
-	//. "fmt"
+	. "fmt"
+	r "reflect"
 )
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
@@ -272,6 +273,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 	case N_PREDCOMP:
 		_,expr1 := execExpression(q, n.node1)
 		_,expr2 := execExpression(q, n.node2)
+		Println("e1:",expr1,"e2:",expr2,r.TypeOf(expr1),r.TypeOf(expr2))
 		switch n.tok1.(int) {
 		case KW_LIKE:    match = expr2.Equal(expr1)
 		case SP_NOEQ:    negate ^= 1; fallthrough
@@ -292,6 +294,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			}
 		}
 	}
+	Println("match:",match)
 	if negate==1 { return !match }
 	return match
 }

@@ -469,8 +469,9 @@ func findHavingAggregates(q *QuerySpecs, selections *Node, n *Node) error {
 			} else {
 				_,_,_,err := aggCheck(compExpr)
 				if err != nil { return err }
-				_,_,_,err = typeCheck(compExpr)
+				_,t1,_,err := typeCheck(compExpr)
 				if err != nil { return err }
+				enforceType(compExpr, t1)
 				branchShortener(q,compExpr)
 			}
 		}
