@@ -1,5 +1,5 @@
 //top bar back gradient
-$ttop: #2989d8;
+$ttop: #091928;
 $ttp: #207cca;
 $bbt: #207cca;
 $bbot: #7db9e8;
@@ -17,9 +17,10 @@ $ojgradient4: #fb955e;
 
 $tablebg: #ccc;
 $dropdownbg: brown;
+	//background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
 
 $loginTopBut: #a6e8a3;
-$topbarbg: #ffe889;
+$topbarbg: $ttop;
 $loginbg: #fdffe5;
 $historyArrows: #ffff99;
 
@@ -33,8 +34,8 @@ $historyArrows: #ffff99;
 
 html {
 	min-height: 100%;
-	background-color: #DDDDDD;
-	background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
+	background-color: #cccccc;
+	//background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
 	//background-image: url("/bg.jpg");
 	background-attachment: fixed;
 }
@@ -112,10 +113,12 @@ html {
 	min-width: 12em;
 	background-color: $button1;
 	padding: .2em .2em;
-	background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	//background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	@include gradient($ttop,$bbt);
 }
 .tableModDrop {
-	background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	//background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	@include sgradient($bbt,$bbot,$bbot,$bbot);
 }
 .tableModButton {
 	width: 15em;
@@ -178,7 +181,7 @@ html {
 //top bar
 .topBar {
 	background: $topbarbg;
-	background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
+	//background: linear-gradient(to bottom, #3b1212 0%,#71280b 50%,#752201 51%,#bf6e4e 100%);
 	min-height: 2em;
 	padding: 0.2em;
 	display: flex;

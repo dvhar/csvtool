@@ -6,6 +6,13 @@ export class QueryBox extends React.Component {
 		super(props);
 		this.state = {clicked:1}
 	}
+	shiftEnter(e){
+		if (e.keyCode == 13 && e.shiftKey) {
+			e.preventDefault();
+			var query = this.textbox.value;
+			this.props.submitQuery({query : query});
+		}
+	}
 	render(){
 		var arrow = <span className={this.state.clicked===1?"dim":""}>{"\u25bc"}</span>
 		return (
@@ -19,7 +26,7 @@ export class QueryBox extends React.Component {
 					</textarea>
 					<br/>
 					<button className="queryRunButton" onClick={()=>{
-						var query = document.getElementById("textBoxId").value;
+						var query = this.textbox.value;
 						this.props.submitQuery({query : query});
 					}}>Submit Query</button>
 					<button className="queryRunButton" onClick={()=>{ this.props.sendSocket({Type : bit.SK_STOP}); }}>End Query Early</button>
@@ -27,5 +34,9 @@ export class QueryBox extends React.Component {
 				</div>
 			</div>
 		);
+	}
+	componentDidMount(){
+		this.textbox = document.getElementById("textBoxId");
+		this.textbox.onkeydown = (e)=>this.shiftEnter(e);
 	}
 }

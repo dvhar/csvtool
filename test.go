@@ -22,11 +22,11 @@ type Test struct {
 	set int //bits for which set of tests it belongs to
 }
 
-func runTests(doTest bool){
+func runTests(){
 	db.verbose1 = true
 	//db.verbose2 = true
 	//db.verbose3 = true
-	if !doTest { return }
+	if !*flags.testing { return }
 
 	dir1 := "/home/dave/Documents/work/"
 	//dir1 := "/home/dave/testing/ram/"

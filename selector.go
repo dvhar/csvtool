@@ -129,7 +129,8 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 			} else {
 				index := n.tok2.(int)
 				//first entry to aggragate target
-				if q.toRow[index] == nil {
+				if q.toRow[index] == nil { q.toRow[index] = null("") }
+				if _,ok := q.toRow[index].(null); ok {
 					switch n.tok1.(int) {
 					case FN_COUNT: q.toRow[index] = float(1)
 					case FN_AVG:   q.toRow[index] = AverageVal{v1, 1}
@@ -146,6 +147,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 					}
 				}
 			}
+		//don't let any values stay nil
+		} else {
+			index := n.tok2.(int)
+			if q.toRow[index] == nil { q.toRow[index] = null("") }
 		}
 		return t1,v1
 
