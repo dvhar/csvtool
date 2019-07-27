@@ -403,3 +403,6 @@ type Flags struct {
 	persistent *bool
 	command *string
 }
+
+func (f Flags) gui() bool { return *f.command == "" && *f.testing == false }
+func message(s string) { if flags.gui() { messager <- s } }

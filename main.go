@@ -9,6 +9,7 @@ import (
 	. "strconv"
 	"flag"
 	"os"
+	"bufio"
 )
 
 
@@ -32,6 +33,7 @@ func main() {
 	flags.command = flag.String("c","", "run query from command line argument")
 	flag.Parse()
 
+	readStdin()
 	if *flags.command == "" { println("version 0.47 - 7/26/2019") }
 	runTests()
 
@@ -120,10 +122,10 @@ func runQueries(req *webQueryRequest) ([]SingleQueryResult, error) {
 	for i := range queries {
 		//run query
 		result, err = runCsvQuery(queries[i], req)
-		messager <- "Finishing a query..."
+		message("Finishing a query...")
 		results = append(results, result)
 		if err != nil {
-			messager <- Sprint(err)
+			message(Sprint(err))
 			return results, errors.New("Query "+Itoa(i+1)+" Error: "+Sprint(err))
 		}
 	}
@@ -134,7 +136,19 @@ func runCommand() {
 	if *flags.command == "" { return }
 	q := QuerySpecs{ queryString : *flags.command, save : true }
 	saver <- saveData{ Type : CH_SAVPREP }
+	println("trying query")
 	csvQuery(&q)
+	println("don3")
 	saver <- saveData{ Type : CH_NEXT }
 	os.Exit(0)
+}
+
+func readStdin() {
+	fi,_ := os.Stdin.Stat()
+	if fi.Mode() & os.ModeNamedPipe != 0 {
+		reader := bufio.NewReader(os.Stdin)
+		buf := make([]byte,10000)
+		reader.Read(buf)
+		*flags.command = string(buf)
+	}
 }

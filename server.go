@@ -121,12 +121,12 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 			retData.Message = Sprint(err)
 		} else {
 			retData.Status |= DAT_GOOD
-			messager <- successMessage
+			message(successMessage)
 		}
 
 		rowLimit(&retData)
 		println("finished row limit")
-		if (retData.Status & DAT_GOOD)!=0 && retData.Clipped && req.FileIO == 0 { messager <- "Showing only top "+Itoa(maxLimit) }
+		if (retData.Status & DAT_GOOD)!=0 && retData.Clipped && req.FileIO == 0 { message("Showing only top "+Itoa(maxLimit)) }
 		returnJSON,_ := json.Marshal(retData)
 		retData = ReturnData{}
 		println("marshalled json")
