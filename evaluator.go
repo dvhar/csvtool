@@ -161,6 +161,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) err
 
 	//sort matching line positions
 	message("Sorting Rows...")
+	if !flags.gui() { print("\n") }
 	sort.Slice(reader.valPositions, func(i, j int) bool {
 		ret := reader.valPositions[i].val.Greater(reader.valPositions[j].val)
 		if q.sortWay == 2 { return !ret }
@@ -215,6 +216,7 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	//sort groups
 	if q.sortExpr != nil {
 		message("Sorting Rows...")
+		if !flags.gui() { print("\n") }
 		sortIndex := len(res.Vals[0])-1
 		sort.Slice(res.Vals, func(i, j int) bool {
 			ret := res.Vals[i][sortIndex].Greater(res.Vals[j][sortIndex])

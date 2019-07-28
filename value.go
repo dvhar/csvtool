@@ -4,6 +4,7 @@ import (
 	"time"
 	. "fmt"
 	"regexp"
+	"math"
 )
 //interface to simplify operations with various datatypes
 type Value interface {
@@ -17,6 +18,7 @@ type Value interface {
 	Mult(other Value) Value
 	Div(other Value) Value
 	Mod(other Value) Value
+	Pow(other Value) Value
 	String() string
 	MarshalJSON() ([]byte,error)
 }
@@ -37,6 +39,7 @@ func (a AverageVal) Sub(other Value) Value       { return a }
 func (a AverageVal) Mult(other Value) Value      { return a }
 func (a AverageVal) Div(other Value) Value       { return a }
 func (a AverageVal) Mod(other Value) Value       { return a }
+func (a AverageVal) Pow(other Value) Value       { return a }
 func (a AverageVal) Eval() Value                 { return a.val.Div(a.count) }
 
 type float float64
@@ -115,7 +118,6 @@ func (d duration) Sub(other Value) Value {
 	}
 	return d
 }
-
 func (f float) Add(other Value) Value   { if _,ok:=other.(float);!ok      {return other};return float(f + other.(float)) }
 func (i integer) Add(other Value) Value { if _,ok:=other.(integer);!ok    {return other};return integer(i + other.(integer)) }
 func (d date) Add(other Value) Value    { if _,ok:=other.(duration);!ok   {return other};return date{d.val.Add(other.(duration).val)} }
@@ -203,6 +205,14 @@ func (d duration) Mod(other Value) Value { return d }
 func (t text) Mod(other Value) Value     { return t }
 func (n null) Mod(other Value) Value     { return n }
 func (l liker) Mod(other Value) Value    { return l }
+
+func (f float) Pow(other Value) Value    { if _,ok:=other.(float);!ok   {return other}; return float(math.Pow(float64(f), float64(other.(float)))) }
+func (i integer) Pow(other Value) Value  { if _,ok:=other.(integer);!ok {return other}; return integer(math.Pow(float64(i), float64(other.(integer)))) }
+func (d date) Pow(other Value) Value     { return d }
+func (d duration) Pow(other Value) Value { return d }
+func (t text) Pow(other Value) Value     { return t }
+func (n null) Pow(other Value) Value     { return n }
+func (l liker) Pow(other Value) Value    { return l }
 
 func (f float) String() string    { return Sprintf("%.10g",f) }
 func (i integer) String() string  { return Sprintf("%d",i) }

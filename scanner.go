@@ -81,6 +81,7 @@ const (
 	SP_STAR =      SPECIAL|iota
 	SP_DIV =       SPECIAL|iota
 	SP_MOD =       SPECIAL|iota
+	SP_CARROT =    SPECIAL|iota
 	SP_MINUS =     SPECIAL|iota
 	SP_PLUS =      SPECIAL|iota
 	//non-final states
@@ -144,9 +145,9 @@ var enumMap = map[int]string {
 	STATE_WORD :    "STATE_WORD",
 }
 //characters of special tokens
-var specials = []int{ '*','=','!','<','>','\'','"','(',')',',','+','-','%','/' }
+var specials = []int{ '*','=','!','<','>','\'','"','(',')',',','+','-','%','/','^' }
 //non-alphanumeric characters of words
-var others = []int{ '\\',':','_','.','[',']','^' }
+var others = []int{ '\\',':','_','.','[',']' }
 var keywordMap = map[string]int {
 	"and" :       KW_AND,
 	"or" :        KW_OR,
@@ -211,6 +212,7 @@ var specialMap = map[string]int {
 	"-" :  SP_MINUS,
 	"%" :  SP_MOD,
 	"/" :  SP_DIV,
+	"^" :  SP_CARROT,
 }
 var table [NUM_STATES][256]int
 var tabinit bool = false

@@ -18,7 +18,6 @@
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
 <function>          -> <functionname> ( <exprAdd> )
-
 <from>              -> from filename { TODO: joins }
 <where>             -> where <predicates> | ε
 <having>            -> having <predicates> | ε
@@ -228,6 +227,7 @@ func parseExprMult(q* QuerySpecs) (*Node,error) {
 	switch q.Tok().id {
 	case SP_STAR: fallthrough
 	case SP_MOD: fallthrough
+	case SP_CARROT: fallthrough
 	case SP_DIV:
 		if q.PeekTok().id == KW_FROM { break }
 		n.tok1 = q.Tok().id

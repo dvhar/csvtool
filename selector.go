@@ -186,9 +186,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 		if op,ok := n.tok1.(int); ok {
 			_,v2 := execExpression(q, n.node2)
 			switch op {
-			case SP_STAR: v1=v1.Mult(v2)
-			case SP_DIV:  v1=v1.Div(v2)
-			case SP_MOD:  v1=v1.Mod(v2)
+			case SP_STAR:  v1=v1.Mult(v2)
+			case SP_DIV:   v1=v1.Div(v2)
+			case SP_MOD:   v1=v1.Mod(v2)
+			case SP_CARROT:v1=v1.Pow(v2)
 			}
 		}
 		return t1,v1
