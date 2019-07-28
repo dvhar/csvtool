@@ -35,6 +35,7 @@ type QuerySpecs struct {
 	fromRow []string
 	toRow []Value
 	midRow []Value
+	midExess int
 	intColumn bool
 	groupby bool
 }
@@ -166,6 +167,7 @@ type Node struct {
 	node2 *Node
 	node3 *Node
 	node4 *Node
+	node5 *Node
 }
 type Columns struct {
 	NewNames []string
@@ -294,7 +296,7 @@ func openFiles(q *QuerySpecs) error {
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
 			if q.NextTok().id == WORD { q.files[q.Tok().val] = file }
-			if q.Tok().id == KW_AS && q.NextTok().id == WORD { q.files[q.Tok().val] = file }
+			if q.Tok().val == "as" && q.NextTok().id == WORD { q.files[q.Tok().val] = file }
 			if err = inferTypes(q, key); err != nil {return err}
 		}
 	}
@@ -395,7 +397,6 @@ type sockDirMessage struct {
 	Type int
 	Dir Directory
 }
-
 type Flags struct {
 	localPort *string
 	danger *bool

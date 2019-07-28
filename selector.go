@@ -4,6 +4,7 @@ import (
 	d "github.com/araddon/dateparse"
 	s "strings"
 	//. "fmt"
+	//r "reflect"
 )
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
@@ -45,6 +46,12 @@ func execSelections(q *QuerySpecs, n *Node) {
 
 func evalWhere(q *QuerySpecs) bool {
 	node := q.tree.node3
+	if node.node1 == nil { return true }
+	return evalPredicates(q, node.node1)
+}
+
+func evalHaving(q *QuerySpecs) bool {
+	node := q.tree.node5
 	if node.node1 == nil { return true }
 	return evalPredicates(q, node.node1)
 }

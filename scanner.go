@@ -28,6 +28,7 @@ const (
 	KW_XOR =      LOGOP|KEYWORD|iota
 	KW_SELECT =   KEYWORD|iota
 	KW_FROM  =    KEYWORD|iota
+	KW_HAVING  =  KEYWORD|iota
 	KW_AS  =      KEYWORD|iota
 	KW_WHERE =    KEYWORD|iota
 	KW_ORDER =    KEYWORD|iota
@@ -104,6 +105,7 @@ var enumMap = map[int]string {
 	KW_XOR  :       "KW_XOR",
 	KW_SELECT :     "KW_SELECT",
 	KW_FROM  :      "KW_FROM",
+	KW_HAVING  :    "KW_HAVING",
 	KW_AS  :        "KW_AS",
 	KW_WHERE :      "KW_WHERE",
 	KW_ORDER :      "KW_ORDER",
@@ -151,6 +153,7 @@ var keywordMap = map[string]int {
 	"xor" :       KW_XOR,
 	"select" :    KW_SELECT,
 	"from" :      KW_FROM,
+	"having" :    KW_HAVING,
 	"as" :        KW_AS,
 	"where" :     KW_WHERE,
 	"order" :     KW_ORDER,

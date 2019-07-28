@@ -53,7 +53,7 @@ func keepSubtreeTypes(t1, t2, op int) (bool,int) {
 
 //type checker
 var caseWhenExprType int
-func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype, value(if literal), err
+func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype, literal, err
 	if n == nil { return 0,0,false,nil }
 	var literal bool
 
@@ -78,7 +78,7 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 			if err != nil { return 0,0,false,err }
 			_, t2, l2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,false,err }
-			n3, d3, l3, err := typeCheck(n.node3)
+			n3, t3, l3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,false,err }
 			var thisType int
 			//when comparing an intial expression
@@ -92,11 +92,11 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 				}
 				n.node2.tok3 = caseWhenExprType
 				thisType = t2
-				if n3>0 { thisType = typeCompute(l2,l3,t2,d3) }
+				if n3>0 { thisType = typeCompute(l2,l3,t2,t3) }
 			//when using predicates
 			} else {
 				thisType = t1
-				if n3>0 { thisType = typeCompute(l1,l3,t1,d3) }
+				if n3>0 { thisType = typeCompute(l1,l3,t1,t3) }
 			}
 			if n1 == N_VALUE { literal = l1 }
 			return N_EXPRCASE, thisType, literal, nil
@@ -136,8 +136,10 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 			_, _, _, err = typeCheck(n.node2)
 		case N_SELECTIONS:
 			n.tok5 = t1
-			err = enforceType(n.node1, t1)
-			if err != nil { return 0,0,false,err }
+			if n.tok3.(int) & (1<<3) == 0 {
+				err = enforceType(n.node1, t1)
+				if err != nil { return 0,0,false,err }
+			}
 			_, _, _, err = typeCheck(n.node2)
 		}
 		return n.label, t1, l1, err
@@ -159,7 +161,7 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 			if err != nil { return 0,0,false,err }
 			thisType = typeCompute(l1,l2,t1,t2)
 
-			//see if using special rules for time/duration type interaction
+			//see if using special rules for time/duration type interaction - not used in predicates
 			keep, final := keepSubtreeTypes(t1,t2,operator)
 			if keep {
 				thisType = final
@@ -183,11 +185,11 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		if operator,ok := n.tok1.(int); ok && operator == KW_BETWEEN {
 			_, t2, l2, err := typeCheck(n.node2)
 			if err != nil { return 0,0,false,err }
-			_, d3, l3, err := typeCheck(n.node3)
+			_, t3, l3, err := typeCheck(n.node3)
 			if err != nil { return 0,0,false,err }
 			thisType = typeCompute(l1,l2,t1,t2)
 			l12 := l1; if l2 == false { l12 = false }
-			thisType = typeCompute(l12,l3,thisType,d3)
+			thisType = typeCompute(l12,l3,thisType,t3)
 			if l3==false {l1 = false}
 		}
 		//predicate comparisions are typed independantly, so leave type in tok3
@@ -407,7 +409,7 @@ func columnNamer(q *QuerySpecs, n *Node) {
 				n.tok2 = Sprintf("col%d",n.tok1.([]int)[0]+1)
 			}
 		}
-		newColItem(q, n.tok5.(int), n.tok2.(string))
+		newColItem(q, n.tok5.(int), n.tok2.(string), n.tok3.(int))
 	}
 	columnNamer(q, n.node1)
 	columnNamer(q, n.node2)
@@ -450,10 +452,63 @@ func findAggregateFunction(n *Node) int {
 	if a != 0 { return a }
 	return findAggregateFunction(n.node3)
 }
+func findHavingAggregates(q *QuerySpecs, selections *Node, n *Node) error {
+	if n == nil { return nil }
+	//found expression in predicate comparison
+	if n.label == N_PREDCOMP && n.node2 != nil {
+			_,t1,l1,err := typeCheck(n.node1)
+			if err != nil { return err }
+			_,t2,l2,err := typeCheck(n.node2)
+			if err != nil { return err }
+			_,t3,l3,err := typeCheck(n.node3)
+			if err != nil { return err }
+			a1 := findAggregateFunction(n.node1)
+			a2 := findAggregateFunction(n.node2)
+			a3 := findAggregateFunction(n.node3)
+			thisType := typeCompute(l1,l2,t1,t2)
+			if n.node3 != nil {
+				l12 := l1; if l2 == false { l12 = false }
+				thisType = typeCompute(l12,l3,thisType,t3)
+				if !(l3 || a3>0) { return errors.New("'having' clause must be aggregates or literals") }
+			}
+			if !(l1 || a1>0) || !(l2 || a2>0) { return errors.New("'having' clause must be aggregates or literals") }
 
-func newColItem(q* QuerySpecs, typ int, name string) {
-	q.colSpec.NewNames = append(q.colSpec.NewNames, name)
-	q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
+			enforceType(n.node1, thisType)
+			enforceType(n.node2, thisType)
+			enforceType(n.node3, thisType)
+
+			n.node1 = branchShortener(q,n.node1)
+			n.node2 = branchShortener(q,n.node2)
+			n.node3 = branchShortener(q,n.node3)
+
+			//add aggregate expression to selections for midrow
+			a := []int{a1,a2,a3}
+			for i,n := range []*Node{n.node1,n.node2,n.node3} {
+				if a[i] > 0 {
+					q.midExess++
+					nn := selections.node1.node1
+					for ; nn.node2 != nil; nn = nn.node2 {}
+					nn.node2 = &Node{
+						label: N_SELECTIONS,
+						tok3: (1<<3)|(1<<4), // 1<<3 means selection was already processed, 1<<4 means exclude from results
+						tok5: thisType,
+						node1: n,
+					}
+				}
+			}
+		}
+
+	findHavingAggregates(q, selections, n.node1)
+	findHavingAggregates(q, selections, n.node2)
+	findHavingAggregates(q, selections, n.node3)
+	return nil
+}
+
+func newColItem(q* QuerySpecs, typ int, name string, info int) {
+	if (info & (1<<4)) == 0 {
+		q.colSpec.NewNames = append(q.colSpec.NewNames, name)
+		q.colSpec.NewTypes = append(q.colSpec.NewTypes, typ)
+	}
 	q.colSpec.NewWidth++
 	q.colSpec.NewPos = append(q.colSpec.NewPos, q.colSpec.NewWidth)
 }

@@ -77,7 +77,6 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	//prepare output
 	res:= SingleQueryResult{
 		Colnames : q.colSpec.NewNames,
-		Numcols: q.colSpec.NewWidth,
 		Types: q.colSpec.NewTypes,
 		Pos: q.colSpec.NewPos,
 		ShowLimit : q.showLimit,
@@ -95,6 +94,7 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	if err != nil { Println(err); return SingleQueryResult{}, err }
 	res.Numrows = q.quantityRetrieved
 	returnGroupedRows(q, &res)
+	res.Numcols = q.colSpec.NewWidth
 	return res, nil
 }
 
@@ -188,12 +188,14 @@ func groupRetriever (q *QuerySpecs, n* Node, m map[interface{}]interface{}, r *S
 	case 0:
 		for k,row := range m {
 			q.midRow = row.([]Value)
-			q.toRow = make([]Value, q.colSpec.NewWidth)
-			execSelect(q,r)
-			r.Vals = append(r.Vals, q.toRow)
-			m[k] = nil
-			q.quantityRetrieved++
-			if q.LimitReached() && !q.save && q.sortExpr==nil { return }
+			if evalHaving(q) {
+				q.toRow = make([]Value, q.colSpec.NewWidth)
+				execSelect(q,r)
+				r.Vals = append(r.Vals, q.toRow[0:q.colSpec.NewWidth-q.midExess])
+				m[k] = nil
+				q.quantityRetrieved++
+				if q.LimitReached() && !q.save && q.sortExpr==nil { return }
+			}
 		}
 	case 1: for _,v := range m { groupRetriever(q, n.node2, v.(map[interface{}]interface{}), r) }
 	}
@@ -213,14 +215,16 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	//sort groups
 	if q.sortExpr != nil {
 		message("Sorting Rows...")
+		sortIndex := len(res.Vals[0])-1
 		sort.Slice(res.Vals, func(i, j int) bool {
-			ret := res.Vals[i][q.colSpec.NewWidth-1].Greater(res.Vals[j][q.colSpec.NewWidth-1])
+			ret := res.Vals[i][sortIndex].Greater(res.Vals[j][sortIndex])
 			if q.sortWay == 2 { return !ret }
 			return ret
 		})
 		//remove sort value and excess rows when done
 		if q.quantityLimit > 0 && q.quantityLimit <= len(res.Vals) { res.Vals = res.Vals[0:q.quantityLimit] }
-		for i,_ := range res.Vals { res.Vals[i] = res.Vals[i][0:q.colSpec.NewWidth-1] }
+		for i,_ := range res.Vals { res.Vals[i] = res.Vals[i][0:sortIndex] }
+		q.colSpec.NewWidth--
 	}
 	//save groups to file
 	if q.save  {

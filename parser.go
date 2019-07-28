@@ -1,5 +1,5 @@
 /*
-<query>             -> <Select> <from> <where> <groupby> <orderby>
+<query>             -> <Select> <from> <where> <groupby> <having> <orderby>
 <Select>            -> {c} Select { top # } <Selections>
 <Selections>        -> * <Selections> | {alias =} <exprAdd> {as alias} <Selections> | ε
 <exprAdd>           -> <exprMult> ( + | - ) <exprAdd> | <exprMult>
@@ -21,6 +21,7 @@
 
 <from>              -> from filename { TODO: joins }
 <where>             -> where <predicates> | ε
+<having>            -> having <predicates> | ε
 <groupby>           -> group by <expressions> | ε
 <expressions>       -> <exprAdd> { <expressions> }
 <orderby>           -> order by <exprAdd> | ε
@@ -54,21 +55,24 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	n.node4,err =  parseGroupby(q)
 	if err != nil { return n,err }
+	n.node5,err =  parseHaving(q)
+	if err != nil { return n,err }
 	q.sortExpr,err = parseOrder(q)
 	if err != nil { return n,err }
 
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
 
-	//add sort expression to selections if grouping
+	//add 'having' and 'order by' expressions to selections if grouping
 	if q.sortExpr!=nil && q.groupby {
 		nn := n.node1.node1
 		for ; nn.node2 != nil; nn = nn.node2 {}
 		nn.node2 = &Node{
 			label: N_SELECTIONS,
-			tok3: 0,
+			tok3: 1<<4,
 			node1: q.sortExpr,
 		}
 	}
+	findHavingAggregates(q, n, n.node5)
 
 	//process selections
 	_,_,_,err = aggCheck(n.node1)
@@ -518,6 +522,16 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 	n := &Node{label:N_WHERE}
 	var err error
 	if q.Tok().id != KW_WHERE { return n,nil }
+	q.NextTok()
+	n.node1,err = parsePredicates(q)
+	return n,err
+}
+
+//node1 is conditions
+func parseHaving(q*QuerySpecs) (*Node,error) {
+	n := &Node{label:N_WHERE}
+	var err error
+	if q.Tok().id != KW_HAVING { return n,nil }
 	q.NextTok()
 	n.node1,err = parsePredicates(q)
 	return n,err
