@@ -186,10 +186,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 		if op,ok := n.tok1.(int); ok {
 			_,v2 := execExpression(q, n.node2)
 			switch op {
-			case SP_STAR:  v1=v1.Mult(v2)
-			case SP_DIV:   v1=v1.Div(v2)
-			case SP_MOD:   v1=v1.Mod(v2)
-			case SP_CARROT:v1=v1.Pow(v2)
+			case SP_STAR:   v1=v1.Mult(v2)
+			case SP_DIV:    v1=v1.Div(v2)
+			case SP_MOD:    v1=v1.Mod(v2)
+			case SP_CARROT: v1=v1.Pow(v2)
 			}
 		}
 		return t1,v1
@@ -276,7 +276,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		_,expr2 := execExpression(q, n.node2)
 		switch n.tok1.(int) {
 		case KW_LIKE:    match = expr2.Equal(expr1)
-		case SP_NOEQ:    negate ^= 1; fallthrough
+		case SP_NOEQ:    match =!expr1.Equal(expr2)
 		case SP_EQ:      match = expr1.Equal(expr2)
 		case SP_LESSEQ:  match = expr1.LessEq(expr2)
 		case SP_GREAT:   match = expr1.Greater(expr2)

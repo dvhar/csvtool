@@ -50,182 +50,182 @@ type text string
 type null string
 type liker struct {val *regexp.Regexp}
 
-func (f float) Less(other Value) bool      {
+func (a float) Less(other Value) bool      {
 	switch o := other.(type) {
-		case float:   return f < o
-		case integer: return f < float(o)
+		case float:   return a < o
+		case integer: return a < float(o)
 	}
 	return false
 }
-func (i integer) Less(other Value) bool    { if _,ok:=other.(integer);!ok  {return false};return i < other.(integer) }
-func (d date) Less(other Value) bool       { if _,ok:=other.(date);!ok     {return false};return d.val.Before(other.(date).val) }
-func (d duration) Less(other Value) bool   {
+func (a integer) Less(other Value) bool    { if _,ok:=other.(integer);!ok  {return false};return a < other.(integer) }
+func (a date) Less(other Value) bool       { if _,ok:=other.(date);!ok     {return false};return a.val.Before(other.(date).val) }
+func (a duration) Less(other Value) bool   {
 	switch o := other.(type) {
-		case duration: return d.val < o.val
-		case integer:  return d.val < time.Duration(o) //for abs()
+		case duration: return a.val < o.val
+		case integer:  return a.val < time.Duration(o) //for abs()
 	}
 	return false
 }
-func (t text) Less(other Value) bool       { if _,ok:=other.(text);!ok     {return false};return t < other.(text) }
-func (n null) Less(other Value) bool       { if _,ok:=other.(null);ok      {return false};return true }
-func (l liker) Less(other Value) bool      { return false }
+func (a text) Less(other Value) bool       { if _,ok:=other.(text);!ok     {return false};return a < other.(text) }
+func (a null) Less(other Value) bool       { if _,ok:=other.(null);ok      {return false};return true }
+func (a liker) Less(other Value) bool      { return false }
 
-func (f float) LessEq(other Value) bool    { if _,ok:=other.(float);!ok    {return false};return f <= other.(float) }
-func (i integer) LessEq(other Value) bool  { if _,ok:=other.(integer);!ok  {return false};return i <= other.(integer) }
-func (d date) LessEq(other Value) bool     { if _,ok:=other.(duration);!ok {return false};return !d.val.After(other.(date).val) }
-func (d duration) LessEq(other Value) bool { if _,ok:=other.(date);!ok     {return false};return d.val <= other.(duration).val }
-func (t text) LessEq(other Value) bool     { if _,ok:=other.(text);!ok     {return false};return t <= other.(text) }
-func (n null) LessEq(other Value) bool     { return false }
-func (l liker) LessEq(other Value) bool    { return false }
+func (a float) LessEq(other Value) bool    { if _,ok:=other.(float);!ok    {return false};return a <= other.(float) }
+func (a integer) LessEq(other Value) bool  { if _,ok:=other.(integer);!ok  {return false};return a <= other.(integer) }
+func (a date) LessEq(other Value) bool     { if _,ok:=other.(duration);!ok {return false};return !a.val.After(other.(date).val) }
+func (a duration) LessEq(other Value) bool { if _,ok:=other.(date);!ok     {return false};return a.val <= other.(duration).val }
+func (a text) LessEq(other Value) bool     { if _,ok:=other.(text);!ok     {return false};return a <= other.(text) }
+func (a null) LessEq(other Value) bool     { return false }
+func (a liker) LessEq(other Value) bool    { return false }
 
-func (f float) Greater(other Value) bool   { if _,ok := other.(float); !ok    { return true } else {return f > other.(float) } }
-func (i integer) Greater(other Value) bool { if _,ok := other.(integer); !ok  { return true } else {return i > other.(integer) } }
-func (d date) Greater(other Value) bool    { if _,ok := other.(date); !ok     { return true } else {return d.val.After(other.(date).val) } }
-func (d duration) Greater(other Value) bool{ if _,ok := other.(duration); !ok { return true } else {return d.val > other.(duration).val } }
-func (t text) Greater(other Value) bool    { if _,ok := other.(text); !ok     { return true } else {return t > other.(text) } }
-func (n null) Greater(other Value) bool    { if o,ok := other.(null); ok      { return n > o } else {return false} }
-func (l liker) Greater(other Value) bool   { return false }
+func (a float) Greater(other Value) bool   { if _,ok := other.(float); !ok    { return true } else {return a > other.(float) } }
+func (a integer) Greater(other Value) bool { if _,ok := other.(integer); !ok  { return true } else {return a > other.(integer) } }
+func (a date) Greater(other Value) bool    { if _,ok := other.(date); !ok     { return true } else {return a.val.After(other.(date).val) } }
+func (a duration) Greater(other Value) bool{ if _,ok := other.(duration); !ok { return true } else {return a.val > other.(duration).val } }
+func (a text) Greater(other Value) bool    { if _,ok := other.(text); !ok     { return true } else {return a > other.(text) } }
+func (a null) Greater(other Value) bool    { if o,ok := other.(null); ok      { return a > o } else {return false} }
+func (a liker) Greater(other Value) bool   { return false }
 
-func (f float) GreatEq(other Value) bool   { if _,ok:=other.(float);!ok    {return true};return f >= other.(float) }
-func (i integer) GreatEq(other Value) bool { if _,ok:=other.(integer);!ok  {return true};return i >= other.(integer) }
-func (d date) GreatEq(other Value) bool    { if _,ok:=other.(date);!ok     {return true};return !d.val.Before(other.(date).val) }
-func (d duration) GreatEq(other Value) bool{ if _,ok:=other.(duration);!ok {return true};return d.val > other.(duration).val }
-func (t text) GreatEq(other Value) bool    { if _,ok:=other.(text);!ok     {return true};return t >= other.(text) }
-func (n null) GreatEq(other Value) bool    { return false }
-func (l liker) GreatEq(other Value) bool   { return false }
+func (a float) GreatEq(other Value) bool   { if _,ok:=other.(float);!ok    {return true};return a >= other.(float) }
+func (a integer) GreatEq(other Value) bool { if _,ok:=other.(integer);!ok  {return true};return a >= other.(integer) }
+func (a date) GreatEq(other Value) bool    { if _,ok:=other.(date);!ok     {return true};return !a.val.Before(other.(date).val) }
+func (a duration) GreatEq(other Value) bool{ if _,ok:=other.(duration);!ok {return true};return a.val > other.(duration).val }
+func (a text) GreatEq(other Value) bool    { if _,ok:=other.(text);!ok     {return true};return a >= other.(text) }
+func (a null) GreatEq(other Value) bool    { return false }
+func (a liker) GreatEq(other Value) bool   { return false }
 
-func (f float) Equal(other Value) bool     { if _,ok:=other.(float);!ok     {return false};return f == other.(float) }
-func (i integer) Equal(other Value) bool   { if _,ok:=other.(integer);!ok   {return false};return i == other.(integer) }
-func (d date) Equal(other Value) bool      { if _,ok:=other.(date);!ok      {return false};return d.val.Equal(other.(date).val) }
-func (d duration) Equal(other Value) bool  { if _,ok:=other.(duration);!ok  {return false};return d.val == other.(duration).val }
-func (t text) Equal(other Value) bool      { if _,ok:=other.(text);!ok      {return false};return t == other.(text) }
-func (n null) Equal(other Value) bool      { if _,ok := other.(null);ok     {return true };return false }
-func (l liker) Equal(other Value) bool     { return l.val.MatchString(Sprint(other)) }
+func (a float) Equal(other Value) bool     { if _,ok:=other.(float);!ok     {return false};return a == other.(float) }
+func (a integer) Equal(other Value) bool   { if _,ok:=other.(integer);!ok   {return false};return a == other.(integer) }
+func (a date) Equal(other Value) bool      { if _,ok:=other.(date);!ok      {return false};return a.val.Equal(other.(date).val) }
+func (a duration) Equal(other Value) bool  { if _,ok:=other.(duration);!ok  {return false};return a.val == other.(duration).val }
+func (a text) Equal(other Value) bool      { if _,ok:=other.(text);!ok      {return false};return a == other.(text) }
+func (a null) Equal(other Value) bool      { if _,ok := other.(null);ok     {return true };return false }
+func (a liker) Equal(other Value) bool     { return a.val.MatchString(Sprint(other)) }
 
-func (d duration) Add(other Value) Value {
+func (a duration) Add(other Value) Value {
 	switch o := other.(type) {
-		case date:     return date{o.val.Add(d.val)}
-		case duration: return duration{d.val + o.val}
+		case date:     return date{o.val.Add(a.val)}
+		case duration: return duration{a.val + o.val}
 		case null:     return o
 	}
-	return d
+	return a
 }
-func (d duration) Sub(other Value) Value {
+func (a duration) Sub(other Value) Value {
 	switch o := other.(type) {
-		case date:     return date{o.val.Add(- d.val)}
-		case duration: return duration{d.val - o.val}
+		case date:     return date{o.val.Add(- a.val)}
+		case duration: return duration{a.val - o.val}
 		case null:     return o
 	}
-	return d
+	return a
 }
-func (f float) Add(other Value) Value   { if _,ok:=other.(float);!ok      {return other};return float(f + other.(float)) }
-func (i integer) Add(other Value) Value { if _,ok:=other.(integer);!ok    {return other};return integer(i + other.(integer)) }
-func (d date) Add(other Value) Value    { if _,ok:=other.(duration);!ok   {return other};return date{d.val.Add(other.(duration).val)} }
-func (t text) Add(other Value) Value    { if _,ok:=other.(text);!ok       {return other};return text(t + other.(text)) }
-func (n null) Add(other Value) Value    { return n }
-func (l liker) Add(other Value) Value   { return l }
+func (a float) Add(other Value) Value   { if _,ok:=other.(float);!ok      {return other};return float(a + other.(float)) }
+func (a integer) Add(other Value) Value { if _,ok:=other.(integer);!ok    {return other};return integer(a + other.(integer)) }
+func (a date) Add(other Value) Value    { if _,ok:=other.(duration);!ok   {return other};return date{a.val.Add(other.(duration).val)} }
+func (a text) Add(other Value) Value    { if _,ok:=other.(text);!ok       {return other};return text(a + other.(text)) }
+func (a null) Add(other Value) Value    { return a }
+func (a liker) Add(other Value) Value   { return a }
 
-func (f float) Sub(other Value) Value   { if _,ok:=other.(float);!ok   {return other};return float(f - other.(float)) }
-func (i integer) Sub(other Value) Value { if _,ok:=other.(integer);!ok {return other};return integer(i - other.(integer)) }
-func (d date) Sub(other Value) Value    {
+func (a float) Sub(other Value) Value   { if _,ok:=other.(float);!ok   {return other};return float(a - other.(float)) }
+func (a integer) Sub(other Value) Value { if _,ok:=other.(integer);!ok {return other};return integer(a - other.(integer)) }
+func (a date) Sub(other Value) Value    {
 	switch o := other.(type) {
-		case date:     return duration{d.val.Sub(o.val)}
-		case duration: return date{d.val.Add(-o.val)}
+		case date:     return duration{a.val.Sub(o.val)}
+		case duration: return date{a.val.Add(-o.val)}
 		case null:     return o
 	}
-	return d
+	return a
 }
-func (t text) Sub(other Value) Value    { return t }
-func (n null) Sub(other Value) Value    { return n }
-func (l liker) Sub(other Value) Value   { return l }
+func (a text) Sub(other Value) Value    { return a }
+func (a null) Sub(other Value) Value    { return a }
+func (a liker) Sub(other Value) Value   { return a }
 
-func (f float) Mult(other Value) Value  {
+func (a float) Mult(other Value) Value  {
 	switch o := other.(type) {
-		case float:    return float(f * o)
-		case integer:  return float(f * float(o))
-		case duration: return duration{time.Duration(f) * o.val}
+		case float:    return float(a * o)
+		case integer:  return float(a * float(o))
+		case duration: return duration{time.Duration(a) * o.val}
 		case null:     return o
 	}
-	return f
+	return a
 }
-func (i integer) Mult(other Value) Value{
+func (a integer) Mult(other Value) Value{
 	switch o := other.(type) {
-		case integer:  return integer(i * o)
-		case duration: return duration{time.Duration(i) * o.val}
+		case integer:  return integer(a * o)
+		case duration: return duration{time.Duration(a) * o.val}
 		case null:     return o
 	}
-	return i
+	return a
 }
-func (d date) Mult(other Value) Value     { return d }
-func (d duration) Mult(other Value) Value {
+func (a date) Mult(other Value) Value     { return a }
+func (a duration) Mult(other Value) Value {
 	switch o := other.(type) {
-		case integer: return duration{d.val * time.Duration(o)}
-		case float:   return duration{d.val * time.Duration(o)}
+		case integer: return duration{a.val * time.Duration(o)}
+		case float:   return duration{a.val * time.Duration(o)}
 		case null:    return o
 	}
-	return d
+	return a
 }
-func (t text) Mult(other Value) Value     { return t }
-func (n null) Mult(other Value) Value     { return n }
-func (l liker) Mult(other Value) Value    { return l }
+func (a text) Mult(other Value) Value     { return a }
+func (a null) Mult(other Value) Value     { return a }
+func (a liker) Mult(other Value) Value    { return a }
 
-func (f float) Div(other Value) Value    {
+func (a float) Div(other Value) Value    {
 	switch o := other.(type) {
-		case float:   if o != 0 { return float(f / o)        } else { return null("") }
-		case integer: if o != 0 { return float(f / float(o)) } else { return null("") }
+		case float:   if o != 0 { return float(a / o)        } else { return null("") }
+		case integer: if o != 0 { return float(a / float(o)) } else { return null("") }
 		case null:     return o
 	}
-	return f
+	return a
 }
-func (i integer) Div(other Value) Value  {
+func (a integer) Div(other Value) Value  {
 	switch o := other.(type) {
-		case integer: if o != 0 { return integer(i / o)          } else { return null("") }
-		case float:   if o != 0 { return integer(i / integer(o)) } else { return null("") }
+		case integer: if o != 0 { return integer(a / o)          } else { return null("") }
+		case float:   if o != 0 { return integer(a / integer(o)) } else { return null("") }
 		case null:     return o
 	}
-	return i
+	return a
 }
-func (d date) Div(other Value) Value     { return d }
-func (d duration) Div(other Value) Value {
+func (a date) Div(other Value) Value     { return a }
+func (a duration) Div(other Value) Value {
 	switch o := other.(type) {
-		case integer: if o != 0 { return duration{d.val / time.Duration(o)} } else { return null("") }
-		case float:   if o != 0 { return duration{d.val / time.Duration(o)} } else { return null("") }
+		case integer: if o != 0 { return duration{a.val / time.Duration(o)} } else { return null("") }
+		case float:   if o != 0 { return duration{a.val / time.Duration(o)} } else { return null("") }
 		case null:     return o
 	}
-	return d
+	return a
 }
-func (t text) Div(other Value) Value     { return t }
-func (n null) Div(other Value) Value     { return n }
-func (l liker) Div(other Value) Value    { return l }
+func (a text) Div(other Value) Value     { return a }
+func (a null) Div(other Value) Value     { return a }
+func (a liker) Div(other Value) Value    { return a }
 
-func (f float) Mod(other Value) Value    { return f }
-func (i integer) Mod(other Value) Value  { return integer(i % other.(integer)) }
-func (d date) Mod(other Value) Value     { return d }
-func (d duration) Mod(other Value) Value { return d }
-func (t text) Mod(other Value) Value     { return t }
-func (n null) Mod(other Value) Value     { return n }
-func (l liker) Mod(other Value) Value    { return l }
+func (a float) Mod(other Value) Value    { return a }
+func (a integer) Mod(other Value) Value  { return integer(a % other.(integer)) }
+func (a date) Mod(other Value) Value     { return a }
+func (a duration) Mod(other Value) Value { return a }
+func (a text) Mod(other Value) Value     { return a }
+func (a null) Mod(other Value) Value     { return a }
+func (a liker) Mod(other Value) Value    { return a }
 
-func (f float) Pow(other Value) Value    { if _,ok:=other.(float);!ok   {return other}; return float(math.Pow(float64(f), float64(other.(float)))) }
-func (i integer) Pow(other Value) Value  { if _,ok:=other.(integer);!ok {return other}; return integer(math.Pow(float64(i), float64(other.(integer)))) }
-func (d date) Pow(other Value) Value     { return d }
-func (d duration) Pow(other Value) Value { return d }
-func (t text) Pow(other Value) Value     { return t }
-func (n null) Pow(other Value) Value     { return n }
-func (l liker) Pow(other Value) Value    { return l }
+func (a float) Pow(other Value) Value    { if _,ok:=other.(float);!ok   {return other}; return float(math.Pow(float64(a), float64(other.(float)))) }
+func (a integer) Pow(other Value) Value  { if _,ok:=other.(integer);!ok {return other}; return integer(math.Pow(float64(a), float64(other.(integer)))) }
+func (a date) Pow(other Value) Value     { return a }
+func (a duration) Pow(other Value) Value { return a }
+func (a text) Pow(other Value) Value     { return a }
+func (a null) Pow(other Value) Value     { return a }
+func (a liker) Pow(other Value) Value    { return a }
 
-func (f float) String() string    { return Sprintf("%.10g",f) }
-func (i integer) String() string  { return Sprintf("%d",i) }
-func (d date) String() string     { return d.val.Format("2006-01-02 15:04:05") }
-func (d duration) String() string { return d.val.String() }
-func (t text) String() string     { return string(t) }
-func (n null) String() string     { return string(n) }
-func (l liker) String() string    { return Sprint(l.val) }
+func (a float) String() string    { return Sprintf("%.10g",a) }
+func (a integer) String() string  { return Sprintf("%d",a) }
+func (a date) String() string     { return a.val.Format("2006-01-02 15:04:05") }
+func (a duration) String() string { return a.val.String() }
+func (a text) String() string     { return string(a) }
+func (a null) String() string     { return string(a) }
+func (a liker) String() string    { return Sprint(a.val) }
 
-func (f float) MarshalJSON() ([]byte,error)    { return json.Marshal(f.String()) }
-func (i integer) MarshalJSON() ([]byte,error)  { return json.Marshal(i.String())}
-func (d date) MarshalJSON() ([]byte,error)     { return json.Marshal(d.String()) }
-func (d duration) MarshalJSON() ([]byte,error) { return json.Marshal(d.String()) }
-func (t text) MarshalJSON() ([]byte,error)     { return json.Marshal(t.String()) }
-func (n null) MarshalJSON() ([]byte,error)     { return json.Marshal(n.String()) }
-func (l liker) MarshalJSON() ([]byte,error)    { return json.Marshal(l.String())}
+func (a float) MarshalJSON() ([]byte,error)    { return json.Marshal(a.String()) }
+func (a integer) MarshalJSON() ([]byte,error)  { return json.Marshal(a.String())}
+func (a date) MarshalJSON() ([]byte,error)     { return json.Marshal(a.String()) }
+func (a duration) MarshalJSON() ([]byte,error) { return json.Marshal(a.String()) }
+func (a text) MarshalJSON() ([]byte,error)     { return json.Marshal(a.String()) }
+func (a null) MarshalJSON() ([]byte,error)     { return json.Marshal(a.String()) }
+func (a liker) MarshalJSON() ([]byte,error)    { return json.Marshal(a.String())}
