@@ -389,7 +389,7 @@ func branchShortener(q *QuerySpecs, n *Node) *Node {
 	if n.label == N_VALUE && n.tok2.(int) == 2 { return n.node1 }
 	//set 'distinct' expression and maybe hide it
 	if n.label==N_SELECTIONS && n.tok3.(int)&1==1 {
-		q.distinctExpr = n.node1.node1
+		q.distinctExpr = n.node1
 		if n.tok3.(int)&2!=0 { return n.node2 }
 	}
 	return n
