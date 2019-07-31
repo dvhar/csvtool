@@ -34,7 +34,7 @@ func main() {
 	flag.Parse()
 
 	readStdin()
-	if *flags.command == "" { println("version 0.47 - 7/26/2019") }
+	if *flags.command == "" { println("version 0.481 - 7/30/2019") }
 	runTests()
 
 	messager = make(chan string)
