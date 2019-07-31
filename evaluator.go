@@ -7,6 +7,7 @@ import (
   "sort"
   "io"
   "bytes"
+  bt "github.com/google/btree"
 )
 
 var stop int
@@ -103,7 +104,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 	var err error
 	rowsChecked := 0
 	stop = 0
-	distinctCheck := make(map[interface{}]bool)
+	distinctCheck := bt.New(200)
 
 	for {
 		if stop == 1 { stop = 0;  break }
@@ -126,22 +127,16 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) erro
 }
 
 //see if row has distinct value if looking for one
-func evalDistinct(q *QuerySpecs, distinctCheck map[interface{}]bool) bool {
+func evalDistinct(q *QuerySpecs, distinctCheck *bt.BTree) bool {
 	if q.distinctExpr == nil { return true }
 	_,compVal := execExpression(q, q.distinctExpr)
-	_,duplicate := distinctCheck[compVal]
-	if duplicate {
-		return false
-	} else {
-		distinctCheck[compVal] = true
-	}
-	return true
+	return distinctCheck.ReplaceOrInsert(compVal) == nil
 }
 
 //run ordered query
 func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
 	stop = 0
-	distinctCheck := make(map[interface{}]bool)
+	distinctCheck := bt.New(200)
 	rowsChecked := 0
 	var match bool
 	var err error

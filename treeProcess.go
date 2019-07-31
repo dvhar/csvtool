@@ -62,7 +62,7 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 	case N_VALUE:
 		if n.tok2.(int)==2 { //function
 			_, t1, _, err := typeCheck(n.node1)
-			if n.node1.tok1.(int) == FN_COUNT { t1 = T_FLOAT }
+			if n.node1.tok1.(int) == FN_COUNT { n.tok4 = t1; t1 = T_FLOAT }
 			return n.label,t1,false,err
 		}
 		if n.tok2.(int)==0 { literal = true } //literal
@@ -304,6 +304,7 @@ func enforceType(n *Node, t int) error {
 		}
 		//functions
 		if n.tok2.(int) == 2 {
+			if n.tok4 != nil { t = n.tok4.(int) }
 			err = enforceType(n.node1, t)
 		}
 		return err

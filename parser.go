@@ -33,6 +33,7 @@ import (
 	"regexp"
 	. "strconv"
 	. "fmt"
+	bt "github.com/google/btree"
 )
 
 //recursive descent parser builds parse tree and QuerySpecs
@@ -314,6 +315,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 //tok1 is [value, column index, function id]
 //tok2 is [0,1,2] for literal/column/function
 //tok3 is type
+//tok4 is type in special cases like FN_COUNT
 //node1 is function expression if doing that
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
@@ -553,7 +555,7 @@ func parseOrder(q* QuerySpecs) (*Node,error) {
 
 //tok1 is function id
 //tok2 will be intermediate index if aggragate
-//tok3 is distinct map for count
+//tok3 is distinct btree for count
 //node1 is expression in parens
 func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
@@ -572,7 +574,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	//other functions
 	} else {
 		if q.Tok().val == "distinct" {
-			n.tok3 = make(map[Value]bool)
+			n.tok3 = bt.New(200)
 			q.NextTok()
 		}
 		n.node1, err = parseExprAdd(q)

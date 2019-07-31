@@ -3,9 +3,11 @@ import (
 	. "strconv"
 	d "github.com/araddon/dateparse"
 	s "strings"
-	//. "fmt"
+	. "fmt"
 	//r "reflect"
+	bt "github.com/google/btree"
 )
+var _ = Println
 
 func execSelect(q *QuerySpecs, res*SingleQueryResult) {
 
@@ -111,6 +113,8 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 
 		//values have not been aggregated yet
 		t1,v1 := execExpression(q, n.node1)
+		//treePrint(n.node1,0)
+		//Println("just evaluated",v1)
 		if _,ok:=v1.(null);!ok {
 			//non-aggregate function
 			if n.tok2==nil {
@@ -133,7 +137,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 				if q.toRow[index] == nil { q.toRow[index] = null("") }
 				if _,ok := q.toRow[index].(null); ok {
 					switch n.tok1.(int) {
-					case FN_COUNT: q.toRow[index] = float(1); if n.tok3!=nil { n.tok3.(map[Value]bool)[v1] = true }
+					case FN_COUNT: q.toRow[index] = float(1); if n.tok3!=nil { n.tok3.(*bt.BTree).ReplaceOrInsert(v1) }
 					case FN_AVG:   q.toRow[index] = AverageVal{v1, 1}
 					default: q.toRow[index] = v1
 					}
@@ -149,9 +153,9 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 						if n.tok3 == nil {
 							q.toRow[index] = q.toRow[index].Add(float(1))
 						//count distinct values
-						} else if _,notDistinct := n.tok3.(map[Value]bool)[v1]; !notDistinct {
+						} else if n.tok3.(*bt.BTree).ReplaceOrInsert(v1) == nil {
 							q.toRow[index] = q.toRow[index].Add(float(1))
-							n.tok3.(map[Value]bool)[v1] = true
+						} else {
 						}
 					}
 				}

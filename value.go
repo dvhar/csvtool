@@ -5,12 +5,13 @@ import (
 	. "fmt"
 	"regexp"
 	"math"
+	bt "github.com/google/btree"
 )
 //interface to simplify operations with various datatypes
 type Value interface {
 	Greater(other Value) bool
 	GreatEq(other Value) bool
-	Less(other Value) bool
+	Less(other bt.Item) bool
 	LessEq(other Value) bool
 	Equal(other Value) bool
 	Add(other Value) Value
@@ -32,7 +33,7 @@ func (a AverageVal) String() string              { return a.Eval().String() }
 func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.String()) }
 func (a AverageVal) Greater(other Value) bool    { return false }
 func (a AverageVal) GreatEq(other Value) bool    { return false }
-func (a AverageVal) Less(other Value) bool       { return false }
+func (a AverageVal) Less(other bt.Item) bool       { return false }
 func (a AverageVal) LessEq(other Value) bool     { return false }
 func (a AverageVal) Equal(other Value) bool      { return false }
 func (a AverageVal) Sub(other Value) Value       { return a }
@@ -50,25 +51,25 @@ type text string
 type null string
 type liker struct {val *regexp.Regexp}
 
-func (a float) Less(other Value) bool      {
+func (a float) Less(other bt.Item) bool      {
 	switch o := other.(type) {
 		case float:   return a < o
 		case integer: return a < float(o)
 	}
 	return false
 }
-func (a integer) Less(other Value) bool    { if _,ok:=other.(integer);!ok  {return false};return a < other.(integer) }
-func (a date) Less(other Value) bool       { if _,ok:=other.(date);!ok     {return false};return a.val.Before(other.(date).val) }
-func (a duration) Less(other Value) bool   {
+func (a integer) Less(other bt.Item) bool    { if _,ok:=other.(integer);!ok  {return false};return a < other.(integer) }
+func (a date) Less(other bt.Item) bool       { if _,ok:=other.(date);!ok     {return false};return a.val.Before(other.(date).val) }
+func (a duration) Less(other bt.Item) bool   {
 	switch o := other.(type) {
 		case duration: return a.val < o.val
 		case integer:  return a.val < time.Duration(o) //for abs()
 	}
 	return false
 }
-func (a text) Less(other Value) bool       { if _,ok:=other.(text);!ok     {return false};return a < other.(text) }
-func (a null) Less(other Value) bool       { if _,ok:=other.(null);ok      {return false};return true }
-func (a liker) Less(other Value) bool      { return false }
+func (a text) Less(other bt.Item) bool       { if _,ok:=other.(text);!ok     {return false};return a < other.(text) }
+func (a null) Less(other bt.Item) bool       { if _,ok:=other.(null);ok      {return false};return true }
+func (a liker) Less(other bt.Item) bool      { return false }
 
 func (a float) LessEq(other Value) bool    { if _,ok:=other.(float);!ok    {return false};return a <= other.(float) }
 func (a integer) LessEq(other Value) bool  { if _,ok:=other.(integer);!ok  {return false};return a <= other.(integer) }
