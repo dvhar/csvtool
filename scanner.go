@@ -42,6 +42,10 @@ const (
 	KW_ELSE =     KEYWORD|iota
 	KW_END =      KEYWORD|iota
 	KW_JOIN=      KEYWORD|iota
+	KW_INNER=     KEYWORD|iota
+	KW_OUTER=     KEYWORD|iota
+	KW_LEFT=      KEYWORD|iota
+	KW_RIGHT=     KEYWORD|iota
 	KW_BETWEEN =  RELOP|KEYWORD|iota
 	KW_LIKE =     RELOP|KEYWORD|iota
 	//not scanned as keywords but still using that for unique vals
@@ -169,7 +173,6 @@ var keywordMap = map[string]int {
 	"then" :      KW_THEN,
 	"else" :      KW_ELSE,
 	"end" :       KW_END,
-	"join" :      KW_JOIN,
 	"not" :       SP_NEGATE,
 }
 //functions are normal words to avoid taking up too many words
@@ -290,6 +293,9 @@ type Token struct {
 	val string
 	line int
 	quoted bool
+}
+func (t Token) Lower() string {
+	return strings.ToLower(t.val)
 }
 
 var lineNo = 1

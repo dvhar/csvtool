@@ -18,7 +18,10 @@
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} ( predicates )
 <function>          -> <functionname> ( <exprAdd> )
-<from>              -> from filename { TODO: joins }
+<from>              -> from filename { as alias } <joinChain>
+<joinChain>         -> <join> <joinChain> | ε
+<join>              -> { left | right | ε } { inner | outer | ε }
+                       join file as alias on <predicates>
 <where>             -> where <predicates> | ε
 <having>            -> having <predicates> | ε
 <groupby>           -> group by <expressions> | ε
@@ -31,6 +34,7 @@ package main
 import (
 	"errors"
 	"regexp"
+	"path/filepath"
 	. "strconv"
 	. "fmt"
 	bt "github.com/google/btree"
@@ -507,16 +511,74 @@ func parseTop(q* QuerySpecs) error {
 
 //tok1 is file path
 //tok2 is alias
+//node1 is joins
 func parseFrom(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FROM}
+	var err error
 	if q.Tok().id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().val) }
 	n.tok1 = q.NextTok()
 	q.NextTok()
 	if q.Tok().id == KW_AS {
-		n.tok2 = q.NextTok()
+		t := q.NextTok()
+		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
+		n.tok2 = t.val
 		q.NextTok()
 	}
-	return n, nil
+	n.node1, err = parseJoinChain(q)
+	return n, err
+}
+
+//node1 is join
+//node2 is next joinChain
+func parseJoinChain(q *QuerySpecs) (*Node,error) {
+	n := &Node{label:N_JOINCHAIN}
+	var err error
+	switch q.Tok().Lower() {
+	case "left":
+	case "right":
+	case "inner":
+	case "outer":
+	case "join":
+	default: return nil,nil
+	}
+	n.node1, err = parseJoin(q)
+	n.node1, err = parseJoinChain(q)
+	return n, err
+}
+//tok1 is [left right]
+//tok2 is [inner outer]
+//tok3 is fileData
+//tok4 is alias
+//node1 is join condition (predicates)
+func parseJoin(q *QuerySpecs) (*Node,error) {
+	n := &Node{label:N_JOIN}
+	var err error
+	switch q.Tok().Lower() {
+	case "left":  n.tok1 = KW_LEFT; q.NextTok();
+	case "right": n.tok1 = KW_RIGHT; q.NextTok();
+	}
+	switch q.Tok().Lower() {
+	case "inner": n.tok2 = KW_INNER; q.NextTok();
+	case "outer": n.tok2 = KW_OUTER; q.NextTok();
+	}
+	if q.Tok().Lower() != "join" { return n,errors.New("Expected 'join'. Found:"+q.Tok().val) }
+	n.tok3 = q.NextTok()
+	if q.Tok().id == KW_AS {
+		t := q.NextTok()
+		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
+		n.tok4 = t.val
+	} else if q.Tok().id == WORD {
+		n.tok4 = q.Tok().val
+	} else {
+		return n,errors.New("Join requires an alias. Found: "+q.Tok().val)
+	}
+	if q.NextTok().Lower() != "on" { return n,errors.New("Expected 'on'. Found: "+q.Tok().val) }
+	q.NextTok()
+	fd, ok := q.files[filepath.Base(n.tok4.(string))]
+	if !ok { return n,errors.New("Could not open file "+n.tok4.(string)) }
+	n.tok4 = fd
+	n.node1, err = parsePredicates(q)
+	return n, err
 }
 
 //node1 is conditions
