@@ -514,6 +514,15 @@ func newColItem(q* QuerySpecs, typ int, name string, info int) {
 	q.colSpec.NewPos = append(q.colSpec.NewPos, q.colSpec.NewWidth)
 }
 
+func leafNodeFiles(q* QuerySpecs, n *Node) {
+	if n == nil { return }
+	leafNodeFiles(q,n.node1)
+	leafNodeFiles(q,n.node2)
+	leafNodeFiles(q,n.node3)
+	leafNodeFiles(q,n.node4)
+	leafNodeFiles(q,n.node5)
+}
+
 func isOneOfType(test1, test2, type1, type2 int) bool {
 	return (test1 == type1 || test1 == type2) && (test2 == type1 || test2 == type2)
 }

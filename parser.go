@@ -78,6 +78,9 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	}
 	findHavingAggregates(q, n, n.node5)
 
+	//process leaf nodes that need file data
+	leafNodeFiles(q,q.tree)
+
 	//process selections
 	_,_,_,err = aggCheck(n.node1)
 	if err != nil { return n,err }
@@ -315,16 +318,17 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
+//TODO: do much of this in leafNodeFiles()
 //if implement dot notation, put parser here
 //tok1 is [value, column index, function id]
 //tok2 is [0,1,2] for literal/column/function
 //tok3 is type
 //tok4 is type in special cases like FN_COUNT
 //node1 is function expression if doing that
+var cInt *regexp.Regexp = regexp.MustCompile(`^c\d+$`)
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
-	cInt := regexp.MustCompile(`^c\d+$`)
 	fdata := q.files["_f1"]
 	tok := q.Tok()
 	errCheck := func(col int) error {
