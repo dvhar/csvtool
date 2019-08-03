@@ -304,6 +304,11 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 			} else {
 				match = expr1.GreatEq(expr3)
 			}
+		case KW_IN:
+			for nn:=n.node2;nn!=nil&&!match;nn=nn.node2 {
+				_,expr2 = execExpression(q, nn.node1)
+				match = expr1.Equal(expr2)
+			}
 		}
 	}
 	if negate==1 { return !match }

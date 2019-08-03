@@ -47,6 +47,7 @@ const (
 	KW_RIGHT=     KEYWORD|iota
 	KW_BETWEEN =  RELOP|KEYWORD|iota
 	KW_LIKE =     RELOP|KEYWORD|iota
+	KW_IN =       RELOP|KEYWORD|iota
 	//not scanned as keywords but still using that for unique vals
 	FN_SUM =      KEYWORD|AGG_BIT|iota
 	FN_AVG =      KEYWORD|AGG_BIT|iota
@@ -172,6 +173,7 @@ var keywordMap = map[string]int {
 	"then" :      KW_THEN,
 	"else" :      KW_ELSE,
 	"end" :       KW_END,
+	"in" :        KW_IN,
 	"not" :       SP_NEGATE,
 }
 //functions are normal words to avoid taking up too many words

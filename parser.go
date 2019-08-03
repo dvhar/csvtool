@@ -16,8 +16,8 @@
 <predicates>        -> <predicateCompare> { <logop> <predicates> }
 <predicateCompare>  -> {not} <exprAdd> {not} <relop> <exprAdd> 
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
+                     | {not} <exprAdd> in ( <expressions> )
                      | {not} ( predicates )
-<function>          -> <functionname> ( <exprAdd> )
 <from>              -> from filename { as alias } <joinChain>
 <joinChain>         -> <join> <joinChain> | ε
 <join>              -> { left | right | ε } { inner | outer | ε }
@@ -77,9 +77,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		}
 	}
 	findHavingAggregates(q, n, n.node5)
-
-	//process leaf nodes that need file data
-	leafNodeFiles(q,q.tree)
 
 	//process selections
 	_,_,_,err = aggCheck(n.node1)
@@ -318,7 +315,6 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
-//TODO: do much of this in leafNodeFiles()
 //if implement dot notation, put parser here
 //tok1 is [value, column index, function id]
 //tok2 is [0,1,2] for literal/column/function
@@ -462,6 +458,13 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		like = re.ReplaceAllString(like.(string), ".")
 		like,err = regexp.Compile("(?i)^"+like.(string)+"$")
 		n.node2 = &Node{label: N_VALUE, tok1: liker{like.(*regexp.Regexp)}, tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
+		q.NextTok()
+	} else if n.tok1 == KW_IN {
+		if q.Tok().id != SP_LPAREN { return n,errors.New("Expected opening parenthesis for expression list. Found: "+q.Tok().val) }
+		q.NextTok()
+		n.node2, err = parseExpressionList(q,true)
+		if err != nil { return n,err }
+		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after expression list. Found: "+q.Tok().val) }
 		q.NextTok()
 	} else {
 		n.node2, err = parseExprAdd(q)
@@ -660,7 +663,7 @@ func parseGroupby(q* QuerySpecs) (*Node,error) {
 	if !(q.Tok().val == "group" && q.PeekTok().val == "by") { return nil,nil }
 	q.NextTok()
 	q.NextTok()
-	n.node1, err = parseGroupExpressions(q)
+	n.node1, err = parseExpressionList(q,false)
 	n.tok1 = make(map[interface{}]interface{})
 	return n,err
 }
@@ -668,8 +671,10 @@ func parseGroupby(q* QuerySpecs) (*Node,error) {
 //node1 is expression
 //node2 is expressions
 //tok1 [0,1] for map returns row or next map
-func parseGroupExpressions(q* QuerySpecs) (*Node,error) {
-	n := &Node{label:N_EXPRESSIONS}
+func parseExpressionList(q* QuerySpecs, interdependant bool) (*Node,error) { //bool afg if expression types are interdependant
+	label := N_EXPRESSIONS
+	if interdependant { label = N_DEXPRESSIONS }
+	n := &Node{label:label}
 	var err error
 	n.node1, err = parseExprAdd(q)
 	if err != nil { return n,err }
@@ -683,6 +688,6 @@ func parseGroupExpressions(q* QuerySpecs) (*Node,error) {
 			return n,err
 	}
 	n.tok1 = 1
-	n.node2, err = parseGroupExpressions(q)
+	n.node2, err = parseExpressionList(q, interdependant)
 	return n,err
 }
