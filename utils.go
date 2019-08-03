@@ -121,6 +121,7 @@ const (
 	N_FUNCTION
 	N_GROUPBY
 	N_EXPRESSIONS
+	N_DEXPRESSIONS
 )
 //tree node labels for debugging
 var treeMap = map[int]string {
@@ -146,6 +147,7 @@ var treeMap = map[int]string {
 	N_EXPRESSIONS:"N_EXPRESSIONS",
 	N_JOINCHAIN:  "N_JOINCHAIN",
 	N_JOIN:       "N_JOIN",
+	N_DEXPRESSIONS:"N_DEXPRESSIONS",
 }
 var typeMap = map[int]string {
 	T_NULL:      "null",

@@ -145,10 +145,11 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		return n.label, t1, l1, err
 
 	//1 2 or 3 type-interdependant nodes
-	case N_EXPRADD:   fallthrough
-	case N_EXPRMULT:  fallthrough
-	case N_CWEXPRLIST:fallthrough
-	case N_CPREDLIST: fallthrough
+	case N_EXPRADD:     fallthrough
+	case N_EXPRMULT:    fallthrough
+	case N_CWEXPRLIST:  fallthrough
+	case N_CPREDLIST:   fallthrough
+	case N_DEXPRESSIONS:fallthrough
 	case N_PREDCOMP:
 		n1, t1, l1, err := typeCheck(n.node1)
 		if err != nil { return 0,0,false,err }
@@ -208,7 +209,7 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		_, _, _, err = typeCheck(n.node2)
 		return n.label, 0, false, err
 
-	//each predicate condition 
+	//each case predicate condition 
 	case N_CPRED:
 		_, _, _, err := typeCheck(n.node1)
 		if err != nil { return 0,0,false,err }
