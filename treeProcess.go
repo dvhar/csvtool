@@ -404,7 +404,7 @@ func columnNamer(q *QuerySpecs, n *Node) {
 		if n.tok2 == nil {
 			//if just selecting column, use that name
 			if n.node1.label == N_VALUE && n.node1.tok2.(int)==1 {
-				n.tok2 = q.files["_f1"].names[n.node1.tok1.(int)]
+				n.tok2 = q.files[n.node1.tok5.(string)].names[n.node1.tok1.(int)]
 			//give column numeric name if not already named
 			} else {
 				n.tok2 = Sprintf("col%d",n.tok1.([]int)[0]+1)

@@ -160,6 +160,7 @@ type FileData struct {
 	names []string
 	types []int
 	width int
+	id int
 }
 type Node struct {
 	label int
@@ -294,9 +295,9 @@ func openFiles(q *QuerySpecs) error {
 		_,err := os.Stat(q.Tok().val)
 		//open file and add to file map
 		if err == nil && extension.MatchString(q.Tok().val) {
-			file := &FileData{fname : q.Tok().val}
-			filename := filepath.Base(file.fname)
 			q.numfiles++
+			file := &FileData{fname : q.Tok().val, id : q.numfiles}
+			filename := filepath.Base(file.fname)
 			key := "_f" + Sprint(q.numfiles)
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file

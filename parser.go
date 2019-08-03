@@ -80,11 +80,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	}
 	findHavingAggregates(q, n, n.node5)
 
-	//process leaf nodes that need file data
-	err = leafNodeFiles(q,n)
-	treePrint(n, 0)
-	if err != nil { return n,err }
-
 	//process selections
 	_,_,_,err = aggCheck(n.node1)
 	if err != nil { return n,err }
@@ -135,19 +130,24 @@ func parseSelect(q* QuerySpecs) (*Node,error) {
 func selectAll(q* QuerySpecs) (*Node,error) {
 	var err error
 	n := &Node{label:N_SELECTIONS,tok3:0}
-	file := q.files["_f1"]
 	firstSelection := n
 	var lastSelection *Node
-	for i:= range file.names {
-		n.node2 = &Node{label:N_SELECTIONS,tok3:0}
-		n.node1 = &Node{
-			label: N_VALUE,
-			tok1: i,
-			tok2: 1,
+	for j:=1;;j++ {
+		file,ok := q.files["_f"+Sprint(j)]
+		if !ok { break }
+		for i:= range file.names {
+			n.node2 = &Node{label:N_SELECTIONS,tok3:0}
+			n.node1 = &Node{
+				label: N_VALUE,
+				tok1: i,
+				tok2: 1,
+				tok3: file.types[i],
+				tok5: "_f"+Sprint(j),
+			}
+			countSelected++
+			lastSelection = n
+			n = n.node2
 		}
-		countSelected++
-		lastSelection = n
-		n = n.node2
 	}
 	lastSelection.node2,err = parseSelections(q)
 	return firstSelection,err
@@ -327,6 +327,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 //tok2 is [0,1,2] for literal/column/function
 //tok3 is type
 //tok4 is type in special cases like FN_COUNT
+//tok5 is file id
 //node1 is function expression if doing that
 var cInt *regexp.Regexp = regexp.MustCompile(`^c\d+$`)
 func parseValue(q* QuerySpecs) (*Node,error) {
@@ -356,6 +357,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 			value = tok.val
 			fdata = q.files["_f1"]
 		}
+		n.tok5 = "_f"+Sprint(fdata.id)
 		//try column number
 		if num,er := Atoi(value); q.intColumn && !tok.quoted && er == nil {
 			if num<0 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
