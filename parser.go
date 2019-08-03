@@ -34,6 +34,7 @@ package main
 import (
 	"errors"
 	"regexp"
+	"strings"
 	//"path/filepath"
 	. "strconv"
 	. "fmt"
@@ -80,8 +81,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	findHavingAggregates(q, n, n.node5)
 
 	//process leaf nodes that need file data
-	treePrint(n, 0)
 	err = leafNodeFiles(q,n)
+	treePrint(n, 0)
 	if err != nil { return n,err }
 
 	//process selections
@@ -332,24 +333,52 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
 	tok := q.Tok()
-	//given a column number
-	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
-		n.tok1 = num-1
-		n.tok2 = 1
-	} else if !tok.quoted && cInt.MatchString(tok.val) {
-		num,_ := Atoi(tok.val[1:])
-		n.tok1 = num - 1
-		n.tok2 = 1
 	//see if it's a function
-	} else if  fn,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
+	if fn,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
 		n.tok1 = fn
 		n.tok2 = 2
 		n.node1, err = parseFunction(q)
 		if err != nil { return n,err }
 		return n, err
-	//column name or literal - process later
+	//any non-function value
 	} else {
-		n.tok1 = tok.val
+		//determine file source and value
+		S := strings.SplitAfterN(tok.val,".",2)
+		var fdata *FileData
+		var ok bool
+		var value string
+		if len(S)==2 && q.aliases != nil {
+			alias := strings.TrimRight(S[0],".")
+			fdata,ok = q.files[alias]
+			value = S[1]
+			if !ok { value = tok.val; fdata = q.files["_f1"] }
+		} else {
+			value = tok.val
+			fdata = q.files["_f1"]
+		}
+		//try column number
+		if num,er := Atoi(value); q.intColumn && !tok.quoted && er == nil {
+			if num<0 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
+			n.tok1 = num-1
+			n.tok2 = 1
+			n.tok3 = fdata.types[num-1]
+		} else if !tok.quoted && cInt.MatchString(value) {
+			num,_ := Atoi(value[1:])
+			if num<0 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
+			n.tok1 = num - 1
+			n.tok2 = 1
+			n.tok3 = fdata.types[num-1]
+		//try column name
+		} else if n.tok1, err = getColumnIdx(fdata.names, value); err == nil {
+			n.tok2 = 1
+			n.tok3 = fdata.types[n.tok1.(int)]
+		//else must be literal
+		} else {
+			err = nil
+			n.tok2 = 0
+			n.tok3 = getNarrowestType(value,0)
+			n.tok1 = value
+		}
 	}
 	q.NextTok()
 	return n, err
@@ -513,6 +542,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
 		fallthrough
 	case WORD:
+		if _,ok:=joinMap[t.val];ok { return n,errors.New("Join requires file aliases. Found: "+t.val) }
 		n.tok2 = t.val
 		q.NextTok()
 	}

@@ -4,7 +4,6 @@ import (
   . "strconv"
   d "github.com/araddon/dateparse"
   "time"
-  "strings"
   "errors"
 )
 
@@ -513,35 +512,6 @@ func newColItem(q* QuerySpecs, typ int, name string, info int) {
 	}
 	q.colSpec.NewWidth++
 	q.colSpec.NewPos = append(q.colSpec.NewPos, q.colSpec.NewWidth)
-}
-
-func leafNodeFiles(q* QuerySpecs, n *Node) error {
-	if n == nil { return nil }
-	err := leafNodeFiles(q,n.node1)
-	if err != nil { return err }
-	err = leafNodeFiles(q,n.node2)
-	if err != nil { return err }
-	err = leafNodeFiles(q,n.node3)
-	if err != nil { return err }
-	err = leafNodeFiles(q,n.node4)
-	if err != nil { return err }
-	err = leafNodeFiles(q,n.node5)
-	if err != nil { return err }
-	if n.label == N_VALUE {
-		//column or literal
-		if word,ok := n.tok1.(string); ok {
-			if n.tok2 == nil {
-				if q.aliases != nil {
-					S := strings.SplitAfterN(word,".",2)
-					alias := strings.TrimRight(S[0],".")
-					file,ok := q.files[alias]
-					if !ok { return errors.New(alias+" is not an alias for a file") }
-					_=file
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func isOneOfType(test1, test2, type1, type2 int) bool {
