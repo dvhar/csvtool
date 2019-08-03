@@ -538,9 +538,11 @@ func treePrint(n *Node, i int){
 	for j:=0;j<i;j++ { Print("  ") }
 	Println(treeMap[n.label])
 	for j:=0;j<i;j++ { Print("  ") }
-	Println("toks:",n.tok1, n.tok2, n.tok3)
+	Println("toks:",n.tok1, n.tok2, n.tok3, n.tok4, n.tok5)
 	treePrint(n.node1,i+1)
 	treePrint(n.node2,i+1)
 	treePrint(n.node3,i+1)
+	treePrint(n.node4,i+1)
+	treePrint(n.node5,i+1)
 }
 

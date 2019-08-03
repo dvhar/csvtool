@@ -34,7 +34,7 @@ package main
 import (
 	"errors"
 	"regexp"
-	"path/filepath"
+	//"path/filepath"
 	. "strconv"
 	. "fmt"
 	bt "github.com/google/btree"
@@ -42,6 +42,7 @@ import (
 
 //recursive descent parser builds parse tree and QuerySpecs
 func parseQuery(q* QuerySpecs) (*Node,error) {
+	_ = Print
 	n := &Node{label:N_QUERY}
 	n.tok1 = q
 	//reset some global vars before parsing each query
@@ -79,6 +80,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	findHavingAggregates(q, n, n.node5)
 
 	//process leaf nodes that need file data
+	treePrint(n, 0)
 	leafNodeFiles(q,q.tree)
 
 	//process selections
@@ -140,7 +142,6 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 			label: N_VALUE,
 			tok1: i,
 			tok2: 1,
-			tok3: file.types[i],
 		}
 		countSelected++
 		lastSelection = n
@@ -329,25 +330,15 @@ var cInt *regexp.Regexp = regexp.MustCompile(`^c\d+$`)
 func parseValue(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_VALUE}
 	var err error
-	fdata := q.files["_f1"]
 	tok := q.Tok()
-	errCheck := func(col int) error {
-		if col < 1 { return errors.New("Column number too small: "+Sprint(col)) }
-		if col > fdata.width { return errors.New("Column number too big: "+Sprint(col)+". Max is "+Itoa(fdata.width)) }
-		return nil
-	}
 	//given a column number
 	if num,er := Atoi(tok.val); q.intColumn && !tok.quoted && er == nil {
-		if err := errCheck(num); err != nil { return n,err }
 		n.tok1 = num-1
 		n.tok2 = 1
-		n.tok3 = fdata.types[num-1]
 	} else if !tok.quoted && cInt.MatchString(tok.val) {
 		num,_ := Atoi(tok.val[1:])
-		if err := errCheck(num); err != nil { return n,err }
 		n.tok1 = num - 1
 		n.tok2 = 1
-		n.tok3 = fdata.types[num-1]
 	//see if it's a function
 	} else if  fn,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
 		n.tok1 = fn
@@ -355,19 +346,11 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.node1, err = parseFunction(q)
 		if err != nil { return n,err }
 		return n, err
-	//try column name
-	} else if n.tok1, err = getColumnIdx(fdata.names, tok.val); err == nil {
-		n.tok2 = 1
-		n.tok3 = fdata.types[n.tok1.(int)]
-	//else must be literal
+	//column name or literal - process later
 	} else {
-		err = nil
-		n.tok2 = 0
-		n.tok3 = getNarrowestType(tok.val,0)
 		n.tok1 = tok.val
 	}
 	q.NextTok()
-	if n.tok2.(int)==1 { n.tok3 = fdata.types[n.tok1.(int)] }
 	return n, err
 }
 
@@ -522,9 +505,13 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	if q.Tok().id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().val) }
 	n.tok1 = q.NextTok()
 	q.NextTok()
-	if q.Tok().id == KW_AS {
-		t := q.NextTok()
+	t := q.Tok()
+	switch t.id {
+	case KW_AS:
+		t = q.NextTok()
 		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
+		fallthrough
+	case WORD:
 		n.tok2 = t.val
 		q.NextTok()
 	}
@@ -546,12 +533,13 @@ func parseJoinChain(q *QuerySpecs) (*Node,error) {
 	default: return nil,nil
 	}
 	n.node1, err = parseJoin(q)
-	n.node1, err = parseJoinChain(q)
+	if err != nil { return n,err }
+	n.node2, err = parseJoinChain(q)
 	return n, err
 }
 //tok1 is [left right]
 //tok2 is [inner outer]
-//tok3 is fileData
+//tok3 is filepath
 //tok4 is alias
 //node1 is join condition (predicates)
 func parseJoin(q *QuerySpecs) (*Node,error) {
@@ -566,21 +554,24 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	case "outer": n.tok2 = KW_OUTER; q.NextTok();
 	}
 	if q.Tok().Lower() != "join" { return n,errors.New("Expected 'join'. Found:"+q.Tok().val) }
-	n.tok3 = q.NextTok()
-	if q.Tok().id == KW_AS {
-		t := q.NextTok()
+	//file path
+	n.tok3 = q.NextTok().val
+	if err:=eosError(q);err != nil { return n,err }
+	//alias
+	t := q.NextTok()
+	switch t.id {
+	case KW_AS:
+		t = q.NextTok()
 		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
+		fallthrough
+	case WORD:
 		n.tok4 = t.val
-	} else if q.Tok().id == WORD {
-		n.tok4 = q.Tok().val
-	} else {
+	default:
 		return n,errors.New("Join requires an alias. Found: "+q.Tok().val)
 	}
+	if _,ok:=q.files[t.val];!ok { return n,errors.New("Could not open file "+n.tok3.(string)) }
 	if q.NextTok().Lower() != "on" { return n,errors.New("Expected 'on'. Found: "+q.Tok().val) }
 	q.NextTok()
-	fd, ok := q.files[filepath.Base(n.tok4.(string))]
-	if !ok { return n,errors.New("Could not open file "+n.tok4.(string)) }
-	n.tok4 = fd
 	n.node1, err = parsePredicates(q)
 	return n, err
 }

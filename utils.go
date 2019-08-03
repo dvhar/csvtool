@@ -20,6 +20,7 @@ type QuerySpecs struct {
 	colSpec Columns
 	queryString string
 	tokArray []Token
+	aliases []string
 	tokIdx int
 	quantityLimit int
 	quantityRetrieved int
@@ -143,6 +144,8 @@ var treeMap = map[int]string {
 	N_FUNCTION:   "N_FUNCTION",
 	N_GROUPBY:    "N_GROUPBY",
 	N_EXPRESSIONS:"N_EXPRESSIONS",
+	N_JOINCHAIN:  "N_JOINCHAIN",
+	N_JOIN:       "N_JOIN",
 }
 var typeMap = map[int]string {
 	T_NULL:      "null",
@@ -297,8 +300,16 @@ func openFiles(q *QuerySpecs) error {
 			key := "_f" + Sprint(q.numfiles)
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
-			if q.NextTok().id == WORD { q.files[q.Tok().val] = file }
-			if q.Tok().val == "as" && q.NextTok().id == WORD { q.files[q.Tok().val] = file }
+			if q.NextTok().id == WORD {
+				q.files[q.Tok().val] = file
+				if q.aliases == nil { q.aliases = make([]string, 0) }
+				q.aliases = append(q.aliases,  q.Tok().val)
+			}
+			if q.Tok().Lower() == "as" && q.NextTok().id == WORD {
+				q.files[q.Tok().val] = file
+				if q.aliases == nil { q.aliases = make([]string, 0) }
+				q.aliases = append(q.aliases,  q.Tok().val)
+			}
 			if err = inferTypes(q, key); err != nil {return err}
 		}
 	}
@@ -414,4 +425,10 @@ func message(s string) {
 	} else {
 		print("\r"+s)
 	}
+}
+
+func eosError(q *QuerySpecs) error {
+	//Println("peektok:",q.PeekTok())
+	if q.PeekTok().id == 255 { return errors.New("Unexpected end of query string") }
+	return nil
 }
