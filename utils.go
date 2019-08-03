@@ -21,6 +21,7 @@ type QuerySpecs struct {
 	queryString string
 	tokArray []Token
 	aliases []string
+	joining bool
 	tokIdx int
 	quantityLimit int
 	quantityRetrieved int

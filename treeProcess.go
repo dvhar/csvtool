@@ -524,6 +524,19 @@ func aggregateCombo(a1,a2,l1,l2 bool) error {
 	return nil
 }
 
+func joinExprFinder(q* QuerySpecs, n* Node) {
+	if n.label == N_PREDCOMP {
+		n.tok3 = make([]Value,0)
+		n.tok4 = make([]Value,0)
+	} else {
+		joinExprFinder(q,n.node1)
+		joinExprFinder(q,n.node2)
+		joinExprFinder(q,n.node3)
+		joinExprFinder(q,n.node4)
+		joinExprFinder(q,n.node5)
+	}
+}
+
 //print parse tree for debuggging
 func treePrint(n *Node, i int){
 	if n==nil {return}

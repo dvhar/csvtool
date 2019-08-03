@@ -90,6 +90,11 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	_,f := findAggregateFunctions(q, n.node1)
 	if f { return n,errors.New("Cannot have aggregate function inside an aggregate function") }
 
+	//process 'from' section
+	_,_,_,err = typeCheck(n.node2)
+	if err != nil { return n,err }
+	branchShortener(q, n.node2)
+
 	//process 'where' section
 	if e := findAggregateFunction(n.node3);e >0 { return n,errors.New("Cannot have aggregate function in 'where' clause") }
 	_,_,_,err = typeCheck(n.node3)
@@ -108,6 +113,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		err = enforceType(q.sortExpr, sortType)
 		branchShortener(q,q.sortExpr)
 	}
+
+	treePrint(n,0)
 
 	return n,err
 }
@@ -359,13 +366,13 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		n.tok5 = "_f"+Sprint(fdata.id)
 		//try column number
 		if num,er := Atoi(value); q.intColumn && !tok.quoted && er == nil {
-			if num<0 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
+			if num<1 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
 			n.tok1 = num-1
 			n.tok2 = 1
 			n.tok3 = fdata.types[num-1]
 		} else if !tok.quoted && cInt.MatchString(value) {
 			num,_ := Atoi(value[1:])
-			if num<0 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
+			if num<1 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
 			n.tok1 = num - 1
 			n.tok2 = 1
 			n.tok3 = fdata.types[num-1]
@@ -416,6 +423,8 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 
 //tok1 is logop
 //tok2 is negation
+//tok3 will be array for join file 1
+//tok4 will be array for join file 2
 //node1 is predicate comparison
 //node2 is next predicates node
 func parsePredicates(q* QuerySpecs) (*Node,error) {
@@ -571,6 +580,7 @@ func parseJoinChain(q *QuerySpecs) (*Node,error) {
 	case "join":
 	default: return nil,nil
 	}
+	q.joining = true
 	n.node1, err = parseJoin(q)
 	if err != nil { return n,err }
 	n.node2, err = parseJoinChain(q)
@@ -697,7 +707,7 @@ func parseGroupby(q* QuerySpecs) (*Node,error) {
 
 //node1 is expression
 //node2 is expressions
-//tok1 [0,1] for map returns row or next map
+//tok1 [0,1] for map returns row or next map when used for groups
 func parseExpressionList(q* QuerySpecs, interdependant bool) (*Node,error) { //bool afg if expression types are interdependant
 	label := N_EXPRESSIONS
 	if interdependant { label = N_DEXPRESSIONS }
