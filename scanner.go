@@ -30,6 +30,7 @@ const (
 	KW_HAVING  =  KEYWORD|iota
 	KW_AS  =      KEYWORD|iota
 	KW_WHERE =    KEYWORD|iota
+	KW_GROUP =    KEYWORD|iota
 	KW_ORDER =    KEYWORD|iota
 	KW_BY =       KEYWORD|iota
 	KW_TOP =      KEYWORD|iota
@@ -174,6 +175,7 @@ var keywordMap = map[string]int {
 	"else" :      KW_ELSE,
 	"end" :       KW_END,
 	"in" :        KW_IN,
+	"group" :     KW_GROUP,
 	"not" :       SP_NEGATE,
 }
 //functions are normal words to avoid taking up too many words
