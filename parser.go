@@ -81,7 +81,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 
 	//process leaf nodes that need file data
 	treePrint(n, 0)
-	leafNodeFiles(q,q.tree)
+	err = leafNodeFiles(q,n)
+	if err != nil { return n,err }
 
 	//process selections
 	_,_,_,err = aggCheck(n.node1)

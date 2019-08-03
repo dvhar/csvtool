@@ -196,6 +196,13 @@ var functionMap = map[string]int {
 	"dayofweek": FN_WDAY,
 	"hour" :     FN_HOUR,
 }
+var joinMap = map[string]int {
+	"inner" :  KW_INNER,
+	"outer" :  KW_OUTER,
+	"left" :   KW_LEFT,
+	"right" :  KW_RIGHT,
+	"join" :   KW_JOIN,
+}
 var specialMap = map[string]int {
 	"=" :  SP_EQ,
 	"!" :  SP_NEGATE,

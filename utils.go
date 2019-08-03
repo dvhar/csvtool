@@ -300,12 +300,12 @@ func openFiles(q *QuerySpecs) error {
 			key := "_f" + Sprint(q.numfiles)
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
-			if q.NextTok().id == WORD {
+			if _,ok:=joinMap[q.PeekTok().val];!ok && q.NextTok().id==WORD {
 				q.files[q.Tok().val] = file
 				if q.aliases == nil { q.aliases = make([]string, 0) }
 				q.aliases = append(q.aliases,  q.Tok().val)
 			}
-			if q.Tok().Lower() == "as" && q.NextTok().id == WORD {
+			if _,ok:=joinMap[q.PeekTok().val];!ok && q.Tok().Lower()=="as" && q.NextTok().id==WORD {
 				q.files[q.Tok().val] = file
 				if q.aliases == nil { q.aliases = make([]string, 0) }
 				q.aliases = append(q.aliases,  q.Tok().val)
