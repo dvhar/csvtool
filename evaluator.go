@@ -83,14 +83,11 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 		ShowLimit : q.showLimit,
 	}
 
-	//prepare reader and run query
-	var reader LineReader
-	reader.Init(q, "_f1")
-	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; reader.fp.Close() }()
+	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; q.files["_f1"].reader.fp.Close() }()
 	if q.sortExpr != nil && !q.groupby {
-		err = orderedQuery(q, &res, &reader)
+		err = orderedQuery(q, &res)
 	} else {
-		err = normalQuery(q, &res, &reader)
+		err = normalQuery(q, &res)
 	}
 	if err != nil { Println(err); return SingleQueryResult{}, err }
 	res.Numrows = q.quantityRetrieved
@@ -100,11 +97,12 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 }
 
 //retrieve results without needing to index the rows
-func normalQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
+func normalQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
 	rowsChecked := 0
 	stop = 0
 	distinctCheck := bt.New(200)
+	reader := q.files["_f1"].reader
 
 	for {
 		if stop == 1 { stop = 0;  break }
@@ -134,9 +132,10 @@ func evalDistinct(q *QuerySpecs, distinctCheck *bt.BTree) bool {
 }
 
 //run ordered query
-func orderedQuery(q *QuerySpecs, res *SingleQueryResult, reader *LineReader) error {
+func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	stop = 0
 	distinctCheck := bt.New(200)
+	reader := q.files["_f1"].reader
 	rowsChecked := 0
 	var match bool
 	var err error
@@ -226,5 +225,27 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	//save groups to file
 	if q.save  {
 		for _,v := range res.Vals { saver <- saveData{Type : CH_ROW, Row : &v} ; <-savedLine }
+	}
+}
+
+//join query
+func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
+	var err error
+	stop = 0
+	reader1 := q.files["_f1"].reader
+
+	for {
+		if stop == 1 { stop = 0;  break }
+
+		//read line from base csv file
+		q.fromRow,err = reader1.Read()
+		if err != nil {break}
+
+	}
+	return nil
+}
+func scanJoinFiles(q *QuerySpecs, n *Node) {
+	if n == nil { return }
+	if n.label == N_PREDCOMP {
 	}
 }

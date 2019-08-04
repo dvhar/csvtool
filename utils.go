@@ -165,6 +165,7 @@ type FileData struct {
 	width int
 	key string
 	id int
+	reader LineReader
 }
 type Node struct {
 	label int
@@ -317,6 +318,7 @@ func openFiles(q *QuerySpecs) error {
 				q.aliases = append(q.aliases,  q.Tok().val)
 			}
 			if err = inferTypes(q, key); err != nil {return err}
+			q.files[key].reader.Init(q,key)
 		}
 	}
 	q.Reset()
