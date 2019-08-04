@@ -163,6 +163,7 @@ type FileData struct {
 	names []string
 	types []int
 	width int
+	key string
 	id int
 }
 type Node struct {
@@ -302,6 +303,7 @@ func openFiles(q *QuerySpecs) error {
 			file := &FileData{fname : q.Tok().val, id : q.numfiles}
 			filename := filepath.Base(file.fname)
 			key := "_f" + Sprint(q.numfiles)
+			file.key = key
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
 			if _,ok:=joinMap[q.PeekTok().val];!ok && q.NextTok().id==WORD {

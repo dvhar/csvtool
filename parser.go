@@ -18,10 +18,8 @@
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} <exprAdd> in ( <expressions> )
                      | {not} ( predicates )
-<from>              -> from filename { as alias } <joinChain>
-<joinChain>         -> <join> <joinChain> | ε
-<join>              -> { left | right | ε } { inner | outer | ε }
-                       join file as alias on <predicates>
+<from>              -> from filename { as alias } <join>
+<join>              -> { left | right | ε } { inner | outer | ε } join file as alias on <predicates> { <join> }
 <where>             -> where <predicates> | ε
 <having>            -> having <predicates> | ε
 <groupby>           -> group by <expressions> | ε
@@ -93,6 +91,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	//process 'from' section
 	_,_,_,err = typeCheck(n.node2)
 	if err != nil { return n,err }
+	joinExprFinder(q, n.node2, "")
 	branchShortener(q, n.node2)
 
 	//process 'where' section
@@ -445,6 +444,8 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 //tok1 is [relop, paren] for comparison or more predicates
 //tok2 is negation
 //tok3 will be independant type
+//tok4 will be [1,2] which which expr to add to array
+//tok5 will be join array
 //node1 is [expr, predicates]
 //node2 is second expr
 //node3 is third expr for betweens
@@ -563,14 +564,18 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 		n.tok2 = t.val
 		q.NextTok()
 	}
-	n.node1, err = parseJoinChain(q)
+	n.node1, err = parseJoin(q)
 	return n, err
 }
 
-//node1 is join
-//node2 is next joinChain
-func parseJoinChain(q *QuerySpecs) (*Node,error) {
-	n := &Node{label:N_JOINCHAIN}
+//tok1 is [left right]
+//tok2 is [inner outer]
+//tok3 is filepath
+//tok4 is alias
+//node1 is join condition (predicates)
+//node2 is next join
+func parseJoin(q *QuerySpecs) (*Node,error) {
+	n := &Node{label:N_JOIN}
 	var err error
 	switch q.Tok().Lower() {
 	case "left":
@@ -581,19 +586,6 @@ func parseJoinChain(q *QuerySpecs) (*Node,error) {
 	default: return nil,nil
 	}
 	q.joining = true
-	n.node1, err = parseJoin(q)
-	if err != nil { return n,err }
-	n.node2, err = parseJoinChain(q)
-	return n, err
-}
-//tok1 is [left right]
-//tok2 is [inner outer]
-//tok3 is filepath
-//tok4 is alias
-//node1 is join condition (predicates)
-func parseJoin(q *QuerySpecs) (*Node,error) {
-	n := &Node{label:N_JOIN}
-	var err error
 	switch q.Tok().Lower() {
 	case "left":  n.tok1 = KW_LEFT; q.NextTok();
 	case "right": n.tok1 = KW_RIGHT; q.NextTok();
@@ -622,6 +614,7 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	if q.NextTok().Lower() != "on" { return n,errors.New("Expected 'on'. Found: "+q.Tok().val) }
 	q.NextTok()
 	n.node1, err = parsePredicates(q)
+	n.node2, err = parseJoin(q)
 	return n, err
 }
 

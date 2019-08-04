@@ -524,17 +524,30 @@ func aggregateCombo(a1,a2,l1,l2 bool) error {
 	return nil
 }
 
-func joinExprFinder(q* QuerySpecs, n* Node) {
-	if n.label == N_PREDCOMP {
-		n.tok3 = make([]Value,0)
-		n.tok4 = make([]Value,0)
-	} else {
-		joinExprFinder(q,n.node1)
-		joinExprFinder(q,n.node2)
-		joinExprFinder(q,n.node3)
-		joinExprFinder(q,n.node4)
-		joinExprFinder(q,n.node5)
+//prepare join subtree
+func joinExprFinder(q* QuerySpecs, n* Node, jfile string) string { //returns key of file referenced by expression
+	if n == nil { return "" }
+	switch n.label {
+		case N_VALUE: if n.tok5 != nil { return n.tok5.(string) }
+		case N_JOIN:
+			joinExprFinder(q, n.node1, q.files[n.tok4.(string)].key)
+			joinExprFinder(q, n.node2, "")
+		case N_PREDCOMP:
+			f1 := joinExprFinder(q, n.node1, jfile)
+			f2 := joinExprFinder(q, n.node2, jfile)
+			if jfile == f1 { n.tok4 = 1 }
+			if jfile == f2 { n.tok4 = 2 }
+			n.tok5 = make([]Value,0)
+		default:
+			s := make([]string,5)
+			s[0] = joinExprFinder(q, n.node1, jfile)
+			s[1] = joinExprFinder(q, n.node2, jfile)
+			s[2] = joinExprFinder(q, n.node3, jfile)
+			s[3] = joinExprFinder(q, n.node4, jfile)
+			s[4] = joinExprFinder(q, n.node5, jfile)
+			for _,v := range s { if v != "" { return v } }
 	}
+	return ""
 }
 
 //print parse tree for debuggging

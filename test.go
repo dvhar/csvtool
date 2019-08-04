@@ -32,14 +32,18 @@ func runTests(){
 	//dir1 := "/home/dave/testing/ram/"
 	file1 := "parkingTest.csv"
 	file2 := "parkingTestShort.csv"
+	file3 := "tojoin-1.csv"
+	file4 := "tojoin-2.csv"
 	f1 := " '" + dir1 + file1 + "' "
 	f2 := " '" + dir1 + file2 + "' "
+	f3 := " '" + dir1 + file3 + "' "
+	f4 := " '" + dir1 + file4 + "' "
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
 	newSet := 1<<3
 	thisTest := newSet //| selectSet | fromSet | whereSet
-	_,_,_,_ = f2, whereSet, fromSet, newSet
+	_,_,_,_,_,_ = f1, f2, selectSet, whereSet, fromSet, newSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -158,7 +162,8 @@ func runTests(){
 		Test{`select top 20 c5 from`+f1+`where c5 in (NJ, VA, FL, 78)`,"expression in list",true,whereSet},
 		Test{`select top 20 c3 from`+f1+`where c3 in (8479417420, 7813745231, 7536344478)`,"expression in int list",true,whereSet},
 		Test{`select top 20 c5 from`+f1+`where c5 in (8479417420, 7813745231, 7536344478)`,"string expression in int list",true,whereSet},
-		Test{`select top 10 c1 from`+f1+`pt join`+f2+`ps on pt.c1 = ps.c3 and ps.c4 = pt.c12`,"join test",true,newSet},
+		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,fromSet},
+		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c8`,"join test",true,newSet},
 	}
 
 	for _,t := range tests {
