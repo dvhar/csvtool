@@ -34,6 +34,9 @@ type ValPos struct {
 func (l*LineReader) SavePos(value Value) {
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
 }
+func (l*LineReader) SavePosTo(value Value, arr *[]ValPos) {
+	*arr = append(*arr, ValPos{l.prevPos, value})
+}
 func (l*LineReader) PrepareReRead() {
 	l.lineBytes = make([]byte, l.maxLineSize)
 	l.byteReader = bytes.NewReader(l.lineBytes)
@@ -250,19 +253,47 @@ func scanJoinFiles(q *QuerySpecs, n *Node) {
 	if n.label == N_PREDCOMP {
 		reader := q.files[n.tok1.(string)].reader
 		var onExpr *Node
-		arr := make([]Value,0)
+		var jf JoinFinder
+		jf.arr = make([]ValPos,0)
 		if n.tok4.(int) == 1 { onExpr = n.node1 }
 		if n.tok4.(int) == 2 { onExpr = n.node2 }
 		for {
 			q.fromRow,err = reader.Read()
 			if err != nil {break}
 			_,onValue := execExpression(q, onExpr)
-			arr = append(arr, onValue)
+			reader.SavePosTo(onValue, &jf.arr)
 		}
-		n.tok5 = arr
+		jf.Sort()
+		n.tok5 = jf
 	} else {
 		scanJoinFiles(q, n.node1)
 		scanJoinFiles(q, n.node2)
 	}
 	return
+}
+type JoinFinder struct {
+	arr []ValPos
+	started bool
+	u int
+	m int
+	l int
+}
+func (jf *JoinFinder) Find(val Value) int64 {
+	if !jf.started {
+		jf.started=true; jf.u=len(jf.arr)-1
+	}
+	for ;jf.l <= jf.u; {
+		jf.m = (jf.l + jf.u)/2
+		if jf.arr[jf.m].val.Less(val) {
+			jf.l = jf.m+1
+		} else if jf.arr[jf.m].val.Greater(val) {
+			jf.u = jf.m-1
+		} else if jf.arr[jf.m].val.Equal(val) {
+			return jf.arr[jf.m].pos
+		} else { return -1 }
+	}
+	return -1
+}
+func (jf *JoinFinder) Sort() {
+	sort.Slice(jf.arr, func(i, j int) bool { return jf.arr[i].val.Greater(jf.arr[j].val) })
 }
