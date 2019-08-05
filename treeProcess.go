@@ -537,7 +537,8 @@ func joinExprFinder(q* QuerySpecs, n* Node, jfile string) string { //returns key
 			f2 := joinExprFinder(q, n.node2, jfile)
 			if jfile == f1 { n.tok4 = 1 }
 			if jfile == f2 { n.tok4 = 2 }
-			n.tok5 = make([]Value,0)
+			//don't need relop since join only uses =
+			n.tok1 = jfile
 		default:
 			s := make([]string,5)
 			s[0] = joinExprFinder(q, n.node1, jfile)

@@ -86,6 +86,8 @@ func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; q.files["_f1"].reader.fp.Close() }()
 	if q.sortExpr != nil && !q.groupby {
 		err = orderedQuery(q, &res)
+	} else if q.joining {
+		err = joinQuery(q, &res)
 	} else {
 		err = normalQuery(q, &res)
 	}
@@ -232,20 +234,35 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
 	stop = 0
-	reader1 := q.files["_f1"].reader
-
+	reader := q.files["_f1"].reader
+	scanJoinFiles(q,q.tree.node2)
+	treePrint(q.tree.node2,0)
 	for {
 		if stop == 1 { stop = 0;  break }
-
-		//read line from base csv file
-		q.fromRow,err = reader1.Read()
+		q.fromRow,err = reader.Read()
 		if err != nil {break}
-
 	}
 	return nil
 }
 func scanJoinFiles(q *QuerySpecs, n *Node) {
 	if n == nil { return }
+	var err error
 	if n.label == N_PREDCOMP {
+		reader := q.files[n.tok1.(string)].reader
+		var onExpr *Node
+		arr := make([]Value,0)
+		if n.tok4.(int) == 1 { onExpr = n.node1 }
+		if n.tok4.(int) == 2 { onExpr = n.node2 }
+		for {
+			q.fromRow,err = reader.Read()
+			if err != nil {break}
+			_,onValue := execExpression(q, onExpr)
+			arr = append(arr, onValue)
+		}
+		n.tok5 = arr
+	} else {
+		scanJoinFiles(q, n.node1)
+		scanJoinFiles(q, n.node2)
 	}
+	return
 }
