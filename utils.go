@@ -4,6 +4,7 @@ package main
 import (
 	"regexp"
 	"net/http"
+	"sort"
 	"github.com/gorilla/websocket"
 	"encoding/csv"
 	"path/filepath"
@@ -441,4 +442,45 @@ func eosError(q *QuerySpecs) error {
 	//Println("peektok:",q.PeekTok())
 	if q.PeekTok().id == 255 { return errors.New("Unexpected end of query string") }
 	return nil
+}
+
+type JoinFinder struct {
+	jfile string
+	jnode *Node
+	bnode *Node
+	arr []ValPos
+	i int
+}
+//return -1 if no more matches
+func (jf *JoinFinder) FindNext(val Value) int64 {
+	//use binary search for leftmost instance
+	if jf.i == -1 {
+		l := 0
+		r := len(jf.arr)
+		var m int
+		for ;l<r; {
+			m = (l+r)/2
+			if jf.arr[m].val.Less(val) {
+				l = m + 1
+			} else {
+				r = m
+			}
+		}
+		if jf.arr[l].val.Equal(val) {
+			jf.i = l
+			return jf.arr[l].pos
+		}
+	//check right neighbors for more matches
+	} else {
+		jf.i = jf.i+1
+		if jf.arr[jf.i].val.Equal(val) {
+			return jf.arr[jf.i].pos
+		}
+	}
+	jf.i = -1 //set i to -1 when done so next search is binary
+	return -1
+}
+func (jf *JoinFinder) Sort() {
+	sort.Slice(jf.arr, func(i, j int) bool { return jf.arr[i].val.Greater(jf.arr[j].val) })
+	jf.i = -1
 }

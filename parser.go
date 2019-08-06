@@ -113,8 +113,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 		branchShortener(q,q.sortExpr)
 	}
 
-	treePrint(n,0)
-
 	return n,err
 }
 
@@ -445,7 +443,7 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 //tok2 is negation
 //tok3 will be independant type
 //tok4 will be [1,2] which which expr to add to array
-//tok5 will be join array
+//tok5 will be join struct
 //node1 is [expr, predicates]
 //node2 is second expr
 //node3 is third expr for betweens

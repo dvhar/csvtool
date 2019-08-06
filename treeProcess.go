@@ -533,12 +533,14 @@ func joinExprFinder(q* QuerySpecs, n* Node, jfile string) string { //returns key
 			joinExprFinder(q, n.node1, q.files[n.tok4.(string)].key)
 			joinExprFinder(q, n.node2, "")
 		case N_PREDCOMP:
+			var jf JoinFinder
+			jf.arr = make([]ValPos,0)
+			jf.jfile = jfile
 			f1 := joinExprFinder(q, n.node1, jfile)
 			f2 := joinExprFinder(q, n.node2, jfile)
-			if jfile == f1 { n.tok4 = 1 }
-			if jfile == f2 { n.tok4 = 2 }
-			//don't need relop since join only uses =
-			n.tok1 = jfile
+			if jfile == f1 { jf.jnode = n.node1; jf.bnode = n.node2 }
+			if jfile == f2 { jf.jnode = n.node2; jf.bnode = n.node1 }
+			n.tok5 = jf
 		default:
 			s := make([]string,5)
 			s[0] = joinExprFinder(q, n.node1, jfile)

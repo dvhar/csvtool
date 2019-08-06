@@ -1,13 +1,13 @@
 package main
 import (
-  . "fmt"
-  "encoding/csv"
-  "os"
-  . "strconv"
-  "sort"
-  "io"
-  "bytes"
-  bt "github.com/google/btree"
+	. "fmt"
+	"encoding/csv"
+	"os"
+	. "strconv"
+	"sort"
+	"io"
+	"bytes"
+	bt "github.com/google/btree"
 )
 
 var stop int
@@ -59,8 +59,15 @@ func (l*LineReader) Read() ([]string,error) {
 	l.pos += int64(size)
 	return line, err
 }
-func (l*LineReader) ReadAt(lineNo int) ([]string,error) {
+func (l*LineReader) ReadAtIndex(lineNo int) ([]string,error) {
 	l.fp.ReadAt(l.lineBytes, l.valPositions[lineNo].pos)
+	l.byteReader.Seek(0,0)
+	l.csvReader = csv.NewReader(l.byteReader)
+	line, err := l.csvReader.Read()
+	return line, err
+}
+func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
+	l.fp.ReadAt(l.lineBytes, pos)
 	l.byteReader.Seek(0,0)
 	l.csvReader = csv.NewReader(l.byteReader)
 	line, err := l.csvReader.Read()
@@ -171,7 +178,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader.PrepareReRead()
 	for i := range reader.valPositions {
 		if stop == 1 { stop = 0; message("query cancelled"); break }
-		q.fromRow,err = reader.ReadAt(i)
+		q.fromRow,err = reader.ReadAtIndex(i)
 		if err != nil { break }
 		if evalDistinct(q, distinctCheck) {
 			execGroupOrNewRow(q,q.tree.node4)
@@ -239,11 +246,21 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	stop = 0
 	reader := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2)
-	treePrint(q.tree.node2,0)
+	treePrint(q.tree,0)
+	firstJoin := q.tree.node2.node1
 	for {
 		if stop == 1 { stop = 0;  break }
 		q.fromRow,err = reader.Read()
 		if err != nil {break}
+		for nn := firstJoin ; nn != nil ; nn = nn.node2 {
+			predNode := nn.node1.node1
+			jf := predNode.tok5.(JoinFinder)
+			_,compVal := execExpression(q, jf.bnode)
+			for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
+				jline,_ := q.files[jf.jfile].reader.ReadAtPosition(pos)
+				Println(jline)
+			}
+		}
 	}
 	return nil
 }
@@ -251,12 +268,9 @@ func scanJoinFiles(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	var err error
 	if n.label == N_PREDCOMP {
-		reader := q.files[n.tok1.(string)].reader
-		var onExpr *Node
-		var jf JoinFinder
-		jf.arr = make([]ValPos,0)
-		if n.tok4.(int) == 1 { onExpr = n.node1 }
-		if n.tok4.(int) == 2 { onExpr = n.node2 }
+		reader := q.files[n.tok5.(JoinFinder).jfile].reader
+		jf := n.tok5.(JoinFinder)
+		onExpr := jf.jnode
 		for {
 			q.fromRow,err = reader.Read()
 			if err != nil {break}
@@ -270,30 +284,4 @@ func scanJoinFiles(q *QuerySpecs, n *Node) {
 		scanJoinFiles(q, n.node2)
 	}
 	return
-}
-type JoinFinder struct {
-	arr []ValPos
-	started bool
-	u int
-	m int
-	l int
-}
-func (jf *JoinFinder) Find(val Value) int64 {
-	if !jf.started {
-		jf.started=true; jf.u=len(jf.arr)-1
-	}
-	for ;jf.l <= jf.u; {
-		jf.m = (jf.l + jf.u)/2
-		if jf.arr[jf.m].val.Less(val) {
-			jf.l = jf.m+1
-		} else if jf.arr[jf.m].val.Greater(val) {
-			jf.u = jf.m-1
-		} else if jf.arr[jf.m].val.Equal(val) {
-			return jf.arr[jf.m].pos
-		} else { return -1 }
-	}
-	return -1
-}
-func (jf *JoinFinder) Sort() {
-	sort.Slice(jf.arr, func(i, j int) bool { return jf.arr[i].val.Greater(jf.arr[j].val) })
 }
