@@ -439,7 +439,6 @@ func message(s string) {
 }
 
 func eosError(q *QuerySpecs) error {
-	//Println("peektok:",q.PeekTok())
 	if q.PeekTok().id == 255 { return errors.New("Unexpected end of query string") }
 	return nil
 }
@@ -454,34 +453,32 @@ type JoinFinder struct {
 //return -1 if no more matches
 func (jf *JoinFinder) FindNext(val Value) int64 {
 	//use binary search for leftmost instance
+	r := len(jf.arr)
 	if jf.i == -1 {
 		l := 0
-		r := len(jf.arr)
 		var m int
 		for ;l<r; {
 			m = (l+r)/2
 			if jf.arr[m].val.Less(val) {
-				//Println("--less",jf.arr[m].val,val,l,m,r)
 				l = m + 1
 			} else {
-				//Println("--greateq",jf.arr[m].val,val,l,m,r)
 				r = m
 			}
 		}
-		//Println("l:",l)
 		if jf.arr[l].val.Equal(val) {
 			jf.i = l
 			return jf.arr[l].pos
 		}
 	//check right neighbors for more matches
 	} else {
-		jf.i = jf.i+1
-		if jf.arr[jf.i].val.Equal(val) {
-			return jf.arr[jf.i].pos
+		if jf.i < r-1 {
+			jf.i = jf.i+1
+			if jf.arr[jf.i].val.Equal(val) {
+				return jf.arr[jf.i].pos
+			}
 		}
 	}
 	jf.i = -1 //set i to -1 when done so next search is binary
-	//Println("no match")
 	return -1
 }
 func (jf *JoinFinder) Sort() {

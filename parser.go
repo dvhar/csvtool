@@ -33,6 +33,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"os"
 	//"path/filepath"
 	. "strconv"
 	. "fmt"
@@ -549,7 +550,9 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FROM}
 	var err error
 	if q.Tok().id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().val) }
-	n.tok1 = q.NextTok()
+	n.tok1 = q.NextTok().val
+	_,err = os.Stat(Sprint(n.tok1))
+	if err != nil { return n,err }
 	q.NextTok()
 	t := q.Tok()
 	switch t.id {
@@ -595,7 +598,9 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	if q.Tok().Lower() != "join" { return n,errors.New("Expected 'join'. Found:"+q.Tok().val) }
 	//file path
 	n.tok3 = q.NextTok().val
-	if err:=eosError(q);err != nil { return n,err }
+	_,err = os.Stat(Sprint(n.tok3))
+	if err != nil { return n,err }
+	if err=eosError(q);err != nil { return n,err }
 	//alias
 	t := q.NextTok()
 	switch t.id {
