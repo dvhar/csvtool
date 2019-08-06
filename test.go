@@ -34,16 +34,18 @@ func runTests(){
 	file2 := "parkingTestShort.csv"
 	file3 := "tojoin-1.csv"
 	file4 := "tojoin-2.csv"
+	file5 := "tojoin-3.csv"
 	f1 := " '" + dir1 + file1 + "' "
 	f2 := " '" + dir1 + file2 + "' "
 	f3 := " '" + dir1 + file3 + "' "
 	f4 := " '" + dir1 + file4 + "' "
+	f5 := " '" + dir1 + file5 + "' "
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
 	newSet := 1<<3
 	thisTest := newSet //| selectSet | fromSet | whereSet
-	_,_,_,_,_,_ = f1, f2, selectSet, whereSet, fromSet, newSet
+	_,_,_,_,_,_,_ = f1, f2, f5, selectSet, whereSet, fromSet, newSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},

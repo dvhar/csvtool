@@ -252,11 +252,14 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if stop == 1 { stop = 0;  break }
 		q.fromRow,err = reader.Read()
 		if err != nil {break}
+		Println("-----fromrow: ",q.fromRow)
 		for nn := firstJoin ; nn != nil ; nn = nn.node2 {
 			predNode := nn.node1.node1
 			jf := predNode.tok5.(JoinFinder)
 			_,compVal := execExpression(q, jf.bnode)
+			//Println("compval:",compVal)
 			for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
+				//Println("-----pos:",pos)
 				jline,_ := q.files[jf.jfile].reader.ReadAtPosition(pos)
 				Println(jline)
 			}
@@ -278,6 +281,7 @@ func scanJoinFiles(q *QuerySpecs, n *Node) {
 			reader.SavePosTo(onValue, &jf.arr)
 		}
 		jf.Sort()
+		reader.PrepareReRead()
 		n.tok5 = jf
 	} else {
 		scanJoinFiles(q, n.node1)

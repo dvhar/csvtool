@@ -461,11 +461,14 @@ func (jf *JoinFinder) FindNext(val Value) int64 {
 		for ;l<r; {
 			m = (l+r)/2
 			if jf.arr[m].val.Less(val) {
+				//Println("--less",jf.arr[m].val,val,l,m,r)
 				l = m + 1
 			} else {
+				//Println("--greateq",jf.arr[m].val,val,l,m,r)
 				r = m
 			}
 		}
+		//Println("l:",l)
 		if jf.arr[l].val.Equal(val) {
 			jf.i = l
 			return jf.arr[l].pos
@@ -478,9 +481,10 @@ func (jf *JoinFinder) FindNext(val Value) int64 {
 		}
 	}
 	jf.i = -1 //set i to -1 when done so next search is binary
+	//Println("no match")
 	return -1
 }
 func (jf *JoinFinder) Sort() {
-	sort.Slice(jf.arr, func(i, j int) bool { return jf.arr[i].val.Greater(jf.arr[j].val) })
+	sort.Slice(jf.arr, func(i, j int) bool { return jf.arr[j].val.Greater(jf.arr[i].val) })
 	jf.i = -1
 }
