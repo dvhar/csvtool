@@ -165,7 +165,7 @@ func runTests(){
 		Test{`select top 20 c3 from`+f1+`where c3 in (8479417420, 7813745231, 7536344478)`,"expression in int list",true,whereSet},
 		Test{`select top 20 c5 from`+f1+`where c5 in (8479417420, 7813745231, 7536344478)`,"string expression in int list",true,whereSet},
 		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,fromSet},
-		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c8`,"join test",true,newSet},
+		Test{`select top 10 c8 from`+f3+`pt join '../state.csv' st on pt.c3 = st.c2`,"join test",true,newSet},
 	}
 
 	for _,t := range tests {

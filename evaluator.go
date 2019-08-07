@@ -248,22 +248,28 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	scanJoinFiles(q,q.tree.node2)
 	treePrint(q.tree,0)
 	firstJoin := q.tree.node2.node1
+	len2 := q.files["_f2"].width
 	for {
 		if stop == 1 { stop = 0;  break }
 		q.fromRow,err = reader.Read()
+		l := len(q.fromRow)
+		newfrom := make([]string, l+len2)
+		copy(newfrom, q.fromRow)
+		q.fromRow = newfrom
 		if err != nil {break}
-		Println("-----fromrow: ",q.fromRow)
 		for nn := firstJoin ; nn != nil ; nn = nn.node2 {
 			predNode := nn.node1.node1
 			jf := predNode.tok5.(JoinFinder)
 			_,compVal := execExpression(q, jf.bnode)
-			//Println("compval:",compVal)
 			for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
-				//Println("-----pos:",pos)
+				if q.LimitReached() { goto done1 }
+				q.quantityRetrieved++
 				jline,_ := q.files[jf.jfile].reader.ReadAtPosition(pos)
-				Println(jline)
+				copy(q.fromRow[l:l+len2], jline)
+				Println(q.fromRow)
 			}
 		}
+		done1:
 	}
 	return nil
 }

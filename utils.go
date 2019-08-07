@@ -167,6 +167,7 @@ type FileData struct {
 	key string
 	id int
 	reader *LineReader
+	fromRow []string
 }
 type Node struct {
 	label int
