@@ -147,7 +147,7 @@ func selectAll(q* QuerySpecs) (*Node,error) {
 				tok1: i,
 				tok2: 1,
 				tok3: file.types[i],
-				tok5: "_f"+Sprint(j),
+				tok5: q.files["_f"+Sprint(j)],
 			}
 			countSelected++
 			lastSelection = n

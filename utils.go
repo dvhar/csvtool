@@ -454,7 +454,7 @@ type JoinFinder struct {
 //return -1 if no more matches
 func (jf *JoinFinder) FindNext(val Value) int64 {
 	//use binary search for leftmost instance
-	r := len(jf.arr)
+	r := len(jf.arr)-1
 	if jf.i == -1 {
 		l := 0
 		var m int
