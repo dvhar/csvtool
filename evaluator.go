@@ -248,29 +248,24 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
 	stop = 0
-	reader := q.files["_f1"].reader
+	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2)
-	treePrint(q.tree,0)
 	firstJoin := q.tree.node2.node1
-	len2 := q.files["_f2"].width
+	distinctCheck := bt.New(200)
 	for {
 		if stop == 1 { stop = 0;  break }
-		q.fromRow,err = reader.Read()
-		l := len(q.fromRow)
-		newfrom := make([]string, l+len2)
-		copy(newfrom, q.fromRow)
-		q.fromRow = newfrom
+		_,err = reader1.Read()
 		if err != nil {break}
 		for nn := firstJoin ; nn != nil ; nn = nn.node2 {
 			predNode := nn.node1.node1
 			jf := predNode.tok5.(JoinFinder)
 			_,compVal := execExpression(q, jf.bnode)
 			for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
+				q.files[jf.jfile].reader.ReadAtPosition(pos)
 				if q.LimitReached() { goto done1 }
-				q.quantityRetrieved++
-				jline,_ := q.files[jf.jfile].reader.ReadAtPosition(pos)
-				copy(q.fromRow[l:l+len2], jline)
-				Println(q.fromRow)
+				if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {
+					execSelect(q, res)
+				}
 			}
 		}
 		done1:
