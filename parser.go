@@ -331,7 +331,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 //tok2 is [0,1,2] for literal/column/function
 //tok3 is type
 //tok4 is type in special cases like FN_COUNT
-//tok5 is file id
+//tok5 is filedata
 //node1 is function expression if doing that
 var cInt *regexp.Regexp = regexp.MustCompile(`^c\d+$`)
 func parseValue(q* QuerySpecs) (*Node,error) {
@@ -361,7 +361,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 			value = tok.val
 			fdata = q.files["_f1"]
 		}
-		n.tok5 = "_f"+Sprint(fdata.id)
+		n.tok5 = fdata
 		//try column number
 		if num,er := Atoi(value); q.intColumn && !tok.quoted && er == nil {
 			if num<1 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }

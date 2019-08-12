@@ -405,7 +405,7 @@ func columnNamer(q *QuerySpecs, n *Node) {
 		if n.tok2 == nil {
 			//if just selecting column, use that name
 			if n.node1.label == N_VALUE && n.node1.tok2.(int)==1 {
-				n.tok2 = q.files[n.node1.tok5.(string)].names[n.node1.tok1.(int)]
+				n.tok2 = n.node1.tok5.(*FileData).names[n.node1.tok1.(int)]
 			//give column numeric name if not already named
 			} else {
 				n.tok2 = Sprintf("col%d",n.tok1.([]int)[0]+1)
@@ -528,7 +528,7 @@ func aggregateCombo(a1,a2,l1,l2 bool) error {
 func joinExprFinder(q* QuerySpecs, n* Node, jfile string) string { //returns key of file referenced by expression
 	if n == nil { return "" }
 	switch n.label {
-		case N_VALUE: if n.tok5 != nil { return n.tok5.(string) }
+		case N_VALUE: if n.tok5 != nil { return "_f"+Sprint(n.tok5.(*FileData).id) }
 		case N_JOIN:
 			joinExprFinder(q, n.node1, q.files[n.tok4.(string)].key)
 			joinExprFinder(q, n.node2, "")
