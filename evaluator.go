@@ -17,6 +17,7 @@ var active bool
 type LineReader struct {
 	valPositions []ValPos
 	lineBytes []byte
+	fromRow []string
 	limit int
 	maxLineSize int
 	pos int64
@@ -51,27 +52,30 @@ func (l*LineReader) Init(q *QuerySpecs, f string) {
 }
 
 func (l*LineReader) Read() ([]string,error) {
-	line, err := l.csvReader.Read()
+	var err error
+	l.fromRow, err = l.csvReader.Read()
 	l.lineBytes, _ = l.lineBuffer.ReadBytes('\n')
 	size := len(l.lineBytes)
 	if l.maxLineSize < size { l.maxLineSize = size }
 	l.prevPos = l.pos
 	l.pos += int64(size)
-	return line, err
+	return l.fromRow, err
 }
 func (l*LineReader) ReadAtIndex(lineNo int) ([]string,error) {
 	l.fp.ReadAt(l.lineBytes, l.valPositions[lineNo].pos)
 	l.byteReader.Seek(0,0)
 	l.csvReader = csv.NewReader(l.byteReader)
-	line, err := l.csvReader.Read()
-	return line, err
+	var err error
+	l.fromRow, err = l.csvReader.Read()
+	return l.fromRow, err
 }
 func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
 	l.fp.ReadAt(l.lineBytes, pos)
 	l.byteReader.Seek(0,0)
 	l.csvReader = csv.NewReader(l.byteReader)
-	line, err := l.csvReader.Read()
-	return line, err
+	var err error
+	l.fromRow, err = l.csvReader.Read()
+	return l.fromRow, err
 }
 
 //run csv query
@@ -121,7 +125,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if q.LimitReached() && !q.groupby { break }
 
 		//read line from csv file
-		q.fromRow,err = reader.Read()
+		_,err = reader.Read()
 		if err != nil {break}
 
 		//find matches and retrieve results
@@ -156,7 +160,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if stop == 1 { break }
 		rowsChecked++
 		if rowsChecked % 10000 == 0 { message("Scanning line "+Itoa(rowsChecked)) }
-		q.fromRow,err = reader.Read()
+		_,err = reader.Read()
 		if err != nil {break}
 		match = evalWhere(q)
 		if match {
@@ -178,7 +182,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader.PrepareReRead()
 	for i := range reader.valPositions {
 		if stop == 1 { stop = 0; message("query cancelled"); break }
-		q.fromRow,err = reader.ReadAtIndex(i)
+		_,err = reader.ReadAtIndex(i)
 		if err != nil { break }
 		if evalDistinct(q, distinctCheck) {
 			execGroupOrNewRow(q,q.tree.node4)
@@ -281,7 +285,7 @@ func scanJoinFiles(q *QuerySpecs, n *Node) {
 		jf := n.tok5.(JoinFinder)
 		onExpr := jf.jnode
 		for {
-			q.fromRow,err = reader.Read()
+			_,err = reader.Read()
 			if err != nil {break}
 			_,onValue := execExpression(q, onExpr)
 			reader.SavePosTo(onValue, &jf.arr)

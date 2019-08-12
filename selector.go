@@ -174,7 +174,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 		//column value
 		} else if n.tok2.(int) == 1 {
 			var val Value
-			cell := s.TrimSpace(q.fromRow[n.tok1.(int)])
+			cell := s.TrimSpace(n.tok5.(*FileData).reader.fromRow[n.tok1.(int)])
 			if s.ToLower(cell) == "null" || cell == ""  { return n.tok3.(int), null("") }
 			switch n.tok3.(int) {
 				case T_INT:      a,_ := Atoi(cell);            val = integer(a)
