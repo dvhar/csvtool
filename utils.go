@@ -449,8 +449,8 @@ func eosError(q *QuerySpecs) error {
 
 type JoinFinder struct {
 	jfile string
-	jnode *Node
-	bnode *Node
+	joinNode *Node
+	baseNode *Node
 	arr []ValPos
 	i int
 }

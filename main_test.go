@@ -3,7 +3,7 @@ import (
 	. "fmt"
 	"os"
 	"testing"
-    "./"
+	"./"
 	//"encoding/json"
 )
 
@@ -15,7 +15,7 @@ type Test struct {
 }
 
 func TestAll(t *testing.T){
-    main.Testing = true
+	main.Testing = true
 
 	dir1 := "/home/dave/Documents/work/"
 	//dir1 := "/home/dave/testing/ram/"
@@ -138,15 +138,15 @@ func TestAll(t *testing.T){
 		Test{`select top 20 count(c1) + count(c2) count(c1) count(c2) sum(c1+c2) + avg(c1+c2) avg(c1+c2) c7 from`+f1+`group by month(c7) order by c7`,"expression of aggregates",true,selectSet},
 		Test{`select top 20 max(min(c1)) from`+f1+`group by month(c7) order by c7`,"nested aggregate error",false,selectSet},
 		Test{`select top 20 max(c1)+c2*4 from`+f1,"aggregate add error",false,selectSet},
-        Test{`select top 20 max(c1)*(c2+5) from`+f1,"aggregate mult error",false,selectSet},
-        Test{`select top 20 from`+f1+`where max(c1) between min(c1) and c2`,"aggregate between error",false,selectSet},
-        Test{`select top 20 from`+f1+`where max(c1) between c1 and max(c2)`,"aggregate between error",false,selectSet},
-        Test{`select top 20 from`+f1+`where c1 between max(c1) and max(c2)`,"aggregate between error",false,selectSet},
-        Test{`select top 20 from`+f1+`where c1 between c1 and max(c2)`,"aggregate between error",false,selectSet},
-        Test{`select top 20 case c1 when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
-        Test{`select top 20 case max(c1) when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
-        Test{`select top 20 case max(c1) when c2 then a when c2 then b end from`+f1,"aggregate case error",false,selectSet},
-        Test{`select top 20 case c1 when c2 then a else max(c2) end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select top 20 max(c1)*(c2+5) from`+f1,"aggregate mult error",false,selectSet},
+		Test{`select top 20 from`+f1+`where max(c1) between min(c1) and c2`,"aggregate between error",false,selectSet},
+		Test{`select top 20 from`+f1+`where max(c1) between c1 and max(c2)`,"aggregate between error",false,selectSet},
+		Test{`select top 20 from`+f1+`where c1 between max(c1) and max(c2)`,"aggregate between error",false,selectSet},
+		Test{`select top 20 from`+f1+`where c1 between c1 and max(c2)`,"aggregate between error",false,selectSet},
+		Test{`select top 20 case c1 when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select top 20 case max(c1) when c2 then a when max(c2) then b end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select top 20 case max(c1) when c2 then a when c2 then b end from`+f1,"aggregate case error",false,selectSet},
+		Test{`select top 20 case c1 when c2 then a else max(c2) end from`+f1,"aggregate case error",false,selectSet},
 		Test{`select count(*) month('Issue Date') from`+f1+`group by month('Issue Date') having count(*) between 80 and 100`,"having clause",true,whereSet},
 		Test{`select distinct c5 from`+f1,"distinct column",true,selectSet},
 		Test{`select count(distinct c5) count(distinct c1) from`+f1,"count distinct column",true,selectSet},

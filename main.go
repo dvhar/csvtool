@@ -132,7 +132,7 @@ func runQueries(req *webQueryRequest) ([]SingleQueryResult, error) {
 
 func runCommand() {
 	if *flags.command == "" { return }
-	q := QuerySpecs{ QueryString : *flags.command, save : true }
+	q := QuerySpecs{ QueryString : *flags.command, save : true } //sends output to stdout
 	saver <- saveData{ Type : CH_SAVPREP }
 	CsvQuery(&q)
 	saver <- saveData{ Type : CH_NEXT }

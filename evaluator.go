@@ -62,12 +62,7 @@ func (l*LineReader) Read() ([]string,error) {
 	return l.fromRow, err
 }
 func (l*LineReader) ReadAtIndex(lineNo int) ([]string,error) {
-	l.fp.ReadAt(l.lineBytes, l.valPositions[lineNo].pos)
-	l.byteReader.Seek(0,0)
-	l.csvReader = csv.NewReader(l.byteReader)
-	var err error
-	l.fromRow, err = l.csvReader.Read()
-	return l.fromRow, err
+	return l.ReadAtPosition(l.valPositions[lineNo].pos)
 }
 func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
 	l.fp.ReadAt(l.lineBytes, pos)
@@ -97,7 +92,14 @@ func CsvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 		ShowLimit : q.showLimit,
 	}
 
-	defer func(){ active=false; if q.save {saver <- saveData{Type:CH_NEXT}}; q.files["_f1"].reader.fp.Close() }()
+	defer func(){
+		active=false
+		if q.save {saver <- saveData{Type:CH_NEXT}}
+		for ii := 1; ii <= q.numfiles; ii++ {
+			q.files["_f"+Sprint(ii)].reader.fp.Close()
+		}
+	}()
+
 	if q.sortExpr != nil && !q.groupby {
 		err = orderedQuery(q, &res)
 	} else if q.joining {
@@ -256,13 +258,23 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if stop == 1 { stop = 0;  break }
 		_,err = reader1.Read()
 		if err != nil {break}
-		for nn := firstJoin ; nn != nil ; nn = nn.node2 {
+		for nn := firstJoin ; nn != nil ; nn = nn.node2 { //process each join
 			predNode := nn.node1.node1
 			jf := predNode.tok5.(JoinFinder)
-			_,compVal := execExpression(q, jf.bnode)
-			for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
-				q.files[jf.jfile].reader.ReadAtPosition(pos)
+			jreader := q.files[jf.jfile].reader
+			_,compVal := execExpression(q, jf.baseNode)
+			joinCount := 0
+			for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) { //process each match
+				jreader.ReadAtPosition(pos)
+				joinCount++
 				if q.LimitReached() { goto done1 }
+				if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {
+					execSelect(q, res)
+				}
+			}
+			if joinCount == 0 { //left join when no match
+				if q.LimitReached() { goto done1 }
+				for k,_ := range jreader.fromRow { jreader.fromRow[k] = "" }
 				if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {
 					execSelect(q, res)
 				}
@@ -272,13 +284,14 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	}
 	return nil
 }
+//scan and sort values from join files
 func scanJoinFiles(q *QuerySpecs, n *Node) {
 	if n == nil { return }
 	var err error
 	if n.label == N_PREDCOMP {
 		reader := q.files[n.tok5.(JoinFinder).jfile].reader
 		jf := n.tok5.(JoinFinder)
-		onExpr := jf.jnode
+		onExpr := jf.joinNode
 		for {
 			_,err = reader.Read()
 			if err != nil {break}
