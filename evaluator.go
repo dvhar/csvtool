@@ -79,7 +79,7 @@ func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
 }
 
 //run csv query
-func csvQuery(q *QuerySpecs) (SingleQueryResult, error) {
+func CsvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 
 	//parse and do stuff that only needs to be done once
 	var err error

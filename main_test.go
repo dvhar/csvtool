@@ -1,19 +1,11 @@
-package main
+package main_test
 import (
 	. "fmt"
 	"os"
+	"testing"
+    "./"
 	//"encoding/json"
 )
-
-type DebugPrint struct {
-	verbose1 bool
-	verbose2 bool
-	verbose3 bool
-}
-func (d DebugPrint) Print1(args ...interface{}) { if d.verbose1 { Println(args...) } }
-func (d DebugPrint) Print2(args ...interface{}) { if d.verbose2 { Println(args...) } }
-func (d DebugPrint) Print3(args ...interface{}) { if d.verbose3 { Println(args...) } }
-var db DebugPrint
 
 type Test struct {
 	query string
@@ -22,11 +14,8 @@ type Test struct {
 	set int //bits for which set of tests it belongs to
 }
 
-func runTests(){
-	db.verbose1 = true
-	//db.verbose2 = true
-	//db.verbose3 = true
-	if !*flags.testing { return }
+func TestAll(t *testing.T){
+    main.Testing = true
 
 	dir1 := "/home/dave/Documents/work/"
 	//dir1 := "/home/dave/testing/ram/"
@@ -165,7 +154,7 @@ func runTests(){
 		Test{`select top 20 c3 from`+f1+`where c3 in (8479417420, 7813745231, 7536344478)`,"expression in int list",true,whereSet},
 		Test{`select top 20 c5 from`+f1+`where c5 in (8479417420, 7813745231, 7536344478)`,"string expression in int list",true,whereSet},
 		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,fromSet},
-		Test{`select top 20 distinct hidden st.c1, * from`+f3+`pt join '../state.csv' st on pt.c3 = st.c2 where st.c1 >= 3`,"join test",true,newSet},
+		Test{`select top 20 distinct hidden st.c1, * from`+f3+`pt join '/home/dave/Documents/work/state.csv' st on pt.c3 = st.c2 where st.c1 >= 3`,"join test",true,newSet},
 	}
 
 	for _,t := range tests {
@@ -177,14 +166,14 @@ func runTests(){
 		err := runOneTestQuery(t.query)
 		if t.good && err != nil { os.Exit(1) }
 		if !t.good && err == nil { os.Exit(1) }
-		Println("Test successful\n\n")
+		Print("Test successful\n\n\n")
 	}
 	os.Exit(0)
 }
 
 func runOneTestQuery(query string) error {
-	q := QuerySpecs{ queryString : query, }
-	res, err := csvQuery(&q)
+	q := main.QuerySpecs{ QueryString : query, }
+	res, err := main.CsvQuery(&q)
 	if err != nil { return err }
 	Println("number of colums:",res.Numcols)
 	Println("number of rows:",res.Numrows)

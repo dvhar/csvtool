@@ -19,7 +19,7 @@ import (
 
 type QuerySpecs struct {
 	colSpec Columns
-	queryString string
+	QueryString string
 	tokArray []Token
 	aliases []string
 	joining bool
@@ -425,12 +425,15 @@ type sockDirMessage struct {
 type Flags struct {
 	localPort *string
 	danger *bool
-	testing *bool
 	persistent *bool
 	command *string
 }
+var Testing bool
+func (f Flags) gui() bool {
+    if f.command == nil { return false }
+    return *f.command == "" || Testing == false
+}
 
-func (f Flags) gui() bool { return *f.command == "" && *f.testing == false }
 func message(s string) {
 	if flags.gui() {
 		messager <- s

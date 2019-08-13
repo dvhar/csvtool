@@ -288,7 +288,6 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		//expression matches expression list
 		case WORD: fallthrough
 		case SP_LPAREN:
-			db.Print2("case starts with expression:", q.Tok())
 			n.tok2 = N_EXPRADD
 			n.node1,err = parseExprAdd(q)
 			if err != nil { return n,err }

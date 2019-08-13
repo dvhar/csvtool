@@ -28,14 +28,12 @@ func main() {
 
 	flags.localPort = flag.String("port", "8060", "Change localhost port")
 	flags.danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
-	flags.testing = flag.Bool("test",false, "run tests and then exit")
 	flags.persistent = flag.Bool("stay",false, "don't stop server when browser closes")
 	flags.command = flag.String("c","", "run query from command line argument")
 	flag.Parse()
 
 	readStdin()
 	if *flags.command == "" { println("version 0.481 - 7/30/2019") }
-	runTests()
 
 	messager = make(chan string)
 	fileclick = make(chan string)
@@ -89,11 +87,11 @@ func main() {
 
 }
 
-//wrapper for csvQuery
+//wrapper for CsvQuery
 func runCsvQuery(query string, req *webQueryRequest) (SingleQueryResult,error) {
-	q := QuerySpecs{ queryString : query, }
+	q := QuerySpecs{ QueryString : query, }
 	if (req.FileIO & F_CSV) != 0 { q.save = true }
-	res, err := csvQuery(&q)
+	res, err := CsvQuery(&q)
 	res.Query = query;
 	return res, err
 }
@@ -134,9 +132,9 @@ func runQueries(req *webQueryRequest) ([]SingleQueryResult, error) {
 
 func runCommand() {
 	if *flags.command == "" { return }
-	q := QuerySpecs{ queryString : *flags.command, save : true }
+	q := QuerySpecs{ QueryString : *flags.command, save : true }
 	saver <- saveData{ Type : CH_SAVPREP }
-	csvQuery(&q)
+	CsvQuery(&q)
 	saver <- saveData{ Type : CH_NEXT }
 	os.Exit(0)
 }

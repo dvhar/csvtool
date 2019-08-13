@@ -394,7 +394,7 @@ func (s* StringLookahead) peek() int {
 
 //turn query text into tokens and check if ints are columns or numbers
 func scanTokens(q *QuerySpecs) error {
-	input := &StringLookahead{Str:q.queryString}
+	input := &StringLookahead{Str:q.QueryString}
 	for {
 		t := scanner(input)
 		//turn tokens inside quotes into single token
