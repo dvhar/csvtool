@@ -476,7 +476,7 @@ func (jf *JoinFinder) FindNext(val Value) int64 {
 	//check right neighbors for more matches
 	} else {
 		if jf.i < r-1 {
-			jf.i = jf.i+1
+			jf.i++
 			if jf.arr[jf.i].val.Equal(val) {
 				return jf.arr[jf.i].pos
 			}

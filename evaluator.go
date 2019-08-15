@@ -272,7 +272,7 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 					execSelect(q, res)
 				}
 			}
-			if joinCount == 0 { //left join when no match
+			if joinCount == 0 && nn.tok1.(int) == 1 { //left join when no match
 				if q.LimitReached() { goto done1 }
 				for k,_ := range jreader.fromRow { jreader.fromRow[k] = "" }
 				if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {

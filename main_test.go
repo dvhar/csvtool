@@ -33,7 +33,7 @@ func TestAll(t *testing.T){
 	whereSet := 1<<1
 	fromSet := 1<<2
 	newSet := 1<<3
-	thisTest := newSet | selectSet | fromSet | whereSet
+	thisTest := newSet //| selectSet | fromSet | whereSet
 	_,_,_,_,_,_,_ = f1, f2, f5, selectSet, whereSet, fromSet, newSet
 
 	var tests = []Test {
@@ -153,7 +153,8 @@ func TestAll(t *testing.T){
 		Test{`select top 20 c5 from`+f1+`where c5 in (NJ, VA, FL, 78)`,"expression in list",true,whereSet},
 		Test{`select top 20 c3 from`+f1+`where c3 in (8479417420, 7813745231, 7536344478)`,"expression in int list",true,whereSet},
 		Test{`select top 20 c5 from`+f1+`where c5 in (8479417420, 7813745231, 7536344478)`,"string expression in int list",true,whereSet},
-		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,fromSet},
+		Test{`select top 10 c8 from`+f3+`pt left join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,newSet},
+		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,newSet},
 		Test{`select top 20 distinct hidden st.c1, * from`+f3+`pt join '/home/dave/Documents/work/state.csv' st on pt.c3 = st.c2 where st.c1 >= 3`,"join test",true,newSet},
 	}
 

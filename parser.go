@@ -568,8 +568,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
-//tok1 is [left right]
-//tok2 is [inner outer]
+//tok1 is join details (left/outer or inner)
 //tok3 is filepath
 //tok4 is alias
 //node1 is join condition (predicates)
@@ -579,20 +578,19 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	var err error
 	switch q.Tok().Lower() {
 	case "left":
-	case "right":
 	case "inner":
 	case "outer":
 	case "join":
 	default: return nil,nil
 	}
 	q.joining = true
+	n.tok1 = 0 // 1 is left/outer, 0 is inner
 	switch q.Tok().Lower() {
-	case "left":  n.tok1 = KW_LEFT; q.NextTok();
-	case "right": n.tok1 = KW_RIGHT; q.NextTok();
+	case "left":  n.tok1 = 1; q.NextTok();
 	}
 	switch q.Tok().Lower() {
-	case "inner": n.tok2 = KW_INNER; q.NextTok();
-	case "outer": n.tok2 = KW_OUTER; q.NextTok();
+	case "inner": n.tok1 = 0; q.NextTok();
+	case "outer": n.tok1 = 1; q.NextTok();
 	}
 	if q.Tok().Lower() != "join" { return n,errors.New("Expected 'join'. Found:"+q.Tok().val) }
 	//file path
