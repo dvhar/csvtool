@@ -253,37 +253,43 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2)
 	firstJoin := q.tree.node2.node1
-	distinctCheck := bt.New(200)
+	dist := bt.New(200)
 	for {
 		if stop == 1 { stop = 0;  break }
 		_,err = reader1.Read()
 		if err != nil {break}
-		for nn := firstJoin ; nn != nil ; nn = nn.node2 { //process each join
-			predNode := nn.node1.node1
-			jf := predNode.tok5.(JoinFinder)
-			jreader := q.files[jf.jfile].reader
-			_,compVal := execExpression(q, jf.baseNode)
-			joinCount := 0
-			for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) { //process each match
-				jreader.ReadAtPosition(pos)
-				joinCount++
-				if q.LimitReached() { goto done1 }
-				if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {
-					execSelect(q, res)
-				}
-			}
-			if joinCount == 0 && nn.tok1.(int) == 1 { //left join when no match
-				if q.LimitReached() { goto done1 }
-				for k,_ := range jreader.fromRow { jreader.fromRow[k] = "" }
-				if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {
-					execSelect(q, res)
-				}
-			}
-		}
-		done1:
+		if joinNextFile(q, res, firstJoin, dist) { break }
 	}
 	return nil
 }
+//returns 'reached limit' bool
+func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node, dist *bt.BTree) bool {
+	if nn == nil { //have a line from each file so time to query
+		if evalWhere(q) && evalDistinct(q, dist) && execGroupOrNewRow(q,q.tree.node4) {
+			execSelect(q, res)
+			if q.LimitReached() { return true }
+		}
+		return false
+	}
+	predNode := nn.node1.node1
+	jf := predNode.tok5.(JoinFinder)
+	jreader := q.files[jf.jfile].reader
+	_,compVal := execExpression(q, jf.baseNode)
+	joinFound := false
+	//process each match
+	for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
+		joinFound = true
+		jreader.ReadAtPosition(pos)
+		if joinNextFile(q,res,nn.node2, dist) { return true }
+	}
+	//left join when no match
+	if !joinFound && nn.tok1.(int) == 1 {
+		for k,_ := range jreader.fromRow { jreader.fromRow[k] = "" }
+		if joinNextFile(q,res,nn.node2, dist) { return true }
+	}
+	return false
+}
+
 //scan and sort values from join files
 func scanJoinFiles(q *QuerySpecs, n *Node) {
 	if n == nil { return }
