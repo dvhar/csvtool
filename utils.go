@@ -13,6 +13,7 @@ import (
 	"time"
 	s "strings"
 	d "github.com/araddon/dateparse"
+	bt "github.com/google/btree"
 	. "strconv"
 	. "fmt"
 )
@@ -27,6 +28,7 @@ type QuerySpecs struct {
 	quantityLimit int
 	quantityRetrieved int
 	distinctExpr *Node
+	distinctCheck *bt.BTree
 	sortExpr *Node
 	sortWay int
 	save bool

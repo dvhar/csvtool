@@ -82,6 +82,7 @@ func CsvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	if err != nil { Println(err); return SingleQueryResult{}, err }
 	if q.save { saver <- saveData{Type : CH_HEADER, Header : q.colSpec.NewNames}; <-savedLine }
 	q.showLimit = 20000 / len(q.colSpec.NewNames)
+	q.distinctCheck = bt.New(200)
 	active = true
 
 	//prepare output
@@ -119,7 +120,6 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
 	rowsChecked := 0
 	stop = 0
-	distinctCheck := bt.New(200)
 	reader := q.files["_f1"].reader
 
 	for {
@@ -131,7 +131,7 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if err != nil {break}
 
 		//find matches and retrieve results
-		if evalWhere(q) && evalDistinct(q, distinctCheck) && execGroupOrNewRow(q,q.tree.node4) {
+		if evalWhere(q) && evalDistinct(q) && execGroupOrNewRow(q,q.tree.node4) {
 			execSelect(q, res)
 		}
 
@@ -143,16 +143,15 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult) error {
 }
 
 //see if row has distinct value if looking for one
-func evalDistinct(q *QuerySpecs, distinctCheck *bt.BTree) bool {
+func evalDistinct(q *QuerySpecs) bool {
 	if q.distinctExpr == nil { return true }
 	_,compVal := execExpression(q, q.distinctExpr)
-	return distinctCheck.ReplaceOrInsert(compVal) == nil
+	return q.distinctCheck.ReplaceOrInsert(compVal) == nil
 }
 
 //run ordered query
 func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	stop = 0
-	distinctCheck := bt.New(200)
 	reader := q.files["_f1"].reader
 	rowsChecked := 0
 	var match bool
@@ -186,7 +185,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if stop == 1 { stop = 0; message("query cancelled"); break }
 		_,err = reader.ReadAtIndex(i)
 		if err != nil { break }
-		if evalDistinct(q, distinctCheck) {
+		if evalDistinct(q) {
 			execGroupOrNewRow(q,q.tree.node4)
 			execSelect(q, res)
 			if q.LimitReached() { break }
@@ -253,19 +252,18 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2)
 	firstJoin := q.tree.node2.node1
-	dist := bt.New(200)
 	for {
 		if stop == 1 { stop = 0;  break }
 		_,err = reader1.Read()
 		if err != nil {break}
-		if joinNextFile(q, res, firstJoin, dist) { break }
+		if joinNextFile(q, res, firstJoin) { break }
 	}
 	return nil
 }
 //returns 'reached limit' bool
-func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node, dist *bt.BTree) bool {
+func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 	if nn == nil { //have a line from each file so time to query
-		if evalWhere(q) && evalDistinct(q, dist) && execGroupOrNewRow(q,q.tree.node4) {
+		if evalWhere(q) && evalDistinct(q) && execGroupOrNewRow(q,q.tree.node4) {
 			execSelect(q, res)
 			if q.LimitReached() { return true }
 		}
@@ -280,12 +278,12 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node, dist *bt.BTre
 	for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
 		joinFound = true
 		jreader.ReadAtPosition(pos)
-		if joinNextFile(q,res,nn.node2, dist) { return true }
+		if joinNextFile(q,res,nn.node2) { return true }
 	}
 	//left join when no match
 	if !joinFound && nn.tok1.(int) == 1 {
 		for k,_ := range jreader.fromRow { jreader.fromRow[k] = "" }
-		if joinNextFile(q,res,nn.node2, dist) { return true }
+		if joinNextFile(q,res,nn.node2) { return true }
 	}
 	return false
 }
