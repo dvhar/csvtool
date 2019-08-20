@@ -24,17 +24,22 @@ func TestAll(t *testing.T){
 	file3 := "tojoin-1.csv"
 	file4 := "tojoin-2.csv"
 	file5 := "tojoin-3.csv"
+	file6 := "cities.csv"
+	file7 := "country.csv"
 	f1 := " '" + dir1 + file1 + "' "
 	f2 := " '" + dir1 + file2 + "' "
 	f3 := " '" + dir1 + file3 + "' "
 	f4 := " '" + dir1 + file4 + "' "
 	f5 := " '" + dir1 + file5 + "' "
+	f6 := " '" + dir1 + file6 + "' "
+	f7 := " '" + dir1 + file7 + "' "
 	selectSet := 1
 	whereSet := 1<<1
 	fromSet := 1<<2
 	newSet := 1<<3
-	thisTest := newSet //| selectSet | fromSet | whereSet
-	_,_,_,_,_,_,_ = f1, f2, f5, selectSet, whereSet, fromSet, newSet
+	joinSet := 1<<4
+	thisTest := newSet | selectSet | fromSet | whereSet | joinSet
+	_,_,_,_,_,_,_,_,_ = f1, f2, f5, f3, f4, selectSet, whereSet, fromSet, newSet
 
 	var tests = []Test {
 		Test{"select top 20 from"+f1, "select all", true, selectSet},
@@ -153,9 +158,8 @@ func TestAll(t *testing.T){
 		Test{`select top 20 c5 from`+f1+`where c5 in (NJ, VA, FL, 78)`,"expression in list",true,whereSet},
 		Test{`select top 20 c3 from`+f1+`where c3 in (8479417420, 7813745231, 7536344478)`,"expression in int list",true,whereSet},
 		Test{`select top 20 c5 from`+f1+`where c5 in (8479417420, 7813745231, 7536344478)`,"string expression in int list",true,whereSet},
-		Test{`select top 10 c8 from`+f3+`pt left join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,newSet},
-		Test{`select top 10 c8 from`+f3+`pt join`+f4+`ps on pt.c8 = ps.c9 and ps.c4 = pt.c12`,"join test",true,newSet},
-		Test{`select top 20 distinct hidden st.c1, * from`+f3+`pt join '/home/dave/Documents/work/state.csv' st on pt.c3 = st.c2 where st.c1 >= 3`,"join test",true,newSet},
+		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW and c.AFG=l.ABW`,"bad join",false,joinSet},
+		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW`,"good join",true,joinSet},
 	}
 
 	for _,t := range tests {

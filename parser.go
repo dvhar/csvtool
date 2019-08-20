@@ -420,8 +420,6 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 
 //tok1 is logop
 //tok2 is negation
-//tok3 will be array for join file 1
-//tok4 will be array for join file 2
 //node1 is predicate comparison
 //node2 is next predicates node
 func parsePredicates(q* QuerySpecs) (*Node,error) {
@@ -438,11 +436,34 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 	}
 	return n, err
 }
+//more strict version of parsePredicates for joins
+func parseJoinPredicates(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_PREDICATES}
+	var err error
+	n.tok2 = 0
+	n.node1,err = parseJoinPredCompare(q)
+	if err != nil { return n,err }
+	if (q.Tok().id & LOGOP) != 0 {
+		return n,errors.New("Multiple comparisons per join-file not implemented yet")
+	}
+	return n, err
+}
+//more strict version of parsePredCompare for joins
+func parseJoinPredCompare(q* QuerySpecs) (*Node,error) {
+	n := &Node{label:N_PREDCOMP}
+	var err error
+	n.node1, err = parseExprAdd(q)
+	if err != nil { return n,err }
+	if q.Tok().id != SP_EQ { return n,errors.New("Expected = operator. Found: "+q.Tok().val) }
+	q.NextTok()
+	n.node2, err = parseExprAdd(q)
+	return n, err
+}
 
 //tok1 is [relop, paren] for comparison or more predicates
 //tok2 is negation
 //tok3 will be independant type
-//tok4 will be [1,2] which which expr to add to array
+//tok4 will be join file key
 //tok5 will be join struct
 //node1 is [expr, predicates]
 //node2 is second expr
@@ -613,7 +634,8 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	if _,ok:=q.files[t.val];!ok { return n,errors.New("Could not open file "+n.tok3.(string)) }
 	if q.NextTok().Lower() != "on" { return n,errors.New("Expected 'on'. Found: "+q.Tok().val) }
 	q.NextTok()
-	n.node1, err = parsePredicates(q)
+	n.node1, err = parseJoinPredicates(q)
+	if err != nil { return n,err }
 	n.node2, err = parseJoin(q)
 	return n, err
 }

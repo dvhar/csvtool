@@ -248,6 +248,7 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 //join query
 func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
+	treePrint(q.tree,0)
 	stop = 0
 	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2)
@@ -282,6 +283,7 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 	}
 	//left join when no match
 	if !joinFound && nn.tok1.(int) == 1 {
+		if jreader.fromRow == nil { jreader.fromRow = make([]string, q.files[jf.jfile].width) }
 		for k,_ := range jreader.fromRow { jreader.fromRow[k] = "" }
 		if joinNextFile(q,res,nn.node2) { return true }
 	}
@@ -295,11 +297,10 @@ func scanJoinFiles(q *QuerySpecs, n *Node) {
 	if n.label == N_PREDCOMP {
 		reader := q.files[n.tok5.(JoinFinder).jfile].reader
 		jf := n.tok5.(JoinFinder)
-		onExpr := jf.joinNode
 		for {
 			_,err = reader.Read()
 			if err != nil {break}
-			_,onValue := execExpression(q, onExpr)
+			_,onValue := execExpression(q, jf.joinNode)
 			reader.SavePosTo(onValue, &jf.arr)
 		}
 		jf.Sort()

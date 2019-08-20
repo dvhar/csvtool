@@ -542,7 +542,7 @@ func joinExprFinder(q* QuerySpecs, n* Node, jfile string) string { //returns key
 			if jfile == f2 { jf.joinNode = n.node2; jf.baseNode = n.node1 }
 			n.tok5 = jf
 		default:
-			s := make([]string,5)
+			var s [5]string
 			s[0] = joinExprFinder(q, n.node1, jfile)
 			s[1] = joinExprFinder(q, n.node2, jfile)
 			s[2] = joinExprFinder(q, n.node3, jfile)
