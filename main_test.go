@@ -38,7 +38,7 @@ func TestAll(t *testing.T){
 	fromSet := 1<<2
 	newSet := 1<<3
 	joinSet := 1<<4
-	thisTest := newSet | selectSet | fromSet | whereSet | joinSet
+	thisTest := /* newSet | selectSet | fromSet | whereSet | */ joinSet
 	_,_,_,_,_,_,_,_,_ = f1, f2, f5, f3, f4, selectSet, whereSet, fromSet, newSet
 
 	var tests = []Test {
@@ -158,8 +158,9 @@ func TestAll(t *testing.T){
 		Test{`select top 20 c5 from`+f1+`where c5 in (NJ, VA, FL, 78)`,"expression in list",true,whereSet},
 		Test{`select top 20 c3 from`+f1+`where c3 in (8479417420, 7813745231, 7536344478)`,"expression in int list",true,whereSet},
 		Test{`select top 20 c5 from`+f1+`where c5 in (8479417420, 7813745231, 7536344478)`,"string expression in int list",true,whereSet},
-		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW and c.AFG=l.ABW`,"bad join",false,joinSet},
-		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW`,"good join",true,joinSet},
+		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW and c.AFG=l.ABW`,"bad join - too many predicates",false,joinSet},
+		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW+c.AFG`,"bad join - mixed files",false,joinSet},
+		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG+dog=r.ABW+dog`,"good join",true,joinSet},
 	}
 
 	for _,t := range tests {

@@ -92,7 +92,8 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	//process 'from' section
 	_,_,_,err = typeCheck(n.node2)
 	if err != nil { return n,err }
-	joinExprFinder(q, n.node2, "")
+	_,err = joinExprFinder(q, n.node2, "")
+	if err != nil { return n,err }
 	branchShortener(q, n.node2)
 
 	//process 'where' section
@@ -360,23 +361,25 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 			value = tok.val
 			fdata = q.files["_f1"]
 		}
-		n.tok5 = fdata
 		//try column number
 		if num,er := Atoi(value); q.intColumn && !tok.quoted && er == nil {
 			if num<1 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
 			n.tok1 = num-1
 			n.tok2 = 1
 			n.tok3 = fdata.types[num-1]
+			n.tok5 = fdata
 		} else if !tok.quoted && cInt.MatchString(value) {
 			num,_ := Atoi(value[1:])
 			if num<1 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
 			n.tok1 = num - 1
 			n.tok2 = 1
 			n.tok3 = fdata.types[num-1]
+			n.tok5 = fdata
 		//try column name
 		} else if n.tok1, err = getColumnIdx(fdata.names, value); err == nil {
 			n.tok2 = 1
 			n.tok3 = fdata.types[n.tok1.(int)]
+			n.tok5 = fdata
 		//else must be literal
 		} else {
 			err = nil

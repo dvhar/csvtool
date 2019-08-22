@@ -248,7 +248,6 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 //join query
 func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
-	treePrint(q.tree,0)
 	stop = 0
 	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2)

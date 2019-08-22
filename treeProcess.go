@@ -216,7 +216,12 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		_, thisType, l1, err := typeCheck(n.node2)
 		return n.label, thisType, l1, err
 
+	//explicit rules for each node so no default
+	case N_JOIN:
+		typeCheck(n.node2)
+		fallthrough
 	case N_SELECT: fallthrough
+	case N_FROM: fallthrough
 	case N_GROUPBY: return typeCheck(n.node1)
 	}
 	return 0,0,false,nil
@@ -525,32 +530,56 @@ func aggregateCombo(a1,a2,l1,l2 bool) error {
 }
 
 //prepare join subtree
-func joinExprFinder(q* QuerySpecs, n* Node, jfile string) string { //returns key of file referenced by expression
-	if n == nil { return "" }
+func joinExprFinder(q* QuerySpecs, n* Node, jfile string) (string,error) { //returns key of file referenced by expression, err
+	if n == nil { return "",nil }
 	switch n.label {
-		case N_VALUE: if n.tok5 != nil { return "_f"+Sprint(n.tok5.(*FileData).id) }
+		case N_VALUE:
+			if n.tok5 != nil {
+				return "_f"+Sprint(n.tok5.(*FileData).id), nil
+			}
 		case N_JOIN:
-			joinExprFinder(q, n.node1, q.files[n.tok4.(string)].key)
-			joinExprFinder(q, n.node2, "")
+			_,err := joinExprFinder(q, n.node1, q.files[n.tok4.(string)].key)
+			if err != nil { return "",err }
+			_,err = joinExprFinder(q, n.node2, "")
+			if err != nil { return "",err }
+			return "",nil
 		case N_PREDCOMP:
 			var jf JoinFinder
 			jf.arr = make([]ValPos,0)
 			jf.jfile = jfile
-			f1 := joinExprFinder(q, n.node1, jfile)
-			f2 := joinExprFinder(q, n.node2, jfile)
+			f1,err := joinExprFinder(q, n.node1, jfile)
+			if err != nil { return "",err }
+			f2,err := joinExprFinder(q, n.node2, jfile)
+			if err != nil { return "",err }
+			if f1 == "" || f2 == "" { return "", errors.New("Join condition must reference one file on each side of '='") }
 			if jfile == f1 { jf.joinNode = n.node1; jf.baseNode = n.node2 }
 			if jfile == f2 { jf.joinNode = n.node2; jf.baseNode = n.node1 }
 			n.tok5 = jf
+			enforceType(n.node1, n.tok3.(int))
+			enforceType(n.node2, n.tok3.(int))
+			return "",nil
 		default:
 			var s [5]string
-			s[0] = joinExprFinder(q, n.node1, jfile)
-			s[1] = joinExprFinder(q, n.node2, jfile)
-			s[2] = joinExprFinder(q, n.node3, jfile)
-			s[3] = joinExprFinder(q, n.node4, jfile)
-			s[4] = joinExprFinder(q, n.node5, jfile)
-			for _,v := range s { if v != "" { return v } }
+			var e [5]error
+			s[0], e[0] = joinExprFinder(q, n.node1, jfile)
+			s[1], e[1] = joinExprFinder(q, n.node2, jfile)
+			s[2], e[2] = joinExprFinder(q, n.node3, jfile)
+			s[3], e[3] = joinExprFinder(q, n.node4, jfile)
+			s[4], e[4] = joinExprFinder(q, n.node5, jfile)
+			lastFile := ""
+			for k,v := range s {
+				if e[k] != nil { return "", e[k] }
+				if v != "" {
+					if lastFile == "" {
+						lastFile = v
+					} else if lastFile != v {
+						return "", errors.New("Join condition must reference only one file on each side of '='")
+					}
+				}
+			}
+			return lastFile,nil
 	}
-	return ""
+	return "",nil
 }
 
 //print parse tree for debuggging
