@@ -82,7 +82,7 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
 
 //webserver
 func httpserver(serverUrl string, done chan bool) {
-	println("Starting server")
+	println("Starting server at "+serverUrl)
 	http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
 	http.HandleFunc("/query/", queryHandler())
 	http.HandleFunc("/info/", infoHandler())

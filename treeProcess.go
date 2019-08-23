@@ -551,7 +551,7 @@ func joinExprFinder(q* QuerySpecs, n* Node, jfile string) (string,error) { //ret
 			if err != nil { return "",err }
 			f2,err := joinExprFinder(q, n.node2, jfile)
 			if err != nil { return "",err }
-			if f1 == "" || f2 == "" { return "", errors.New("Join condition must reference one file on each side of '='") }
+			if f1=="" || f2=="" || f1==f2 { return "", errors.New("Join condition must reference one different file on each side of '='") }
 			if jfile == f1 { jf.joinNode = n.node1; jf.baseNode = n.node2 }
 			if jfile == f2 { jf.joinNode = n.node2; jf.baseNode = n.node1 }
 			n.tok5 = jf

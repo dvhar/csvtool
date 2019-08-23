@@ -122,7 +122,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 func parseSelect(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
-	if q.Tok().val == "c" { q.intColumn = true; q.NextTok() }
+	if q.Tok().Lower() == "c" { q.intColumn = true; q.NextTok() }
 	if q.Tok().id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)
@@ -180,7 +180,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case KW_DISTINCT:
 		n.tok3 = 1
 		q.NextTok()
-		if q.Tok().val == "hidden" && !q.Tok().quoted { hidden = true; n.tok3=3; q.NextTok() }
+		if q.Tok().Lower() == "hidden" && !q.Tok().quoted { hidden = true; n.tok3=3; q.NextTok() }
 		fallthrough
 	//expression
 	case KW_CASE:     fallthrough
@@ -339,7 +339,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 	var err error
 	tok := q.Tok()
 	//see if it's a function
-	if fn,ok := functionMap[tok.val]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
+	if fn,ok := functionMap[tok.Lower()]; ok && !tok.quoted && q.PeekTok().id==SP_LPAREN {
 		n.tok1 = fn
 		n.tok2 = 2
 		n.node1, err = parseFunction(q)
@@ -584,7 +584,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
 		fallthrough
 	case WORD:
-		if _,ok:=joinMap[t.val];ok { return n,errors.New("Join requires file aliases. Found: "+t.val) }
+		if _,ok:=joinMap[t.Lower()];ok { return n,errors.New("Join requires file aliases. Found: "+t.val) }
 		n.tok2 = t.val
 		q.NextTok()
 	}
@@ -684,7 +684,7 @@ func parseOrder(q* QuerySpecs) (*Node,error) {
 func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
 	var err error
-	n.tok1 = functionMap[q.Tok().val]
+	n.tok1 = functionMap[q.Tok().Lower()]
 	q.NextTok()
 	//count(*)
 	if q.NextTok().id == SP_STAR && n.tok1.(int) == FN_COUNT {
@@ -697,7 +697,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 		q.NextTok()
 	//other functions
 	} else {
-		if q.Tok().val == "distinct" {
+		if q.Tok().Lower() == "distinct" {
 			n.tok3 = bt.New(200)
 			q.NextTok()
 		}
@@ -715,7 +715,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 func parseGroupby(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_GROUPBY}
 	var err error
-	if !(q.Tok().val == "group" && q.PeekTok().val == "by") { return nil,nil }
+	if !(q.Tok().Lower() == "group" && q.PeekTok().Lower() == "by") { return nil,nil }
 	q.NextTok()
 	q.NextTok()
 	n.node1, err = parseExpressionList(q,false)
