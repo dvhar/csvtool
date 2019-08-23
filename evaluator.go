@@ -300,7 +300,9 @@ func scanJoinFiles(q *QuerySpecs, n *Node) {
 			_,err = reader.Read()
 			if err != nil {break}
 			_,onValue := execExpression(q, jf.joinNode)
-			reader.SavePosTo(onValue, &jf.arr)
+			if _,ok := onValue.(null); !ok {
+				reader.SavePosTo(onValue, &jf.arr)
+			}
 		}
 		jf.Sort()
 		reader.PrepareReRead()
