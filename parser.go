@@ -352,7 +352,7 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		var fdata *FileData
 		var ok bool
 		var value string
-		if len(S)==2 && q.aliases != nil {
+		if len(S)==2 && q.aliases {
 			alias := strings.TrimRight(S[0],".")
 			fdata,ok = q.files[alias]
 			value = S[1]
@@ -593,6 +593,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 }
 
 //tok1 is join details (left/outer or inner)
+//tok2 is [0,1] for small/big join file
 //tok3 is filepath
 //tok4 is alias
 //node1 is join condition (predicates)
@@ -605,6 +606,8 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	case "inner":
 	case "outer":
 	case "join":
+	case "sjoin":
+	case "bjoin":
 	default: return nil,nil
 	}
 	q.joining = true
@@ -616,11 +619,21 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	case "inner": n.tok1 = 0; q.NextTok();
 	case "outer": n.tok1 = 1; q.NextTok();
 	}
-	if q.Tok().Lower() != "join" { return n,errors.New("Expected 'join'. Found:"+q.Tok().val) }
+	sizeOverride := false
+	switch q.Tok().Lower() {
+		case "join":  n.tok2 = 0
+		case "sjoin": n.tok2 = 0; sizeOverride = true
+		case "bjoin": n.tok2 = 1; sizeOverride = true
+		default: return n,errors.New("Expected 'join'. Found:"+q.Tok().val) 
+	}
 	//file path
 	n.tok3 = q.NextTok().val
-	_,err = os.Stat(Sprint(n.tok3))
+	finfo, err := os.Stat(Sprint(n.tok3))
 	if err != nil { return n,err }
+	//see if file is 100+ megabytes
+	if !sizeOverride && finfo.Size() > 100000000 {
+		n.tok2 = 1
+	}
 	if err=eosError(q);err != nil { return n,err }
 	//alias
 	t := q.NextTok()

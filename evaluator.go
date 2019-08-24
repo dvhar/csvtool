@@ -28,10 +28,6 @@ type LineReader struct {
 	byteReader *bytes.Reader
 	fp *os.File
 }
-type ValPos struct {
-	pos int64
-	val Value
-}
 func (l*LineReader) SavePos(value Value) {
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
 }
@@ -250,7 +246,7 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
 	stop = 0
 	reader1 := q.files["_f1"].reader
-	scanJoinFiles(q,q.tree.node2)
+	scanJoinFiles(q,q.tree.node2,false)
 	firstJoin := q.tree.node2.node1
 	for {
 		if stop == 1 { stop = 0;  break }
@@ -274,11 +270,20 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 	jreader := q.files[jf.jfile].reader
 	_,compVal := execExpression(q, jf.baseNode)
 	joinFound := false
-	//process each match
-	for pos := jf.FindNext(compVal); pos != -1 ; pos = jf.FindNext(compVal) {
-		joinFound = true
-		jreader.ReadAtPosition(pos)
-		if joinNextFile(q,res,nn.node2) { return true }
+	//process each match for big file
+	if nn.tok2.(int) == 1 {
+		for pos := jf.FindNextBig(compVal); pos != -1 ; pos = jf.FindNextBig(compVal) {
+			joinFound = true
+			jreader.ReadAtPosition(pos)
+			if joinNextFile(q,res,nn.node2) { return true }
+		}
+	//process each match for small file
+	} else {
+		for row,err := jf.FindNextSmall(compVal); err==nil ; row,err = jf.FindNextSmall(compVal) {
+			joinFound = true
+			jreader.fromRow = row
+			if joinNextFile(q,res,nn.node2) { return true }
+		}
 	}
 	//left join when no match
 	if !joinFound && nn.tok1.(int) == 1 {
@@ -290,26 +295,46 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 }
 
 //scan and sort values from join files
-func scanJoinFiles(q *QuerySpecs, n *Node) {
+func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 	if n == nil { return }
 	var err error
+	if n.label == N_JOIN {
+		if n.tok2.(int) == 1 {
+			big = true
+		} else {
+			big = false
+		}
+	}
 	if n.label == N_PREDCOMP {
 		reader := q.files[n.tok5.(JoinFinder).jfile].reader
 		jf := n.tok5.(JoinFinder)
-		for {
-			_,err = reader.Read()
-			if err != nil {break}
-			_,onValue := execExpression(q, jf.joinNode)
-			if _,ok := onValue.(null); !ok {
-				reader.SavePosTo(onValue, &jf.arr)
+		if big {
+			for {
+				_,err = reader.Read()
+				if err != nil {break}
+				_,onValue := execExpression(q, jf.joinNode)
+				if _,ok := onValue.(null); !ok {
+					reader.SavePosTo(onValue, &jf.posArr)
+				}
+			}
+		} else {
+			for {
+				_,err = reader.Read()
+				if err != nil {break}
+				_,onValue := execExpression(q, jf.joinNode)
+				if _,ok := onValue.(null); !ok {
+					newRow := make([]string, len(reader.fromRow))
+					copy(newRow, reader.fromRow)
+					jf.rowArr = append(jf.rowArr, ValRow{newRow, onValue})
+				}
 			}
 		}
 		jf.Sort()
 		reader.PrepareReRead()
 		n.tok5 = jf
 	} else {
-		scanJoinFiles(q, n.node1)
-		scanJoinFiles(q, n.node2)
+		scanJoinFiles(q, n.node1, big)
+		scanJoinFiles(q, n.node2, big)
 	}
 	return
 }

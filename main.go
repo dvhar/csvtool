@@ -33,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	readStdin()
-	if *flags.command == "" { println("version 0.501 - 8/23/2019") }
+	if *flags.command == "" { println("version 0.51 - 8/24/2019") }
 
 	messager = make(chan string)
 	fileclick = make(chan string)

@@ -206,6 +206,8 @@ var joinMap = map[string]int {
 	"left" :   KW_LEFT,
 	"right" :  KW_RIGHT,
 	"join" :   KW_JOIN,
+	"bjoin" :   KW_JOIN,
+	"sjoin" :   KW_JOIN,
 }
 var specialMap = map[string]int {
 	"=" :  SP_EQ,

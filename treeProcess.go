@@ -545,7 +545,7 @@ func joinExprFinder(q* QuerySpecs, n* Node, jfile string) (string,error) { //ret
 			return "",nil
 		case N_PREDCOMP:
 			var jf JoinFinder
-			jf.arr = make([]ValPos,0)
+			jf.posArr = make([]ValPos,0)
 			jf.jfile = jfile
 			f1,err := joinExprFinder(q, n.node1, jfile)
 			if err != nil { return "",err }

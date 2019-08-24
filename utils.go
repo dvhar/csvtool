@@ -22,7 +22,7 @@ type QuerySpecs struct {
 	colSpec Columns
 	QueryString string
 	tokArray []Token
-	aliases []string
+	aliases bool
 	joining bool
 	tokIdx int
 	quantityLimit int
@@ -311,15 +311,13 @@ func openFiles(q *QuerySpecs) error {
 			file.key = key
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
-			if _,ok:=joinMap[q.PeekTok().val];!ok && q.NextTok().id==WORD {
+			if _,ok:=joinMap[q.PeekTok().Lower()];!ok && q.NextTok().id==WORD {
 				q.files[q.Tok().val] = file
-				if q.aliases == nil { q.aliases = make([]string, 0) }
-				q.aliases = append(q.aliases,  q.Tok().val)
+				q.aliases = true
 			}
-			if _,ok:=joinMap[q.PeekTok().val];!ok && q.Tok().Lower()=="as" && q.NextTok().id==WORD {
+			if _,ok:=joinMap[q.PeekTok().Lower()];!ok && q.Tok().Lower()=="as" && q.NextTok().id==WORD {
 				q.files[q.Tok().val] = file
-				if q.aliases == nil { q.aliases = make([]string, 0) }
-				q.aliases = append(q.aliases,  q.Tok().val)
+				q.aliases = true
 			}
 			if err = inferTypes(q, key); err != nil {return err}
 			var reader LineReader
@@ -449,45 +447,87 @@ func eosError(q *QuerySpecs) error {
 	return nil
 }
 
+type ValPos struct {
+	pos int64
+	val Value
+}
+type ValRow struct {
+	row []string
+	val Value
+}
+
 type JoinFinder struct {
 	jfile string
 	joinNode *Node
 	baseNode *Node
-	arr []ValPos
+	posArr []ValPos //store file position for big file
+	rowArr []ValRow //store whole rows for small file
 	i int
 }
-//return -1 if no more matches
-func (jf *JoinFinder) FindNext(val Value) int64 {
+//find matching file position for big files
+func (jf *JoinFinder) FindNextBig(val Value) int64 {
 	//use binary search for leftmost instance
-	r := len(jf.arr)-1
+	r := len(jf.posArr)-1
 	if jf.i == -1 {
 		l := 0
 		var m int
 		for ;l<r; {
 			m = (l+r)/2
-			if jf.arr[m].val.Less(val) {
+			if jf.posArr[m].val.Less(val) {
 				l = m + 1
 			} else {
 				r = m
 			}
 		}
-		if jf.arr[l].val.Equal(val) {
+		if jf.posArr[l].val.Equal(val) {
 			jf.i = l
-			return jf.arr[l].pos
+			return jf.posArr[l].pos
 		}
 	//check right neighbors for more matches
 	} else {
 		if jf.i < r-1 {
 			jf.i++
-			if jf.arr[jf.i].val.Equal(val) {
-				return jf.arr[jf.i].pos
+			if jf.posArr[jf.i].val.Equal(val) {
+				return jf.posArr[jf.i].pos
 			}
 		}
 	}
 	jf.i = -1 //set i to -1 when done so next search is binary
 	return -1
 }
+//find matching row in memory for small files
+func (jf *JoinFinder) FindNextSmall(val Value) ([]string,error) {
+	//use binary search for leftmost instance
+	r := len(jf.rowArr)-1
+	if jf.i == -1 {
+		l := 0
+		var m int
+		for ;l<r; {
+			m = (l+r)/2
+			if jf.rowArr[m].val.Less(val) {
+				l = m + 1
+			} else {
+				r = m
+			}
+		}
+		if jf.rowArr[l].val.Equal(val) {
+			jf.i = l
+			return jf.rowArr[l].row, nil
+		}
+	//check right neighbors for more matches
+	} else {
+		if jf.i < r-1 {
+			jf.i++
+			if jf.rowArr[jf.i].val.Equal(val) {
+				return jf.rowArr[jf.i].row, nil
+			}
+		}
+	}
+	jf.i = -1 //set i to -1 when done so next search is binary
+	return nil, errors.New("none")
+}
 func (jf *JoinFinder) Sort() {
-	sort.Slice(jf.arr, func(i, j int) bool { return jf.arr[j].val.Greater(jf.arr[i].val) })
+	sort.Slice(jf.posArr, func(i, j int) bool { return jf.posArr[j].val.Greater(jf.posArr[i].val) })
+	sort.Slice(jf.rowArr, func(i, j int) bool { return jf.rowArr[j].val.Greater(jf.rowArr[i].val) })
 	jf.i = -1
 }
