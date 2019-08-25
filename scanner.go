@@ -204,7 +204,6 @@ var joinMap = map[string]int {
 	"inner" :  KW_INNER,
 	"outer" :  KW_OUTER,
 	"left" :   KW_LEFT,
-	"right" :  KW_RIGHT,
 	"join" :   KW_JOIN,
 	"bjoin" :   KW_JOIN,
 	"sjoin" :   KW_JOIN,

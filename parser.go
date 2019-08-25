@@ -714,7 +714,11 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 			n.tok3 = bt.New(200)
 			q.NextTok()
 		}
-		n.node1, err = parseExprAdd(q)
+		if n.tok1.(int) == FN_COALESCE {
+			n.node1, err = parseExpressionList(q, true)
+		} else {
+			n.node1, err = parseExprAdd(q)
+		}
 	}
 	if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
 	q.NextTok()

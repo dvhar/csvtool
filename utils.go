@@ -431,12 +431,12 @@ type Flags struct {
 var Testing bool
 func (f Flags) gui() bool {
     if f.command == nil { return false }
-    return *f.command == "" || Testing == false
+    return *f.command == "" && Testing == false
 }
 
 func message(s string) {
 	if flags.gui() {
-		messager <- s
+		go func(){ messager <- s }()
 	} else {
 		print("\r"+s)
 	}

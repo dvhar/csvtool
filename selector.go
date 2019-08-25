@@ -112,9 +112,19 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 		}
 
 		//values have not been aggregated yet
-		t1,v1 := execExpression(q, n.node1)
-		//treePrint(n.node1,0)
-		//Println("just evaluated",v1)
+		var t1 int
+		var v1 Value
+
+		switch n.tok1.(int) {
+		case FN_COALESCE:
+			for nn:=n.node1; nn!=nil; nn=nn.node2 {
+				t1,v1 = execExpression(q, nn.node1)
+				if _,ok := v1.(null); !ok { break }
+			}
+		default:
+			t1,v1 = execExpression(q, n.node1)
+		}
+
 		if _,ok:=v1.(null);!ok {
 			//non-aggregate function
 			if n.tok2==nil {
@@ -161,8 +171,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 				}
 			}
 		//don't let any values stay nil
-		} else {
-			index := n.tok2.(int)
+		} else if index,ok := n.tok2.(int); ok {
 			if q.toRow[index] == nil { q.toRow[index] = null("") }
 		}
 		return t1,v1
