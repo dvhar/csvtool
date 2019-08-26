@@ -122,6 +122,10 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 			case FN_MDAY:  fallthrough
 			case FN_WDAY:   fallthrough
 			case FN_HOUR:  t1 = T_INT
+			case FN_ENCRYPT:   fallthrough
+			case FN_DECRYPT:
+				enforceType(n.node1, t1)
+				fallthrough
 			case FN_MONTHNAME: fallthrough
 			case FN_WDAYNAME: t1 = T_STRING
 			}
@@ -317,6 +321,8 @@ func enforceType(n *Node, t int) error {
 
 	case N_FUNCTION:
 		switch n.tok1.(int) {
+		case FN_ENCRYPT:
+		case FN_DECRYPT:
 		case FN_YEAR:      fallthrough
 		case FN_MONTH:     fallthrough
 		case FN_WEEK:      fallthrough

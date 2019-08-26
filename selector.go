@@ -6,6 +6,8 @@ import (
 	. "fmt"
 	//r "reflect"
 	bt "github.com/google/btree"
+	"crypto/rc4"
+	"encoding/base64"
 )
 var _ = Println
 
@@ -121,6 +123,18 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 				t1,v1 = execExpression(q, nn.node1)
 				if _,ok := v1.(null); !ok { break }
 			}
+		case FN_ENCRYPT:
+			t1,v1 = execExpression(q, n.node1)
+			plaintext := []byte(v1.String())
+			ciphertext := make([]byte, len(plaintext))
+			n.tok3.(*rc4.Cipher).XORKeyStream(ciphertext, plaintext)
+			v1 = text(base64.StdEncoding.EncodeToString(ciphertext))
+		case FN_DECRYPT:
+			t1,v1 = execExpression(q, n.node1)
+			ciphertext, _ := base64.StdEncoding.DecodeString(v1.String())
+			plaintext := make([]byte, len(ciphertext))
+			n.tok3.(*rc4.Cipher).XORKeyStream(plaintext, ciphertext)
+			v1 = text(plaintext)
 		default:
 			t1,v1 = execExpression(q, n.node1)
 		}
@@ -147,10 +161,11 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 				if q.toRow[index] == nil { q.toRow[index] = null("") }
 				if _,ok := q.toRow[index].(null); ok {
 					switch n.tok1.(int) {
-					case FN_COUNT: q.toRow[index] = float(1); if n.tok3!=nil { n.tok3.(*bt.BTree).ReplaceOrInsert(v1) }
+					case FN_COUNT: q.toRow[index] = float(1)
 					case FN_AVG:   q.toRow[index] = AverageVal{v1, 1}
 					default: q.toRow[index] = v1
 					}
+					if n.tok3!=nil { n.tok3.(*bt.BTree).ReplaceOrInsert(v1) }
 				//update target with new value
 				} else if n.tok3 == nil || n.tok3.(*bt.BTree).ReplaceOrInsert(v1) == nil {
 					switch n.tok1.(int) {

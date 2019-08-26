@@ -67,6 +67,8 @@ const (
 	FN_YDAY =     KEYWORD|iota
 	FN_MDAY =     KEYWORD|iota
 	FN_HOUR =     KEYWORD|iota
+	FN_ENCRYPT =  KEYWORD|iota
+	FN_DECRYPT =  KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
 	SPECIAL =      FINAL|SPECIALBIT
@@ -199,6 +201,8 @@ var functionMap = map[string]int {
 	"dayofmonth":FN_MDAY,
 	"dayofweek": FN_WDAY,
 	"hour" :     FN_HOUR,
+	"encrypt" :  FN_ENCRYPT,
+	"decrypt" :  FN_DECRYPT,
 }
 var joinMap = map[string]int {
 	"inner" :  KW_INNER,

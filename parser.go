@@ -31,6 +31,7 @@
 package main
 import (
 	"errors"
+	"crypto/rc4"
 	"regexp"
 	"strings"
 	"os"
@@ -692,7 +693,8 @@ func parseOrder(q* QuerySpecs) (*Node,error) {
 
 //tok1 is function id
 //tok2 will be intermediate index if aggragate
-//tok3 is distinct btree for count
+//tok3 is distinct btree for count, cipher for encryption
+//tok4 tells type enforcer to skip param
 //node1 is expression in parens
 func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
@@ -710,13 +712,21 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 		q.NextTok()
 	//other functions
 	} else {
-		if q.Tok().Lower() == "distinct" {
+		if (n.tok1.(int) & AGG_BIT) != 0 && q.Tok().Lower() == "distinct" {
 			n.tok3 = bt.New(200)
 			q.NextTok()
 		}
-		if n.tok1.(int) == FN_COALESCE {
+		switch n.tok1.(int) {
+		case FN_COALESCE:
 			n.node1, err = parseExpressionList(q, true)
-		} else {
+		case FN_ENCRYPT: fallthrough
+		case FN_DECRYPT:
+			n.node1, err = parseExprAdd(q)
+			if q.Tok().id != SP_COMMA { return n,errors.New("encrypt function has (value, password) parameters. No comma found.") }
+			n.tok3, err = rc4.NewCipher([]byte(q.NextTok().val))
+			if err != nil { return n,err }
+			q.NextTok()
+		default:
 			n.node1, err = parseExprAdd(q)
 		}
 	}
