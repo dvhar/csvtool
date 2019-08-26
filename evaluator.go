@@ -1,73 +1,13 @@
 package main
 import (
 	. "fmt"
-	"encoding/csv"
-	"os"
 	. "strconv"
 	"sort"
-	"io"
-	"bytes"
 	bt "github.com/google/btree"
 )
 
 var stop int
 var active bool
-
-//Random access csv reader
-type LineReader struct {
-	valPositions []ValPos
-	lineBytes []byte
-	fromRow []string
-	limit int
-	maxLineSize int
-	pos int64
-	prevPos int64
-	lineBuffer bytes.Buffer
-	tee io.Reader
-	csvReader *csv.Reader
-	byteReader *bytes.Reader
-	fp *os.File
-}
-func (l*LineReader) SavePos(value Value) {
-	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
-}
-func (l*LineReader) SavePosTo(value Value, arr *[]ValPos) {
-	*arr = append(*arr, ValPos{l.prevPos, value})
-}
-func (l*LineReader) PrepareReRead() {
-	l.lineBytes = make([]byte, l.maxLineSize)
-	l.byteReader = bytes.NewReader(l.lineBytes)
-}
-func (l*LineReader) Init(q *QuerySpecs, f string) {
-	l.fp,_ = os.Open(q.files[f].fname)
-	l.valPositions = make([]ValPos,0)
-	l.tee = io.TeeReader(l.fp, &l.lineBuffer)
-	l.csvReader = csv.NewReader(l.tee)
-	if q.quantityLimit == 0 { l.limit = 1<<62 } else { l.limit = q.quantityLimit }
-	l.Read()
-}
-
-func (l*LineReader) Read() ([]string,error) {
-	var err error
-	l.fromRow, err = l.csvReader.Read()
-	l.lineBytes, _ = l.lineBuffer.ReadBytes('\n')
-	size := len(l.lineBytes)
-	if l.maxLineSize < size { l.maxLineSize = size }
-	l.prevPos = l.pos
-	l.pos += int64(size)
-	return l.fromRow, err
-}
-func (l*LineReader) ReadAtIndex(lineNo int) ([]string,error) {
-	return l.ReadAtPosition(l.valPositions[lineNo].pos)
-}
-func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
-	l.fp.ReadAt(l.lineBytes, pos)
-	l.byteReader.Seek(0,0)
-	l.csvReader = csv.NewReader(l.byteReader)
-	var err error
-	l.fromRow, err = l.csvReader.Read()
-	return l.fromRow, err
-}
 
 //run csv query
 func CsvQuery(q *QuerySpecs) (SingleQueryResult, error) {

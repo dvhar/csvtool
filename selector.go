@@ -152,21 +152,13 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 					default: q.toRow[index] = v1
 					}
 				//update target with new value
-				} else {
+				} else if n.tok3 == nil || n.tok3.(*bt.BTree).ReplaceOrInsert(v1) == nil {
 					switch n.tok1.(int) {
 					case FN_AVG:   fallthrough
 					case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v1)
 					case FN_MIN:   if q.toRow[index].Greater(v1) { q.toRow[index] = v1 }
 					case FN_MAX:   if q.toRow[index].Less(v1) { q.toRow[index] = v1 }
-					case FN_COUNT:
-						//count all non-null values
-						if n.tok3 == nil {
-							q.toRow[index] = q.toRow[index].Add(float(1))
-						//count distinct values
-						} else if n.tok3.(*bt.BTree).ReplaceOrInsert(v1) == nil {
-							q.toRow[index] = q.toRow[index].Add(float(1))
-						} else {
-						}
+					case FN_COUNT: q.toRow[index] = q.toRow[index].Add(float(1))
 					}
 				}
 			}
