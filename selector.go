@@ -7,6 +7,8 @@ import (
 	//r "reflect"
 	bt "github.com/google/btree"
 	"crypto/rc4"
+	"crypto/cipher"
+	"crypto/rand"
 	"encoding/base64"
 )
 var _ = Println
@@ -126,14 +128,30 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 		case FN_ENCRYPT:
 			t1,v1 = execExpression(q, n.node1)
 			plaintext := []byte(v1.String())
-			ciphertext := make([]byte, len(plaintext))
-			n.tok3.(*rc4.Cipher).XORKeyStream(ciphertext, plaintext)
+			var ciphertext []byte
+			if n.tok4 == nil {
+				ciphertext = make([]byte, len(plaintext))
+				n.tok3.(*rc4.Cipher).XORKeyStream(ciphertext, plaintext)
+			} else {
+				nonceSize := n.tok3.(cipher.AEAD).NonceSize()
+				nonce := make([]byte, nonceSize)
+				rand.Read(nonce)
+				ciphertext = n.tok3.(cipher.AEAD).Seal(nonce, nonce, plaintext, nil)
+			}
 			v1 = text(base64.StdEncoding.EncodeToString(ciphertext))
 		case FN_DECRYPT:
 			t1,v1 = execExpression(q, n.node1)
 			ciphertext, _ := base64.StdEncoding.DecodeString(v1.String())
-			plaintext := make([]byte, len(ciphertext))
-			n.tok3.(*rc4.Cipher).XORKeyStream(plaintext, ciphertext)
+			var plaintext []byte
+			if n.tok4 == nil {
+				plaintext = make([]byte, len(ciphertext))
+				n.tok3.(*rc4.Cipher).XORKeyStream(plaintext, ciphertext)
+			} else {
+				nonceSize := n.tok3.(cipher.AEAD).NonceSize()
+				if len(ciphertext) < nonceSize { return t1,null("") }
+				nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+				plaintext, _ = n.tok3.(cipher.AEAD).Open(nil, nonce, ciphertext, nil)
+			}
 			v1 = text(plaintext)
 		default:
 			t1,v1 = execExpression(q, n.node1)

@@ -32,6 +32,9 @@ package main
 import (
 	"errors"
 	"crypto/rc4"
+	"crypto/aes"
+	"crypto/sha256"
+	"crypto/cipher"
 	"regexp"
 	"strings"
 	"os"
@@ -694,7 +697,7 @@ func parseOrder(q* QuerySpecs) (*Node,error) {
 //tok1 is function id
 //tok2 will be intermediate index if aggragate
 //tok3 is distinct btree for count, cipher for encryption
-//tok4 tells type enforcer to skip param
+//tok4 if using aes
 //node1 is expression in parens
 func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
@@ -722,8 +725,21 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 		case FN_ENCRYPT: fallthrough
 		case FN_DECRYPT:
 			n.node1, err = parseExprAdd(q)
-			if q.Tok().id != SP_COMMA { return n,errors.New("encrypt function has (value, password) parameters. No comma found.") }
-			n.tok3, err = rc4.NewCipher([]byte(q.NextTok().val))
+			if q.Tok().id != SP_COMMA { return n,errors.New("encryption function has (value, password, cipher) parameters. No comma found after value.") }
+			pass := sha256.Sum256([]byte(q.NextTok().val))
+			if q.NextTok().id != SP_COMMA { return n,errors.New("encryption function has (value, password, cipher) parameters. No comma found after password.") }
+			method := q.NextTok()
+			switch method.Lower() {
+			case "rc4":
+				n.tok3, err = rc4.NewCipher(pass[:])
+			case "aes":
+				c, _ := aes.NewCipher(pass[:])
+				gcm, _ := cipher.NewGCM(c)
+				n.tok3 = gcm
+				n.tok4 = true
+			default:
+				return n,errors.New("Third parameter to encryption function is aes or rc4")
+			}
 			if err != nil { return n,err }
 			q.NextTok()
 		default:
