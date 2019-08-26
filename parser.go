@@ -31,14 +31,12 @@
 package main
 import (
 	"errors"
-	"crypto/rc4"
 	"crypto/aes"
 	"crypto/sha256"
 	"crypto/cipher"
 	"regexp"
 	"strings"
 	"os"
-	//"path/filepath"
 	. "strconv"
 	. "fmt"
 	bt "github.com/google/btree"
@@ -728,10 +726,9 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 			if q.Tok().id != SP_COMMA { return n,errors.New("encryption function has (value, password, cipher) parameters. No comma found after value.") }
 			pass := sha256.Sum256([]byte(q.NextTok().val))
 			if q.NextTok().id != SP_COMMA { return n,errors.New("encryption function has (value, password, cipher) parameters. No comma found after password.") }
-			method := q.NextTok()
-			switch method.Lower() {
+			switch q.NextTok().Lower() {
 			case "rc4":
-				n.tok3, err = rc4.NewCipher(pass[:])
+				n.tok3 = pass[:]
 			case "aes":
 				c, _ := aes.NewCipher(pass[:])
 				gcm, _ := cipher.NewGCM(c)

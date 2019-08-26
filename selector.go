@@ -129,9 +129,13 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 			t1,v1 = execExpression(q, n.node1)
 			plaintext := []byte(v1.String())
 			var ciphertext []byte
-			if n.tok4 == nil {
-				ciphertext = make([]byte, len(plaintext))
-				n.tok3.(*rc4.Cipher).XORKeyStream(ciphertext, plaintext)
+			if n.tok4 == nil { // rc4 is insecure but could be useful for obfuscation
+				ciphertext = make([]byte, len(plaintext)+2)
+				nonce := n.tok3.([]byte)[:2]
+				rand.Read(nonce)
+				copy(ciphertext[:2], nonce)
+				c, _ := rc4.NewCipher(n.tok3.([]byte))
+				c.XORKeyStream(ciphertext[2:], plaintext)
 			} else {
 				nonceSize := n.tok3.(cipher.AEAD).NonceSize()
 				nonce := make([]byte, nonceSize)
@@ -144,8 +148,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 			ciphertext, _ := base64.StdEncoding.DecodeString(v1.String())
 			var plaintext []byte
 			if n.tok4 == nil {
-				plaintext = make([]byte, len(ciphertext))
-				n.tok3.(*rc4.Cipher).XORKeyStream(plaintext, ciphertext)
+				copy(n.tok3.([]byte)[:2], ciphertext[:2])
+				c, _ := rc4.NewCipher(n.tok3.([]byte))
+				plaintext = make([]byte, len(ciphertext)-2)
+				c.XORKeyStream(plaintext, ciphertext[2:])
 			} else {
 				nonceSize := n.tok3.(cipher.AEAD).NonceSize()
 				if len(ciphertext) < nonceSize { return t1,null("") }
