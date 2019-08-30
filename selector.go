@@ -148,13 +148,14 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 			ciphertext, _ := base64.StdEncoding.DecodeString(v1.String())
 			var plaintext []byte
 			if n.tok4 == nil {
+				if len(ciphertext) < 3 { return t1,null("") }
 				copy(n.tok3.([]byte)[:2], ciphertext[:2])
 				c, _ := rc4.NewCipher(n.tok3.([]byte))
 				plaintext = make([]byte, len(ciphertext)-2)
 				c.XORKeyStream(plaintext, ciphertext[2:])
 			} else {
 				nonceSize := n.tok3.(cipher.AEAD).NonceSize()
-				if len(ciphertext) < nonceSize { return t1,null("") }
+				if len(ciphertext) < nonceSize+1 { return t1,null("") }
 				nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 				plaintext, _ = n.tok3.(cipher.AEAD).Open(nil, nonce, ciphertext, nil)
 			}
