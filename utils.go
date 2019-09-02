@@ -84,6 +84,9 @@ func (l*LineReader) SavePos(value Value) {
 func (l*LineReader) SavePosTo(value Value, arr *[]ValPos) {
 	*arr = append(*arr, ValPos{l.prevPos, value})
 }
+func (l*LineReader) SavePosTo2(value1, value2 Value, arr *[]ValPos2) {
+	*arr = append(*arr, ValPos2{l.prevPos, value1, value2})
+}
 func (l*LineReader) PrepareReRead() {
 	l.lineBytes = make([]byte, l.maxLineSize)
 	l.byteReader = bytes.NewReader(l.lineBytes)
@@ -509,9 +512,19 @@ type ValPos struct {
 	pos int64
 	val Value
 }
+type ValPos2 struct {
+	pos int64
+	val1 Value
+	val2 Value
+}
 type ValRow struct {
 	row []string
 	val Value
+}
+type ValRow2 struct {
+	row []string
+	val1 Value
+	val2 Value
 }
 
 type JoinFinder struct {
@@ -519,6 +532,7 @@ type JoinFinder struct {
 	joinNode *Node
 	baseNode *Node
 	posArr []ValPos //store file position for big file
+	posArr2 []ValPos2 //store file position for big file with 2 comparisons
 	rowArr []ValRow //store whole rows for small file
 	i int
 }

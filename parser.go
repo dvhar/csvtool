@@ -448,8 +448,16 @@ func parseJoinPredicates(q* QuerySpecs) (*Node,error) {
 	n.tok2 = 0
 	n.node1,err = parseJoinPredCompare(q)
 	if err != nil { return n,err }
-	if (q.Tok().id & LOGOP) != 0 {
-		return n,errors.New("Multiple comparisons per join-file not implemented yet")
+	if q.Tok().id == KW_AND {
+		q.NextTok()
+		var comparison *Node
+		comparison, err = parseJoinPredCompare(q)
+		n.node2 = &Node{
+			label: N_PREDICATES,
+			node1: comparison,
+		}
+	} else if (q.Tok().id & LOGOP) != 0 {
+		return n,errors.New("Join conditions support one 'and' operator per join")
 	}
 	return n, err
 }
