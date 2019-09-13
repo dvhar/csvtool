@@ -442,13 +442,16 @@ func parsePredicates(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 //more strict version of parsePredicates for joins
+//tok3 tells how many conditions
 func parseJoinPredicates(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_PREDICATES}
 	var err error
 	n.tok2 = 0
+	n.tok3 = 1
 	n.node1,err = parseJoinPredCompare(q)
 	if err != nil { return n,err }
 	if q.Tok().id == KW_AND {
+		n.tok3 = 2
 		q.NextTok()
 		var comparison *Node
 		comparison, err = parseJoinPredCompare(q)
