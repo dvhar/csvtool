@@ -45,6 +45,7 @@ type QuerySpecs struct {
 	midExess int
 	intColumn bool
 	groupby bool
+	noHeader bool
 }
 func (q *QuerySpecs) NextTok() *Token {
 	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
@@ -97,7 +98,7 @@ func (l*LineReader) Init(q *QuerySpecs, f string) {
 	l.tee = io.TeeReader(l.fp, &l.lineBuffer)
 	l.csvReader = csv.NewReader(l.tee)
 	if q.quantityLimit == 0 { l.limit = 1<<62 } else { l.limit = q.quantityLimit }
-	l.Read()
+	if !q.noHeader{ l.Read() }
 }
 
 func (l*LineReader) Read() ([]string,error) {
@@ -289,26 +290,31 @@ func getNarrowestType(value string, startType int) int {
 	return startType
 }
 //infer types of all infile columns
-func inferTypes(q *QuerySpecs, f string) error {
+func inferTypes(q *QuerySpecs, key string) error {
 	//open file
-	fp,err := os.Open(q.files[f].fname)
+	fp,err := os.Open(q.files[key].fname)
 	if err != nil { return errors.New("problem opening input file") }
 	defer func(){ fp.Seek(0,0); fp.Close() }()
 	cread := csv.NewReader(fp)
 	line, err := cread.Read()
 	if err != nil { return errors.New("problem reading input file") }
 	//get col names and initialize blank types
+	n := 1
 	for i,entry := range line {
-		q.files[f].names = append(q.files[f].names, entry)
-		q.files[f].types = append(q.files[f].types, 0)
-		q.files[f].width = i+1
+		if q.noHeader {
+			q.files[key].names = append(q.files[key].names, Sprintf("col%d",n))
+		} else {
+			q.files[key].names = append(q.files[key].names, entry)
+		}
+		q.files[key].types = append(q.files[key].types, 0)
+		q.files[key].width = i+1
 	}
 	//get samples and infer types from them
 	for j:=0;j<10000;j++ {
 		line, err := cread.Read()
 		if err != nil { break }
 		for i,cell := range line {
-			q.files[f].types[i] = getNarrowestType(cell, q.files[f].types[i])
+			q.files[key].types[i] = getNarrowestType(cell, q.files[key].types[i])
 		}
 	}
 	return  err
@@ -361,7 +367,22 @@ func openFiles(q *QuerySpecs) error {
 	extension := regexp.MustCompile(`\.csv$`)
 	q.files = make(map[string]*FileData)
 	q.numfiles = 0
+	parsingOptions := true
 	for ; q.Tok().id != EOS ; q.NextTok() {
+		//parse options here because they can effect file prep
+		if parsingOptions {
+			switch q.Tok().Lower() {
+			case "c":
+				q.intColumn = true
+			case "header": fallthrough
+			case "h":
+			case "noheader": fallthrough
+			case "nh":
+				q.noHeader = true
+			case "select":
+				parsingOptions = false
+			}
+		}
 		_,err := os.Stat(q.Tok().val)
 		//open file and add to file map
 		if err == nil && extension.MatchString(q.Tok().val) {

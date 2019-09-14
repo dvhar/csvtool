@@ -38,7 +38,7 @@ func TestAll(t *testing.T){
 	fromSet := 1<<2
 	newSet := 1<<3
 	joinSet := 1<<4
-	thisTest :=  joinSet //| newSet | selectSet | fromSet | whereSet
+	thisTest :=  joinSet | newSet | selectSet | fromSet | whereSet
 	_,_,_,_,_,_,_,_,_ = f1, f2, f5, f3, f4, selectSet, whereSet, fromSet, newSet
 
 	var tests = []Test {

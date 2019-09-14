@@ -1,6 +1,7 @@
 /*
-<query>             -> <Select> <from> <where> <groupby> <having> <orderby>
-<Select>            -> {c} Select { top # } <Selections>
+<query>             -> <options> <Select> <from> <where> <groupby> <having> <orderby>
+<options>           -> {c} {nh | h} <options> | ε
+<Select>            -> Select { top # } <Selections>
 <Selections>        -> * <Selections> | {alias =} <exprAdd> {as alias} <Selections> | ε
 <exprAdd>           -> <exprMult> ( + | - ) <exprAdd> | <exprMult>
 <exprMult>          -> <exprNeg> ( * | / | % ) <exprMult> | <exprNeg>
@@ -54,6 +55,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	err = openFiles(q)
 	if err != nil { return n,err }
 
+	parseOptions(q)
 	n.node1,err =  parseSelect(q)
 	if err != nil { return n,err }
 	n.node2, err = parseFrom(q)
@@ -120,12 +122,23 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	return n,err
 }
 
+//already processed with openFiles()
+func parseOptions(q* QuerySpecs) {
+	switch q.Tok().Lower() {
+	case "c":
+	case "h":
+	case "nh":
+	default: return
+	}
+	q.NextTok()
+	parseOptions(q)
+}
+
 //node1 is selections
 func parseSelect(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
-	if q.Tok().Lower() == "c" { q.intColumn = true; q.NextTok() }
-	if q.Tok().id != KW_SELECT { return n,errors.New("Expected query to start with 'select'. Found "+q.Tok().val) }
+	if q.Tok().id != KW_SELECT { return n,errors.New("Expected 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)
 	if err != nil { return n,err }
