@@ -299,10 +299,9 @@ func inferTypes(q *QuerySpecs, key string) error {
 	line, err := cread.Read()
 	if err != nil { return errors.New("problem reading input file") }
 	//get col names and initialize blank types
-	n := 1
 	for i,entry := range line {
 		if q.noHeader {
-			q.files[key].names = append(q.files[key].names, Sprintf("col%d",n))
+			q.files[key].names = append(q.files[key].names, Sprintf("col%d",i+1))
 		} else {
 			q.files[key].names = append(q.files[key].names, entry)
 		}
@@ -374,7 +373,7 @@ func openFiles(q *QuerySpecs) error {
 			switch q.Tok().Lower() {
 			case "c":
 				q.intColumn = true
-			case "header": fallthrough
+			case "header":
 			case "h":
 			case "noheader": fallthrough
 			case "nh":

@@ -14,8 +14,8 @@ export class TopMenuBar extends React.Component {
 				section = {this.props.s.topDropdown}
 				savepath = {this.props.s.savepath}
 				sendSocket = {this.props.sendSocket}
-				openDirlist = {this.props.openDirlist}
-				saveDirlist = {this.props.saveDirlist}
+				openDirList = {this.props.openDirList}
+				saveDirList = {this.props.saveDirList}
 				changeSavePath = {(path)=>this.props.changeFilePath({type:"save",path:path})}
 				changeOpenPath = {(path)=>this.props.changeFilePath({type:"open",path:path})}
 			/>
@@ -61,7 +61,7 @@ class TopDropdown extends React.Component {
 		var dropdownContents = {
 			nothing : <></>,
 			saveShow : ( <Browser
-							dirlist = {this.props.saveDirlist}
+							dirlist = {this.props.saveDirList}
 							send = {this.props.sendSocket}
 							changePath = {this.props.changeSavePath}
 							changeTopDrop = {this.props.changeTopDrop}
@@ -70,7 +70,7 @@ class TopDropdown extends React.Component {
 							type = {"save"}
 						/> ),
 			browseShow : ( <Browser
-							dirlist = {this.props.openDirlist}
+							dirlist = {this.props.openDirList}
 							updateTopMessage = {this.props.updateTopMessage}
 							changeTopDrop = {this.props.changeTopDrop}
 							send = {this.props.sendSocket}

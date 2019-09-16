@@ -18,22 +18,36 @@ class Main extends React.Component {
 		this.state = {
 			topMessage : "",
 			topDropdown : "nothing",
-			openDirlist : {},
-			saveDirlist : {},
+			openDirList : {},
+			saveDirList : {},
 			queryHistory: ['',],
 			historyPosition : 0,
 			showQuery : <></>,
 			showHelp : 0,
+			restoredQuery : "",
 		}
 		this.topDropReset = this.topDropReset.bind(this);
 
 		//get initial file path
-		postRequest({path:"/info/",body:{}})
+		postRequest({path:"/info/",body:{info:"paths"}})
 		.then(dat=>{
-			this.setState({ openDirlist : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.OpenPath },
-							saveDirlist : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.SavePath } });
+			this.setState({ openDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.OpenPath },
+							saveDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.SavePath } });
 		});
 
+		//restore previous session
+		postRequest({path:"/info/",body:{info:"getState"}})
+		.then(dat=>{
+			console.log(dat);
+			if (dat.haveInfo)
+				this.setState({ openDirList : dat.openDirList || {},
+								saveDirList : dat.saveDirList || {},
+								restoredQuery : dat.currentQuery || "",
+								queryHistory : dat.history || ['',],
+								historyPosition : dat.history.length - 1});
+			var textbox = document.getElementById("textBoxId");
+			if (textbox != null) { textbox.value = this.state.queryHistory[this.state.historyPosition].query; }
+		});
 	}
 	showLoadedQuery(results){
 		if (results.Status & bit.DAT_ERROR){
@@ -51,6 +65,14 @@ class Main extends React.Component {
 							   hideColumns = {new Int8Array(tab.Numcols)}
 							   rows = {new Object({col:"",val:"*"})}
 						   />) });
+			postRequest({path:"/info/",body:{
+				info : "setState",
+				haveInfo : true,
+				currentQuery : document.getElementById("textBoxId").value,
+				history : this.state.queryHistory,
+				openDirList : this.state.openDirList,
+				saveDirList : this.state.saveDirList,
+			}});
 		}
 	}
 
@@ -87,9 +109,9 @@ class Main extends React.Component {
 	}
 	changeFilePath(whichPath){
 		if (whichPath.type === "open")
-			this.state.openDirlist.Path = whichPath.path;
+			this.state.openDirList.Path = whichPath.path;
 		if (whichPath.type === "save")
-			this.state.saveDirlist.Path = whichPath.path;
+			this.state.saveDirList.Path = whichPath.path;
 		this.forceUpdate();
 	}
 
@@ -107,8 +129,8 @@ class Main extends React.Component {
 			changeTopDrop = {(section)=>this.setState({ topDropdown : section })}
 			toggleHelp = {()=>{this.setState({showHelp:this.state.showHelp^1})}}
 			showHelp = {this.state.showHelp}
-			openDirlist = {this.state.openDirlist}
-			saveDirlist = {this.state.saveDirlist}
+			openDirList = {this.state.openDirList}
+			saveDirList = {this.state.saveDirList}
 			changeFilePath = {(path)=>this.changeFilePath(path)}
 			sendSocket = {(request)=>this.sendSocket(request)}
 		/>
@@ -150,9 +172,9 @@ class Main extends React.Component {
 					break;
 				case bit.SK_DIRLIST:
 					switch (dat.Dir.Mode){
-						case "open": that.setState({ openDirlist : dat.Dir });
+						case "open": that.setState({ openDirList : dat.Dir });
 							break;
-						case "save": that.setState({ saveDirlist : dat.Dir });
+						case "save": that.setState({ saveDirList : dat.Dir });
 							break;
 					}
 					break;

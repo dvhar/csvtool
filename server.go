@@ -153,25 +153,52 @@ func rowLimit(retData *ReturnData) {
 	}
 }
 
-//currently only returns paths
+//make this more general-purpose for retrieving misc info
 func infoHandler() (func(http.ResponseWriter, *http.Request)) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		type InfoRequest struct {
-			Info string
-		}
-		type InfoReturn struct {
-			SavePath string
-			OpenPath string
-			Status int
-		}
-		body, _ := ioutil.ReadAll(r.Body)
-		var req InfoRequest
-		var ret InfoReturn
-		json.Unmarshal(body,&req)
+	type InfoRequest struct {
+		Info string `json:"info"`
+	}
+	type PathInfo struct {
+		SavePath string
+		OpenPath string
+		Status int
+	}
+	type HistoryUnit struct {
+		Query string `json:"query"`
+	}
+	type StateInfo struct {
+		HaveInfo bool         `json:"haveInfo"`
+		CurrentQuery string   `json:"currentQuery"`
+		History []HistoryUnit `json:"history"`
+		OpenDirList Directory `json:"openDirList"`
+		SaveDirList Directory `json:"saveDirList"`
+	}
+	type StateSetReq struct {
+		InfoRequest
+		StateInfo
+	}
+	var state StateInfo
 
-		ret.SavePath = FPaths.SavePath
-		ret.OpenPath = FPaths.OpenPath
-		ret.Status = FPaths.Status
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req InfoRequest
+		var ret interface{}
+		body, _ := ioutil.ReadAll(r.Body)
+		json.Unmarshal(body,&req)
+		Println("info request:",string(body),req)
+
+		switch req.Info {
+			case "paths":
+				var pathRet PathInfo
+				pathRet.SavePath = FPaths.SavePath
+				pathRet.OpenPath = FPaths.OpenPath
+				pathRet.Status = FPaths.Status
+				ret = pathRet
+			case "setState":
+				json.Unmarshal(body,&state)
+				Printf("%s\n\n%+v\n","new state:",state)
+			case "getState":
+				ret = state
+		}
 
 		returnJSON,_ := json.Marshal(ret)
 		Fprint(w, string(returnJSON))
