@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {postRequest,bit} from './utils.js';
+import {postRequest,getRequest,bit} from './utils.js';
 import * as command from './command.js';
 import * as display from './display.js';
 import * as help from './help.js';
@@ -24,29 +24,28 @@ class Main extends React.Component {
 			historyPosition : 0,
 			showQuery : <></>,
 			showHelp : 0,
-			restoredQuery : "",
 		}
 		this.topDropReset = this.topDropReset.bind(this);
+		var that = this;
 
-		//get initial file path
-		postRequest({path:"/info/",body:{info:"paths"}})
-		.then(dat=>{
-			this.setState({ openDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.OpenPath },
-							saveDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.SavePath } });
-		});
-
-		//restore previous session
-		postRequest({path:"/info/",body:{info:"getState"}})
+		//restore previous session or initialize paths
+		getRequest({info:"getState"})
 		.then(dat=>{
 			console.log(dat);
-			if (dat.haveInfo)
-				this.setState({ openDirList : dat.openDirList || {},
-								saveDirList : dat.saveDirList || {},
-								restoredQuery : dat.currentQuery || "",
-								queryHistory : dat.history || ['',],
-								historyPosition : dat.history.length - 1});
+			if (dat.haveInfo) {
+				this.setState({ openDirList : dat.openDirList == undefined ? {} : dat.openDirList,
+								saveDirList : dat.saveDirList == undefined ? {} : dat.saveDirList,
+								queryHistory : dat.history == undefined ? ['',] : dat.history,
+								historyPosition : dat.history == undefined ? that.historyPosition : dat.history.length - 1});
+			} else {
+				getRequest({info:"paths"})
+				.then(dat=>{
+					that.setState({ openDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.OpenPath },
+									saveDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.SavePath } });
+		});
+			}
 			var textbox = document.getElementById("textBoxId");
-			if (textbox != null) { textbox.value = this.state.queryHistory[this.state.historyPosition].query; }
+			if (textbox != null && this.state.queryHistory[this.state.historyPosition].query != null) { textbox.value = this.state.queryHistory[this.state.historyPosition].query; }
 		});
 	}
 	showLoadedQuery(results){
@@ -65,7 +64,7 @@ class Main extends React.Component {
 							   hideColumns = {new Int8Array(tab.Numcols)}
 							   rows = {new Object({col:"",val:"*"})}
 						   />) });
-			postRequest({path:"/info/",body:{
+			postRequest({path:"/info?info=setState",body:{
 				info : "setState",
 				haveInfo : true,
 				currentQuery : document.getElementById("textBoxId").value,

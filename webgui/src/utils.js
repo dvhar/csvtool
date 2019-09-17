@@ -9,6 +9,13 @@ export function validJson(str) {
 }
 
 
+export function getRequest(request){
+	var url = new URL("http://localhost:8060/info"),
+    params = {info:request.info}
+	Object.keys(params).forEach(key => url.searchParams.append(key, params[key]))
+	return fetch(url)
+	.then(res=>{if (res.status >= 400) return {Status: res.status}; else return res.json()})
+}
 export function postRequest(request){
 	var req = new Request(request.path, {
 		method: 'POST',

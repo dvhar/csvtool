@@ -86,6 +86,7 @@ func httpserver(serverUrl string, done chan bool) {
 	http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
 	http.HandleFunc("/query/", queryHandler())
 	http.HandleFunc("/info/", infoHandler())
+	http.HandleFunc("/info", infoHandler())
 	http.HandleFunc("/socket/", socketHandler())
 	http.ListenAndServe(serverUrl, nil)
 	done <- true
@@ -153,7 +154,7 @@ func rowLimit(retData *ReturnData) {
 	}
 }
 
-//make this more general-purpose for retrieving misc info
+//get misc info from server like state and path info - replace some socket functions
 func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 	type InfoRequest struct {
 		Info string `json:"info"`
@@ -168,7 +169,6 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 	}
 	type StateInfo struct {
 		HaveInfo bool         `json:"haveInfo"`
-		CurrentQuery string   `json:"currentQuery"`
 		History []HistoryUnit `json:"history"`
 		OpenDirList Directory `json:"openDirList"`
 		SaveDirList Directory `json:"saveDirList"`
@@ -180,13 +180,11 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 	var state StateInfo
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req InfoRequest
 		var ret interface{}
-		body, _ := ioutil.ReadAll(r.Body)
-		json.Unmarshal(body,&req)
-		Println("info request:",string(body),req)
+		params := r.URL.Query()["info"]
+		if len(params) < 1 { return }
 
-		switch req.Info {
+		switch params[0] {
 			case "paths":
 				var pathRet PathInfo
 				pathRet.SavePath = FPaths.SavePath
@@ -194,10 +192,12 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 				pathRet.Status = FPaths.Status
 				ret = pathRet
 			case "setState":
+				body, _ := ioutil.ReadAll(r.Body)
 				json.Unmarshal(body,&state)
-				Printf("%s\n\n%+v\n","new state:",state)
 			case "getState":
 				ret = state
+			case "fileClick":
+				//TODO
 		}
 
 		returnJSON,_ := json.Marshal(ret)
