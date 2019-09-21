@@ -18,6 +18,7 @@ export class TopMenuBar extends React.Component {
 				saveDirList = {this.props.saveDirList}
 				changeSavePath = {(path)=>this.props.changeFilePath({type:"save",path:path})}
 				changeOpenPath = {(path)=>this.props.changeFilePath({type:"open",path:path})}
+				fileClick = {(request)=>this.props.fileClick(request)}
 			/>
 			<SaveButton
 				changeTopDrop = {this.props.changeTopDrop}
@@ -63,6 +64,7 @@ class TopDropdown extends React.Component {
 			saveShow : ( <Browser
 							dirlist = {this.props.saveDirList}
 							send = {this.props.sendSocket}
+							fileClick = {(request)=>this.props.fileClick(request)}
 							changePath = {this.props.changeSavePath}
 							changeTopDrop = {this.props.changeTopDrop}
 							submitQuery = {this.props.submitQuery}
@@ -74,6 +76,7 @@ class TopDropdown extends React.Component {
 							updateTopMessage = {this.props.updateTopMessage}
 							changeTopDrop = {this.props.changeTopDrop}
 							send = {this.props.sendSocket}
+							fileClick = {(request)=>this.props.fileClick(request)}
 							changePath = {this.props.changeOpenPath}
 							type = {"open"}
 						/> ),
@@ -107,7 +110,8 @@ class FileSelector extends React.Component {
 class Browser extends React.Component {
 	constructor(props) {
 		super(props);
-		this.props.send({Type : bit.SK_FILECLICK, Text : this.props.dirlist.Path, Mode: this.props.type});
+		//this.props.send({Type : bit.SK_FILECLICK, Text : this.props.dirlist.Path, Mode: this.props.type});
+		this.props.fileClick({path : this.props.dirlist.Path, mode : this.props.type});
 		this.handleChange = this.handleChange.bind(this);
 		this.state = {
 			innerBoxId : Math.random(),
@@ -116,7 +120,8 @@ class Browser extends React.Component {
 		};
 	}
 	clickPath(path){
-		this.props.send({Type : bit.SK_FILECLICK, Text : path, Mode : this.props.type});
+		//this.props.send({Type : bit.SK_FILECLICK, Text : path, Mode : this.props.type});
+		this.props.fileClick({path : path, mode : this.props.type});
 	}
 	dirlist(){
 		if (this.props.dirlist.Dirs) return (

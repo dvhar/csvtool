@@ -65,7 +65,6 @@ class Main extends React.Component {
 							   rows = {new Object({col:"",val:"*"})}
 						   />) });
 			postRequest({path:"/info?info=setState",body:{
-				info : "setState",
 				haveInfo : true,
 				currentQuery : document.getElementById("textBoxId").value,
 				history : this.state.queryHistory,
@@ -132,6 +131,23 @@ class Main extends React.Component {
 			saveDirList = {this.state.saveDirList}
 			changeFilePath = {(path)=>this.changeFilePath(path)}
 			sendSocket = {(request)=>this.sendSocket(request)}
+			fileClick = {(request)=>{
+				postRequest({path:"/info?info=fileClick",body:{
+					path : request.path,
+					mode : request.mode,
+				}}).then(dat=>{if (dat.Mode) {
+					switch (dat.Mode){
+					case "open":
+						this.setState({openDirList: dat});
+						break;
+					case "save":
+						this.setState({saveDirList: dat});
+						break;
+					}
+				} else {
+					this.setState({topMessage: "connection error"});
+				}})
+			}}
 		/>
 		<help.Help
 			show = {this.state.showHelp}
@@ -163,20 +179,21 @@ class Main extends React.Component {
 			var dat = JSON.parse(e.data);
 			//console.log(dat);
 			switch (dat.Type) {
-				case bit.SK_PING:
-					bugtimer = window.performance.now() + 20000
+			case bit.SK_PING:
+				bugtimer = window.performance.now() + 20000
+				break;
+			case bit.SK_MSG:
+				that.setState({ topMessage : dat.Text }); 
+				break;
+			//deprecated old file browser system
+			case bit.SK_DIRLIST:
+				switch (dat.Dir.Mode){
+				case "open": that.setState({ openDirList : dat.Dir });
 					break;
-				case bit.SK_MSG:
-					that.setState({ topMessage : dat.Text }); 
+				case "save": that.setState({ saveDirList : dat.Dir });
 					break;
-				case bit.SK_DIRLIST:
-					switch (dat.Dir.Mode){
-						case "open": that.setState({ openDirList : dat.Dir });
-							break;
-						case "save": that.setState({ saveDirList : dat.Dir });
-							break;
-					}
-					break;
+				}
+				break;
 			}
 		}
 		this.ws.onerror = function(e) { console.log("ERROR: " + e.data); } 

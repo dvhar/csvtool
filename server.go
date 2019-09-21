@@ -156,8 +156,9 @@ func rowLimit(retData *ReturnData) {
 
 //get misc info from server like state and path info - replace some socket functions
 func infoHandler() (func(http.ResponseWriter, *http.Request)) {
-	type InfoRequest struct {
-		Info string `json:"info"`
+	type DirRequest struct {
+		Path string `json:"path"`
+		Mode string `json:"mode"`
 	}
 	type PathInfo struct {
 		SavePath string
@@ -174,7 +175,6 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 		SaveDirList Directory `json:"saveDirList"`
 	}
 	type StateSetReq struct {
-		InfoRequest
 		StateInfo
 	}
 	var state StateInfo
@@ -185,19 +185,29 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 		if len(params) < 1 { return }
 
 		switch params[0] {
-			case "paths":
-				var pathRet PathInfo
-				pathRet.SavePath = FPaths.SavePath
-				pathRet.OpenPath = FPaths.OpenPath
-				pathRet.Status = FPaths.Status
-				ret = pathRet
-			case "setState":
-				body, _ := ioutil.ReadAll(r.Body)
-				json.Unmarshal(body,&state)
-			case "getState":
-				ret = state
-			case "fileClick":
-				//TODO
+		case "paths":
+			var pathRet PathInfo
+			pathRet.SavePath = FPaths.SavePath
+			pathRet.OpenPath = FPaths.OpenPath
+			pathRet.Status = FPaths.Status
+			ret = pathRet
+		case "setState":
+			body, _ := ioutil.ReadAll(r.Body)
+			json.Unmarshal(body,&state)
+		case "getState":
+			ret = state
+		case "fileClick":
+			var dir DirRequest
+			body, _ := ioutil.ReadAll(r.Body)
+			json.Unmarshal(body, &dir)
+			newDirs := fileBrowser(Directory{Path : dir.Path, Mode : dir.Mode})
+			switch newDirs.Mode {
+			case "open":
+				state.OpenDirList = newDirs
+			case "save":
+				state.SaveDirList = newDirs
+			}
+			ret = newDirs
 		}
 
 		returnJSON,_ := json.Marshal(ret)
@@ -207,22 +217,22 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 
 //show request from browser
 func formatRequest(r *http.Request) string {
- var request []string
- url := Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
- request = append(request, url)
- request = append(request, Sprintf("Host: %v", r.Host))
- for name, headers := range r.Header {
-   name = strings.ToLower(name)
-   for _, h := range headers {
-	 request = append(request, Sprintf("%v: %v", name, h))
-   }
- }
- if r.Method == "POST" {
-	r.ParseForm()
-	request = append(request, "\n")
-	request = append(request, r.Form.Encode())
- }
-  return strings.Join(request, "\n")
+	var request []string
+	url := Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
+	request = append(request, url)
+	request = append(request, Sprintf("Host: %v", r.Host))
+	for name, headers := range r.Header {
+		name = strings.ToLower(name)
+		for _, h := range headers {
+			request = append(request, Sprintf("%v: %v", name, h))
+		}
+	}
+	if r.Method == "POST" {
+		r.ParseForm()
+		request = append(request, "\n")
+		request = append(request, r.Form.Encode())
+	}
+	return strings.Join(request, "\n")
 }
 
 //launch browser
