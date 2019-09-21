@@ -20,7 +20,6 @@ var messager chan string
 var saver chan saveData
 var savedLine chan bool
 var fileclick chan string
-var directory chan Directory
 var browsersOpen = 0
 var slash string
 
@@ -33,11 +32,10 @@ func main() {
 	flag.Parse()
 
 	readStdin()
-	if !flags.gui() { println("version 0.511 - 8/24/2019") }
+	if !flags.gui() { println("version 0.521 - 9/21/2019") }
 
 	messager = make(chan string)
 	fileclick = make(chan string)
-	directory = make(chan Directory)
 	saver = make(chan saveData)
 	savedLine = make(chan bool)
 	go realtimeCsvSaver()
