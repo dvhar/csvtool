@@ -1,6 +1,6 @@
 /*
 <query>             -> <options> <Select> <from> <where> <groupby> <having> <orderby>
-<options>           -> {c} {nh | h} <options> | ε
+<options>           -> (c | nh | h) <options> | ε
 <Select>            -> Select { top # } <Selections>
 <Selections>        -> * <Selections> | {alias =} <exprAdd> {as alias} <Selections> | ε
 <exprAdd>           -> <exprMult> ( + | - ) <exprAdd> | <exprMult>

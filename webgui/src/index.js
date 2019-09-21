@@ -30,23 +30,24 @@ class Main extends React.Component {
 
 		//restore previous session or initialize paths
 		getRequest({info:"getState"})
-		.then(dat=>{
-			console.log(dat);
-			if (dat.haveInfo) {
-				this.setState({ openDirList : dat.openDirList == undefined ? {} : dat.openDirList,
-								saveDirList : dat.saveDirList == undefined ? {} : dat.saveDirList,
-								queryHistory : dat.history == undefined ? ['',] : dat.history,
-								historyPosition : dat.history == undefined ? that.historyPosition : dat.history.length - 1});
-			} else {
-				getRequest({info:"paths"})
-				.then(dat=>{
-					that.setState({ openDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.OpenPath },
-									saveDirList : dat.Status & bit.FP_OERROR===1 ? {Path:""} : { Path: dat.SavePath } });
-		});
-			}
-			var textbox = document.getElementById("textBoxId");
-			if (textbox != null && this.state.queryHistory[this.state.historyPosition].query != null) { textbox.value = this.state.queryHistory[this.state.historyPosition].query; }
-		});
+			.then(dat=>{
+				console.log(dat);
+				if (dat.openDirList.Dirs && dat.saveDirList.Dirs) {
+					this.setState({ openDirList :  dat.openDirList,
+					                saveDirList :  dat.saveDirList,
+					                queryHistory :  dat.history == undefined ? ['',] : dat.history,
+					                historyPosition :  dat.history == undefined ? that.historyPosition : dat.history.length - 1});
+					console.log("set1 state:",this.state);
+				} else {
+					this.setState({ openDirList :  {Path: dat.openDirList.Path},
+					                saveDirList :  {Path: dat.saveDirList.Path},
+					});
+					console.log("set2 state:",this.state);
+				}
+				var textbox = document.getElementById("textBoxId");
+				if (textbox != null)
+					textbox.value = this.state.queryHistory[this.state.historyPosition].query || "";
+			});
 	}
 	showLoadedQuery(results){
 		if (results.Status & bit.DAT_ERROR){
@@ -113,6 +114,24 @@ class Main extends React.Component {
 		this.forceUpdate();
 	}
 
+	fileClick(request){
+		postRequest({path:"/info?info=fileClick",body:{
+			path : request.path,
+			mode : request.mode,
+		}}).then(dat=>{if (dat.Mode) {
+			switch (dat.Mode){
+			case "open":
+				this.setState({openDirList: dat});
+				break;
+			case "save":
+				this.setState({saveDirList: dat});
+				break;
+			}
+		} else {
+			this.setState({topMessage: "connection error"});
+		}});
+	}
+
 	render(){
 	
 		document.addEventListener('click',this.topDropReset);
@@ -131,23 +150,7 @@ class Main extends React.Component {
 			saveDirList = {this.state.saveDirList}
 			changeFilePath = {(path)=>this.changeFilePath(path)}
 			sendSocket = {(request)=>this.sendSocket(request)}
-			fileClick = {(request)=>{
-				postRequest({path:"/info?info=fileClick",body:{
-					path : request.path,
-					mode : request.mode,
-				}}).then(dat=>{if (dat.Mode) {
-					switch (dat.Mode){
-					case "open":
-						this.setState({openDirList: dat});
-						break;
-					case "save":
-						this.setState({saveDirList: dat});
-						break;
-					}
-				} else {
-					this.setState({topMessage: "connection error"});
-				}})
-			}}
+			fileClick = {(request)=>this.fileClick(request)}
 		/>
 		<help.Help
 			show = {this.state.showHelp}
@@ -177,22 +180,12 @@ class Main extends React.Component {
 		this.ws.onclose = function(e) { console.log("CLOSE"); that.ws = null; } 
 		this.ws.onmessage = function(e) { 
 			var dat = JSON.parse(e.data);
-			//console.log(dat);
 			switch (dat.Type) {
 			case bit.SK_PING:
 				bugtimer = window.performance.now() + 20000
 				break;
 			case bit.SK_MSG:
 				that.setState({ topMessage : dat.Text }); 
-				break;
-			//deprecated old file browser system
-			case bit.SK_DIRLIST:
-				switch (dat.Dir.Mode){
-				case "open": that.setState({ openDirList : dat.Dir });
-					break;
-				case "save": that.setState({ saveDirList : dat.Dir });
-					break;
-				}
 				break;
 			}
 		}

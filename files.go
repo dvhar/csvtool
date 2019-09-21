@@ -138,6 +138,5 @@ func fileBrowser(pathRequest Directory) Directory {
 		}
 	}
 
-	directory <- thisDir
 	return thisDir
 }

@@ -21,10 +21,14 @@ export class TopMenuBar extends React.Component {
 				fileClick = {(request)=>this.props.fileClick(request)}
 			/>
 			<SaveButton
+				dirList = {this.props.saveDirList}
 				changeTopDrop = {this.props.changeTopDrop}
+				fileClick = {(request)=>this.props.fileClick(request)}
 			/>
 			<BrowseButton
+				dirList = {this.props.openDirList}
 				changeTopDrop = {this.props.changeTopDrop}
+				fileClick = {(request)=>this.props.fileClick(request)}
 			/>
 			<HelpButton
 				showHelp = {this.props.showHelp}
@@ -62,7 +66,7 @@ class TopDropdown extends React.Component {
 		var dropdownContents = {
 			nothing : <></>,
 			saveShow : ( <Browser
-							dirlist = {this.props.saveDirList}
+							dirList = {this.props.saveDirList}
 							send = {this.props.sendSocket}
 							fileClick = {(request)=>this.props.fileClick(request)}
 							changePath = {this.props.changeSavePath}
@@ -72,7 +76,7 @@ class TopDropdown extends React.Component {
 							type = {"save"}
 						/> ),
 			browseShow : ( <Browser
-							dirlist = {this.props.openDirList}
+							dirList = {this.props.openDirList}
 							updateTopMessage = {this.props.updateTopMessage}
 							changeTopDrop = {this.props.changeTopDrop}
 							send = {this.props.sendSocket}
@@ -110,8 +114,8 @@ class FileSelector extends React.Component {
 class Browser extends React.Component {
 	constructor(props) {
 		super(props);
-		//this.props.send({Type : bit.SK_FILECLICK, Text : this.props.dirlist.Path, Mode: this.props.type});
-		this.props.fileClick({path : this.props.dirlist.Path, mode : this.props.type});
+		//this.props.send({Type : bit.SK_FILECLICK, Text : this.props.dirList.Path, Mode: this.props.type});
+		//this.props.fileClick({path : this.props.dirList.Path, mode : this.props.type});
 		this.handleChange = this.handleChange.bind(this);
 		this.state = {
 			innerBoxId : Math.random(),
@@ -123,14 +127,14 @@ class Browser extends React.Component {
 		//this.props.send({Type : bit.SK_FILECLICK, Text : path, Mode : this.props.type});
 		this.props.fileClick({path : path, mode : this.props.type});
 	}
-	dirlist(){
-		if (this.props.dirlist.Dirs) return (
-		this.props.dirlist.Dirs.map(path => <span className="dropContent browseDir browseEntry" onClick={()=>this.clickPath(path)}>{path}</span>)
+	dirList(){
+		if (this.props.dirList.Dirs) return (
+		this.props.dirList.Dirs.map(path => <span className="dropContent browseDir browseEntry" onClick={()=>this.clickPath(path)}>{path}</span>)
 		);
 	}
 	filelist(){
-		if (this.props.dirlist.Files) return (
-		this.props.dirlist.Files.map(path => <FileSelector 
+		if (this.props.dirList.Files) return (
+		this.props.dirList.Files.map(path => <FileSelector 
 			path={path}
 			changeTopDrop = {this.props.changeTopDrop}
 			type={this.props.type}
@@ -156,11 +160,11 @@ class Browser extends React.Component {
 		return (
 		<div id={this.state.outterBoxId} className="fileSelectShow fileBrowser dropContent">
 			{header}
-			<input className="dropContent browseDir browseCurrent" id={this.state.currentDirId} value={this.props.dirlist.Path} onChange={this.handleChange}/>
+			<input className="dropContent browseDir browseCurrent" id={this.state.currentDirId} value={this.props.dirList.Path} onChange={this.handleChange}/>
 			<div className="browseDirs dropContent" id={this.state.innerBoxId}>
-			<span className="dropContent browseDir browseEntry" onClick={()=>{ this.clickPath(this.props.dirlist.Parent);
+			<span className="dropContent browseDir browseEntry" onClick={()=>{ this.clickPath(this.props.dirList.Parent);
 			}}><b>←</b></span>
-			{this.dirlist()}
+			{this.dirList()}
 			{this.filelist()}
 			</div>
 		</div>
@@ -179,20 +183,26 @@ class Browser extends React.Component {
 		const dirText = document.getElementById(this.state.currentDirId);
 		dirText.addEventListener("keyup", function(event) {
 			if (event.key === "Enter") {
-				that.clickPath(that.props.dirlist.Path)
+				that.clickPath(that.props.dirList.Path)
 			}
 		});
 	}
 }
 class SaveButton extends React.Component {
-	toggleForm(){ this.props.changeTopDrop("saveShow");}
+	toggleForm(){
+		this.props.fileClick({path : this.props.dirList.Path, mode : "save"});
+		this.props.changeTopDrop("saveShow");
+	}
 	render(){
 		return( <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Save</button>)
 	}
 }
 
 class BrowseButton extends React.Component {
-	toggleForm(){ this.props.changeTopDrop("browseShow");}
+	toggleForm(){
+		this.props.fileClick({path : this.props.dirList.Path, mode : "open"});
+		this.props.changeTopDrop("browseShow");
+	}
 	render(){
 		return( <button className="topButton dropContent" id="saveButton" onClick={()=>this.toggleForm()}>Browse Files</button>)
 	}

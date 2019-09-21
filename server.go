@@ -22,7 +22,6 @@ func (c* Client) writer(){
 		ticker.Stop()
 	}()
 	var sendSock sockMessage
-	var sendDirSock sockDirMessage
 	var sendBytes []byte
 	for {
 		select {
@@ -32,9 +31,6 @@ func (c* Client) writer(){
 			case <-ticker.C:
 				sendSock = sockMessage{ Type: SK_PING }
 				sendBytes,_ = json.Marshal(sendSock)
-			case dir := <-directory:
-				sendDirSock = sockDirMessage{ Type: SK_DIRLIST, Dir: dir }
-				sendBytes,_ = json.Marshal(sendDirSock)
 		}
 		err := c.conn.WriteMessage(1, sendBytes)
 		if err != nil { println("socket writer failed"); return }
@@ -56,8 +52,6 @@ func (c* Client) reader(){
 		switch message.Type {
 			case SK_STOP:
 				if active { stop = 1 }
-			case SK_FILECLICK:
-				go fileBrowser(Directory{Path : message.Text, Mode : message.Mode})
 		}
 	}
 }
@@ -160,11 +154,6 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 		Path string `json:"path"`
 		Mode string `json:"mode"`
 	}
-	type PathInfo struct {
-		SavePath string
-		OpenPath string
-		Status int
-	}
 	type HistoryUnit struct {
 		Query string `json:"query"`
 	}
@@ -185,16 +174,12 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 		if len(params) < 1 { return }
 
 		switch params[0] {
-		case "paths":
-			var pathRet PathInfo
-			pathRet.SavePath = FPaths.SavePath
-			pathRet.OpenPath = FPaths.OpenPath
-			pathRet.Status = FPaths.Status
-			ret = pathRet
 		case "setState":
 			body, _ := ioutil.ReadAll(r.Body)
 			json.Unmarshal(body,&state)
 		case "getState":
+			if state.OpenDirList.Path == "" { state.OpenDirList.Path = FPaths.OpenPath }
+			if state.SaveDirList.Path == "" { state.SaveDirList.Path = FPaths.SavePath }
 			ret = state
 		case "fileClick":
 			var dir DirRequest
