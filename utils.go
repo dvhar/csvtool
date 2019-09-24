@@ -13,7 +13,7 @@ import (
 	"os"
 	"errors"
 	"time"
-	s "strings"
+	"strings"
 	d "github.com/araddon/dateparse"
 	bt "github.com/google/btree"
 	. "strconv"
@@ -267,7 +267,7 @@ func max(a int, b int) int {
 }
 func getColumnIdx(colNames []string, column string) (int, error) {
 	for i,col := range colNames {
-		if s.ToLower(col) == s.ToLower(column) { return i, nil }
+		if strings.ToLower(col) == strings.ToLower(column) { return i, nil }
 	}
 	return 0, errors.New("Column " + column + " not found")
 }
@@ -276,8 +276,8 @@ var countSelected int
 //infer type of single string value
 var LeadingZeroString *regexp.Regexp = regexp.MustCompile(`^0\d+$`)
 func getNarrowestType(value string, startType int) int {
-	entry := s.TrimSpace(value)
-	if s.ToLower(entry) == "null" || entry == "NA" || entry == "" {
+	entry := strings.TrimSpace(value)
+	if strings.ToLower(entry) == "null" || entry == "NA" || entry == "" {
 	  startType = max(T_NULL, startType)
 	} else if LeadingZeroString.MatchString(entry)       { startType = T_STRING
 	} else if _, err := Atoi(entry); err == nil          { startType = max(T_INT, startType)
@@ -323,7 +323,7 @@ func parseDuration(str string) (time.Duration, error) {
 	dur, err := time.ParseDuration(str)
 	if err == nil { return dur, err }
 	if !durationPattern.MatchString(str) { return 0, errors.New("Error: Could not parse '"+str+"' as a time duration") }
-	times := s.Split(str," ")
+	times := strings.Split(str," ")
 	quantity,_ := ParseFloat(times[0],64)
 	unit := times[1]
 	switch unit {
@@ -382,11 +382,12 @@ func openFiles(q *QuerySpecs) error {
 				parsingOptions = false
 			}
 		}
-		_,err := os.Stat(q.Tok().val)
+		tok := strings.Replace(q.Tok().val, "~/", os.Getenv("HOME")+"/", 1)
+		_,err := os.Stat(tok)
 		//open file and add to file map
-		if err == nil && extension.MatchString(q.Tok().val) {
+		if err == nil && extension.MatchString(tok) {
 			q.numfiles++
-			file := &FileData{fname : q.Tok().val, id : q.numfiles}
+			file := &FileData{fname : tok, id : q.numfiles}
 			filename := filepath.Base(file.fname)
 			key := "_f" + Sprint(q.numfiles)
 			file.key = key

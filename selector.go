@@ -109,7 +109,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 
 	case N_FUNCTION:
 		//return earlier aggregated value if in group retrieval stage
-		if q.stage == 1 {
+		if q.stage == 1 && (n.tok1.(int) & AGG_BIT)!=0 {
 			agg := q.midRow[n.tok2.(int)]
 			if avg,ok := agg.(AverageVal);ok { return 1, avg.Eval() }
 			return 1, agg

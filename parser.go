@@ -70,6 +70,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 
 	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
+	if err != nil { return n,err }
 
 	//add 'having' and 'order by' expressions to selections if grouping
 	if q.sortExpr!=nil && q.groupby {
@@ -599,7 +600,8 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FROM}
 	var err error
 	if q.Tok().id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().val) }
-	n.tok1 = q.NextTok().val
+	tok := strings.Replace(q.NextTok().val, "~/", os.Getenv("HOME")+"/", 1)
+	n.tok1 = tok
 	_,err = os.Stat(Sprint(n.tok1))
 	if err != nil { return n,err }
 	q.NextTok()

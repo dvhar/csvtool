@@ -31,18 +31,15 @@ class Main extends React.Component {
 		//restore previous session or initialize paths
 		getRequest({info:"getState"})
 			.then(dat=>{
-				console.log(dat);
 				if (dat.openDirList.Dirs && dat.saveDirList.Dirs) {
 					this.setState({ openDirList :  dat.openDirList,
 					                saveDirList :  dat.saveDirList,
 					                queryHistory :  dat.history == undefined ? ['',] : dat.history,
 					                historyPosition :  dat.history == undefined ? that.historyPosition : dat.history.length - 1});
-					console.log("set1 state:",this.state);
 				} else {
 					this.setState({ openDirList :  {Path: dat.openDirList.Path},
 					                saveDirList :  {Path: dat.saveDirList.Path},
 					});
-					console.log("set2 state:",this.state);
 				}
 				var textbox = document.getElementById("textBoxId");
 				if (textbox != null)
