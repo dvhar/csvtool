@@ -19,7 +19,7 @@
                      | {not} <exprAdd> {not} between <exprAdd> and <exprAdd>
                      | {not} <exprAdd> in ( <expressions> )
                      | {not} ( predicates )
-<from>              -> from filename { as alias } <join>
+<from>              -> from filename { nh | noheader } { {as} alias } { nh | noheader } <join>
 <join>              -> { left | right | ε } { inner | outer | ε } join file as alias on <predicates> { <join> }
 <where>             -> where <predicates> | ε
 <having>            -> having <predicates> | ε
@@ -464,6 +464,8 @@ func parseJoinPredicates(q* QuerySpecs) (*Node,error) {
 	n.tok3 = 1
 	n.node1,err = parseJoinPredCompare(q)
 	if err != nil { return n,err }
+	if (q.Tok().id & LOGOP) != 0 { return n,errors.New("Only one join condition per file") }
+	/*
 	if q.Tok().id == KW_AND {
 		n.tok3 = 2
 		q.NextTok()
@@ -476,6 +478,7 @@ func parseJoinPredicates(q* QuerySpecs) (*Node,error) {
 	} else if (q.Tok().id & LOGOP) != 0 {
 		return n,errors.New("Join conditions support one 'and' operator per join")
 	}
+	*/
 	return n, err
 }
 //more strict version of parsePredCompare for joins
@@ -606,6 +609,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	q.NextTok()
 	t := q.Tok()
+	if t.Lower() == "noheader" || t.Lower() == "nh" { q.NextTok() }
 	switch t.id {
 	case KW_AS:
 		t = q.NextTok()
@@ -616,6 +620,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 		n.tok2 = t.val
 		q.NextTok()
 	}
+	if q.Tok().Lower() == "noheader" || q.Tok().Lower() == "nh" { q.NextTok() }
 	n.node1, err = parseJoin(q)
 	return n, err
 }

@@ -45,7 +45,7 @@ type QuerySpecs struct {
 	midExess int
 	intColumn bool
 	groupby bool
-	noHeader bool
+	noheader bool
 }
 func (q *QuerySpecs) NextTok() *Token {
 	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
@@ -79,6 +79,7 @@ type LineReader struct {
 	byteReader *bytes.Reader
 	fp *os.File
 }
+func (l*LineReader) GetPos() int64 { return l.prevPos }
 func (l*LineReader) SavePos(value Value) {
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
 }
@@ -98,7 +99,7 @@ func (l*LineReader) Init(q *QuerySpecs, f string) {
 	l.tee = io.TeeReader(l.fp, &l.lineBuffer)
 	l.csvReader = csv.NewReader(l.tee)
 	if q.quantityLimit == 0 { l.limit = 1<<62 } else { l.limit = q.quantityLimit }
-	if !q.noHeader{ l.Read() }
+	if !q.noheader{ l.Read() }
 }
 
 func (l*LineReader) Read() ([]string,error) {
@@ -230,6 +231,7 @@ type FileData struct {
 	width int
 	key string
 	id int
+	noheader bool
 	reader *LineReader
 	fromRow []string
 }
@@ -300,7 +302,7 @@ func inferTypes(q *QuerySpecs, key string) error {
 	if err != nil { return errors.New("problem reading input file") }
 	//get col names and initialize blank types
 	for i,entry := range line {
-		if q.noHeader {
+		if q.noheader || q.files[key].noheader {
 			q.files[key].names = append(q.files[key].names, Sprintf("col%d",i+1))
 		} else {
 			q.files[key].names = append(q.files[key].names, entry)
@@ -309,12 +311,14 @@ func inferTypes(q *QuerySpecs, key string) error {
 		q.files[key].width = i+1
 	}
 	//get samples and infer types from them
+	if !q.noheader && !q.files[key].noheader { line, err = cread.Read() }
+	var e error
 	for j:=0;j<10000;j++ {
-		line, err := cread.Read()
-		if err != nil { break }
 		for i,cell := range line {
 			q.files[key].types[i] = getNarrowestType(cell, q.files[key].types[i])
 		}
+		line, e = cread.Read()
+		if e != nil { break }
 	}
 	return  err
 }
@@ -377,7 +381,7 @@ func openFiles(q *QuerySpecs) error {
 			case "h":
 			case "noheader": fallthrough
 			case "nh":
-				q.noHeader = true
+				q.noheader = true
 			case "select":
 				parsingOptions = false
 			}
@@ -393,6 +397,10 @@ func openFiles(q *QuerySpecs) error {
 			file.key = key
 			q.files[key] = file
 			q.files[filename[:len(filename)-4]] = file
+			if q.PeekTok().Lower() == "noheader" || q.PeekTok().Lower() == "nh" {
+				q.NextTok()
+				q.files[key].noheader = true
+			}
 			if _,ok:=joinMap[q.PeekTok().Lower()];!ok && q.NextTok().id==WORD {
 				q.files[q.Tok().val] = file
 				q.aliases = true
@@ -400,6 +408,9 @@ func openFiles(q *QuerySpecs) error {
 			if _,ok:=joinMap[q.PeekTok().Lower()];!ok && q.Tok().Lower()=="as" && q.NextTok().id==WORD {
 				q.files[q.Tok().val] = file
 				q.aliases = true
+			}
+			if q.PeekTok().Lower() == "noheader" || q.PeekTok().Lower() == "nh" {
+				q.files[key].noheader = true
 			}
 			if err = inferTypes(q, key); err != nil {return err}
 			var reader LineReader

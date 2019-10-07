@@ -158,9 +158,9 @@ func TestAll(t *testing.T){
 		Test{`select top 20 c5 from`+f1+`where c5 in (NJ, VA, FL, 78)`,"expression in list",true,whereSet},
 		Test{`select top 20 c3 from`+f1+`where c3 in (8479417420, 7813745231, 7536344478)`,"expression in int list",true,whereSet},
 		Test{`select top 20 c5 from`+f1+`where c5 in (8479417420, 7813745231, 7536344478)`,"string expression in int list",true,whereSet},
-		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW and c.AFG=l.ABW`,"bad join - too many predicates",false,joinSet},
-		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG=r.ABW+c.AFG`,"bad join - mixed files",false,joinSet},
-		Test{`select top 20 from`+f6+`c join`+f7+`r on c.AFG+dog=r.ABW+dog`,"good join",true,joinSet},
+		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1 and c.c3=l.c1`,"bad join - too many predicates",false,joinSet},
+		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1+c.c3`,"bad join - mixed files",false,joinSet},
+		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3+dog=r.c1+dog`,"good join",true,joinSet},
 	}
 
 	for _,t := range tests {
