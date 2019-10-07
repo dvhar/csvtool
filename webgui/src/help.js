@@ -18,7 +18,7 @@ export class Help extends React.Component {
 			{"This program uses a custom version of SQL based on TSQL. Some features like Joins are not implemented yet."}
 			<blockquote>
 				<h4>Specifying a file</h4>
-					{"Click 'Browse Files' to find files, and double click one to add it to the query. You can query different files at the same time by separating queries with a semicolon."}
+					{"Click 'Browse Files' to find files, and double click one to add it to the query. You can query different files at the same time by separating queries with a semicolon. If a file has no header, add 'nh' or 'noheader' after the file path or alias, or before 'select'."}
 					<h4>Selecting some columns</h4>
 					{"Columns can be specified by name or number. Select column numbers by prefacing the number with 'c', or by using a plain unquoted number if putting a 'c' in front of the whole query. Commas between selections are optional."}
 					<br/><br/>
@@ -26,7 +26,7 @@ export class Help extends React.Component {
 					<blockquote>
 						{"select c1 c2 c3 dogs cats from '/home/user/pets.csv'"}
 						<br/>
-						{"select c1 c2 c3 dogs cats from 'C:\\users\\dave\\pets.csv'"}
+						{"select c1 c2 c3 dogs cats from 'C:\\users\\dave\\pets.csv' nh"}
 						<br/>
 						{"c select 1 2 3 dogs cats from 'C:\\users\\dave\\pets.csv'"}
 					</blockquote>
@@ -137,7 +137,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.521 - 9/21/2019
+			version 0.53 - 10/07/2019
 			<hr/>
 			<br/><br/>
 			</div>

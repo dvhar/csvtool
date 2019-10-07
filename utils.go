@@ -520,6 +520,7 @@ type Flags struct {
 	danger *bool
 	persistent *bool
 	command *string
+	version *bool
 }
 var Testing bool
 func (f Flags) gui() bool {

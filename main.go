@@ -27,12 +27,13 @@ func main() {
 
 	flags.localPort = flag.String("port", "8060", "Change localhost port")
 	flags.danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
-	flags.persistent = flag.Bool("stay",false, "don't stop server when browser closes")
-	flags.command = flag.String("c","", "run query from command line argument")
+	flags.persistent = flag.Bool("stay",false, "Don't stop server when browser closes")
+	flags.command = flag.String("c","", "Run query from command line argument")
+	flags.version = flag.Bool("v",false, "Show version and exit`")
 	flag.Parse()
 
 	readStdin()
-	if !flags.gui() { println("version 0.521 - 9/21/2019") }
+	if *flags.version { println("version 0.53 - 10/07/2019"); os.Exit(0) }
 
 	messager = make(chan string)
 	fileclick = make(chan string)

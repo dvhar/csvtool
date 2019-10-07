@@ -670,6 +670,7 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	if err=eosError(q);err != nil { return n,err }
 	//alias
 	t := q.NextTok()
+	if t.Lower() == "noheader" || t.Lower() == "nh" { q.NextTok() }
 	switch t.id {
 	case KW_AS:
 		t = q.NextTok()
@@ -680,6 +681,7 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	default:
 		return n,errors.New("Join requires an alias. Found: "+q.Tok().val)
 	}
+	if q.PeekTok().Lower() == "noheader" || q.PeekTok().Lower() == "nh" { q.NextTok() }
 	if _,ok:=q.files[t.val];!ok { return n,errors.New("Could not open file "+n.tok3.(string)) }
 	if q.NextTok().Lower() != "on" { return n,errors.New("Expected 'on'. Found: "+q.Tok().val) }
 	q.NextTok()
