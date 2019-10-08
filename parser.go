@@ -609,7 +609,7 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	q.NextTok()
 	t := q.Tok()
-	if t.Lower() == "noheader" || t.Lower() == "nh" { q.NextTok() }
+	if t.Lower() == "noheader" || t.Lower() == "nh" { t = q.NextTok() }
 	switch t.id {
 	case KW_AS:
 		t = q.NextTok()
@@ -670,7 +670,7 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	if err=eosError(q);err != nil { return n,err }
 	//alias
 	t := q.NextTok()
-	if t.Lower() == "noheader" || t.Lower() == "nh" { q.NextTok() }
+	if t.Lower() == "noheader" || t.Lower() == "nh" { t = q.NextTok() }
 	switch t.id {
 	case KW_AS:
 		t = q.NextTok()

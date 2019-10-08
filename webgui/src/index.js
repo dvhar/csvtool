@@ -31,16 +31,9 @@ class Main extends React.Component {
 		//restore previous session or initialize paths
 		getRequest({info:"getState"})
 			.then(dat=>{
-				if (dat.openDirList.Dirs && dat.saveDirList.Dirs) {
-					this.setState({ openDirList :  dat.openDirList,
-					                saveDirList :  dat.saveDirList,
-					                queryHistory :  dat.history == undefined ? ['',] : dat.history,
-					                historyPosition :  dat.history == undefined ? that.historyPosition : dat.history.length - 1});
-				} else {
-					this.setState({ openDirList :  {Path: dat.openDirList.Path},
-					                saveDirList :  {Path: dat.saveDirList.Path},
-					});
-				}
+				if (dat.history) this.setState({ queryHistory : dat.history, historyPosition : dat.history.length-1 });
+				if (dat.openDirList) this.setState({ openDirList : dat.openDirList });
+				if (dat.saveDirList) this.setState({ saveDirList : dat.saveDirList });
 				var textbox = document.getElementById("textBoxId");
 				if (textbox != null)
 					textbox.value = this.state.queryHistory[this.state.historyPosition].query || "";
