@@ -52,6 +52,7 @@ const (
 	//not scanned as keywords but still using that for unique vals
 	FN_SUM =      KEYWORD|AGG_BIT|iota
 	FN_AVG =      KEYWORD|AGG_BIT|iota
+	FN_STDEV =    KEYWORD|AGG_BIT|iota
 	FN_MIN =      KEYWORD|AGG_BIT|iota
 	FN_MAX =      KEYWORD|AGG_BIT|iota
 	FN_COUNT =    KEYWORD|AGG_BIT|iota
@@ -188,6 +189,7 @@ var functionMap = map[string]int {
 	"min" :      FN_MIN,
 	"max" :      FN_MAX,
 	"count" :    FN_COUNT,
+	"stdev" :    FN_STDEV,
 	"abs" :      FN_ABS,
 	"format" :   FN_FORMAT,
 	"coalesce" : FN_COALESCE,

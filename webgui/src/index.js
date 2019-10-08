@@ -9,7 +9,6 @@ import * as help from './help.js';
 import * as topbar from './topbar.js';
 import * as serviceWorker from './serviceWorker';
 
-var bugtimer = window.performance.now() + 30000
 
 class Main extends React.Component {
 	constructor(props) {
@@ -163,6 +162,7 @@ class Main extends React.Component {
 
 	componentDidMount(){
 		//websocket
+		var bugtimer = window.performance.now() + 30000
 		var that = this;
 		this.ws = new WebSocket("ws://" + document.location.host + "/socket/");
 		console.log(this.ws);

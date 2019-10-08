@@ -124,19 +124,25 @@ func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
 	return l.fromRow, err
 }
 
-func checkFunctionParamType(functionId, typ int) error {
+//return error, return type of certain functions
+func checkFunctionParamType(functionId, typ int) (int,error) {
 	err := func(s string) error { return errors.New(s+", not "+typeMap[typ]) }
 	switch functionId {
-	case FN_SUM:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only sum numbers") }
-	case FN_AVG:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only average numbers") }
-	case FN_ABS:   if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return err("can only find absolute value of numbers") }
-	case FN_YEAR:  if !intInList(typ, T_DATE) { return err("can only find year of date type") }
-	case FN_MONTH: if !intInList(typ, T_DATE) { return err("can only find month of date type") }
-	case FN_WEEK:  if !intInList(typ, T_DATE) { return err("can only find week of date type") }
-	case FN_WDAY:   if !intInList(typ, T_DATE) { return err("can only find day of date type") }
-	case FN_HOUR:  if !intInList(typ, T_DATE) { return err("can only find hour of date/time type") }
+	case FN_STDEV:    if !intInList(typ, T_FLOAT, T_INT) { return typ,err("can only stdev numbers") }; typ = T_FLOAT
+	case FN_SUM:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only sum numbers") }
+	case FN_AVG:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only average numbers") }
+	case FN_ABS:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only find absolute value of numbers") }
+	case FN_YEAR:     if !intInList(typ, T_DATE) { return typ,err("can only find year of date type") }; typ = T_INT
+	case FN_MONTHNAME:if !intInList(typ, T_DATE) { return typ,err("can only find month of date type") }; typ = T_STRING
+	case FN_MONTH:    if !intInList(typ, T_DATE) { return typ,err("can only find month of date type") }; typ = T_INT
+	case FN_WEEK:     if !intInList(typ, T_DATE) { return typ,err("can only find week of date type") }; typ = T_INT
+	case FN_WDAYNAME: if !intInList(typ, T_DATE) { return typ,err("can only find day of date type") }; typ = T_STRING
+	case FN_WDAY:     fallthrough
+	case FN_YDAY:     fallthrough
+	case FN_MDAY:     if !intInList(typ, T_DATE) { return typ,err("can only find day of date type") }; typ = T_INT
+	case FN_HOUR:     if !intInList(typ, T_DATE) { return typ,err("can only find hour of date/time type") }; typ = T_INT
 	}
-	return nil
+	return typ,nil
 }
 
 func checkOperatorSemantics(operator, t1, t2 int, l1, l2 bool) error {

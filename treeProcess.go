@@ -112,22 +112,11 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		if err != nil { return 0,0,false,err }
 		switch n.label {
 		case N_FUNCTION:
-			err := checkFunctionParamType(n.tok1.(int), t1)
-			//some functions have a specific return type
-			switch n.tok1.(int) {
-			case FN_YEAR:  fallthrough
-			case FN_MONTH: fallthrough
-			case FN_WEEK:  fallthrough
-			case FN_YDAY:  fallthrough
-			case FN_MDAY:  fallthrough
-			case FN_WDAY:   fallthrough
-			case FN_HOUR:  t1 = T_INT
+			t1,err := checkFunctionParamType(n.tok1.(int), t1) //check params and get return type
+			switch n.tok1.(int) { //enforce the ones that are type agnostic on the spot
 			case FN_ENCRYPT:   fallthrough
 			case FN_DECRYPT:
 				enforceType(n.node1, t1)
-				fallthrough
-			case FN_MONTHNAME: fallthrough
-			case FN_WDAYNAME: t1 = T_STRING
 			}
 			if err != nil { return 0,0,false,err }
 		case N_EXPRNEG:
@@ -320,6 +309,7 @@ func enforceType(n *Node, t int) error {
 		return err
 
 	case N_FUNCTION:
+		//blank ones were already enforced
 		switch n.tok1.(int) {
 		case FN_ENCRYPT:
 		case FN_DECRYPT:
@@ -332,6 +322,7 @@ func enforceType(n *Node, t int) error {
 		case FN_MONTHNAME: fallthrough
 		case FN_WDAYNAME:  fallthrough
 		case FN_HOUR:  err = enforceType(n.node1, T_DATE)
+		case FN_STDEV:  err = enforceType(n.node1, T_FLOAT)
 		default: err = enforceType(n.node1, t)
 		}
 		return err

@@ -24,6 +24,33 @@ type Value interface {
 	MarshalJSON() ([]byte,error)
 }
 
+type StdDevVal struct {
+	nums []float
+	mean float
+}
+func (a StdDevVal) Add(other Value) Value       { if _,ok:=other.(float);!ok{return null("")};return StdDevVal{ append(a.nums, other.(float)), a.mean + 1, } }
+func (a StdDevVal) String() string              { return a.Eval().String() }
+func (a StdDevVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.String()) }
+func (a StdDevVal) Greater(other Value) bool    { return false }
+func (a StdDevVal) GreatEq(other Value) bool    { return false }
+func (a StdDevVal) Less(other bt.Item) bool     { return false }
+func (a StdDevVal) LessEq(other Value) bool     { return false }
+func (a StdDevVal) Equal(other Value) bool      { return false }
+func (a StdDevVal) Sub(other Value) Value       { return a }
+func (a StdDevVal) Mult(other Value) Value      { return a }
+func (a StdDevVal) Div(other Value) Value       { return a }
+func (a StdDevVal) Mod(other Value) Value       { return a }
+func (a StdDevVal) Pow(other Value) Value       { return a }
+func (a StdDevVal) Eval() Value                 {
+	count := float(len(a.nums))
+	if count == 0 { return null("") }
+	mean := a.mean.Div(count)
+	sum := float(0)
+	for _,v := range a.nums { sum = sum.Add(v.Sub(mean).Pow(float(2))).(float) }
+	Println(count,sum,mean)
+	return sum.Div(count-1).Pow(float(0.5))
+}
+
 type AverageVal struct {
 	val Value
 	count integer
@@ -33,7 +60,7 @@ func (a AverageVal) String() string              { return a.Eval().String() }
 func (a AverageVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.String()) }
 func (a AverageVal) Greater(other Value) bool    { return false }
 func (a AverageVal) GreatEq(other Value) bool    { return false }
-func (a AverageVal) Less(other bt.Item) bool       { return false }
+func (a AverageVal) Less(other bt.Item) bool     { return false }
 func (a AverageVal) LessEq(other Value) bool     { return false }
 func (a AverageVal) Equal(other Value) bool      { return false }
 func (a AverageVal) Sub(other Value) Value       { return a }
@@ -101,7 +128,7 @@ func (a date) Equal(other Value) bool      { if _,ok:=other.(date);!ok      {ret
 func (a duration) Equal(other Value) bool  { if _,ok:=other.(duration);!ok  {return false};return a.val == other.(duration).val }
 func (a text) Equal(other Value) bool      { if _,ok:=other.(text);!ok      {return false};return a == other.(text) }
 func (a null) Equal(other Value) bool      { if _,ok := other.(null);ok     {return true };return false }
-func (a liker) Equal(other Value) bool     { return a.val.MatchString(Sprint(other)) }
+func (a liker) Equal(other Value) bool     { return a.val.MatchString(other.String()) }
 
 func (a duration) Add(other Value) Value {
 	switch o := other.(type) {
