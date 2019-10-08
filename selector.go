@@ -187,21 +187,23 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 				if q.toRow[index] == nil { q.toRow[index] = null("") }
 				if _,ok := q.toRow[index].(null); ok {
 					switch n.tok1.(int) {
-					case FN_COUNT: q.toRow[index] = float(1)
-					case FN_AVG:   q.toRow[index] = AverageVal{v1, 1}
-					case FN_STDEV: q.toRow[index] = StdDevVal{[]float{v1.(float)}, float(v1.(float))}
+					case FN_COUNT:  q.toRow[index] = float(1)
+					case FN_AVG:    q.toRow[index] = AverageVal{v1, 1}
+					case FN_STDEV:  q.toRow[index] = StdDevVal{[]float{v1.(float)}, float(v1.(float)), 1}
+					case FN_STDEVP: q.toRow[index] = StdDevVal{[]float{v1.(float)}, float(v1.(float)), 0}
 					default: q.toRow[index] = v1
 					}
 					if n.tok3!=nil { n.tok3.(*bt.BTree).ReplaceOrInsert(v1) }
 				//update target with new value
 				} else if n.tok3 == nil || n.tok3.(*bt.BTree).ReplaceOrInsert(v1) == nil {
 					switch n.tok1.(int) {
-					case FN_STDEV: fallthrough
-					case FN_AVG:   fallthrough
-					case FN_SUM:   q.toRow[index] = q.toRow[index].Add(v1)
-					case FN_MIN:   if q.toRow[index].Greater(v1) { q.toRow[index] = v1 }
-					case FN_MAX:   if q.toRow[index].Less(v1) { q.toRow[index] = v1 }
-					case FN_COUNT: q.toRow[index] = q.toRow[index].Add(float(1))
+					case FN_STDEVP: fallthrough
+					case FN_STDEV:  fallthrough
+					case FN_AVG:    fallthrough
+					case FN_SUM:    q.toRow[index] = q.toRow[index].Add(v1)
+					case FN_MIN:    if q.toRow[index].Greater(v1) { q.toRow[index] = v1 }
+					case FN_MAX:    if q.toRow[index].Less(v1) { q.toRow[index] = v1 }
+					case FN_COUNT:  q.toRow[index] = q.toRow[index].Add(float(1))
 					}
 				}
 			}

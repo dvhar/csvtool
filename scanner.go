@@ -53,6 +53,7 @@ const (
 	FN_SUM =      KEYWORD|AGG_BIT|iota
 	FN_AVG =      KEYWORD|AGG_BIT|iota
 	FN_STDEV =    KEYWORD|AGG_BIT|iota
+	FN_STDEVP =   KEYWORD|AGG_BIT|iota
 	FN_MIN =      KEYWORD|AGG_BIT|iota
 	FN_MAX =      KEYWORD|AGG_BIT|iota
 	FN_COUNT =    KEYWORD|AGG_BIT|iota
@@ -190,6 +191,7 @@ var functionMap = map[string]int {
 	"max" :      FN_MAX,
 	"count" :    FN_COUNT,
 	"stdev" :    FN_STDEV,
+	"stdevp" :   FN_STDEVP,
 	"abs" :      FN_ABS,
 	"format" :   FN_FORMAT,
 	"coalesce" : FN_COALESCE,

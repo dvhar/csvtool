@@ -128,6 +128,7 @@ func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
 func checkFunctionParamType(functionId, typ int) (int,error) {
 	err := func(s string) error { return errors.New(s+", not "+typeMap[typ]) }
 	switch functionId {
+	case FN_STDEVP:   fallthrough
 	case FN_STDEV:    if !intInList(typ, T_FLOAT, T_INT) { return typ,err("can only stdev numbers") }; typ = T_FLOAT
 	case FN_SUM:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only sum numbers") }
 	case FN_AVG:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only average numbers") }
