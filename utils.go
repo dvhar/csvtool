@@ -129,9 +129,9 @@ func checkFunctionParamType(functionId, typ int) (int,error) {
 	err := func(s string) error { return errors.New(s+", not "+typeMap[typ]) }
 	switch functionId {
 	case FN_STDEVP:   fallthrough
-	case FN_STDEV:    if !intInList(typ, T_FLOAT, T_INT) { return typ,err("can only stdev numbers") }; typ = T_FLOAT
+	case FN_STDEV:    if !intInList(typ, T_FLOAT, T_INT) { return typ,err("can only find standard deviation of numbers") }; typ = T_FLOAT
 	case FN_SUM:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only sum numbers") }
-	case FN_AVG:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only average numbers") }
+	case FN_AVG:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only average numbers") }; if typ==T_INT { typ=T_FLOAT }
 	case FN_ABS:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only find absolute value of numbers") }
 	case FN_YEAR:     if !intInList(typ, T_DATE) { return typ,err("can only find year of date type") }; typ = T_INT
 	case FN_MONTHNAME:if !intInList(typ, T_DATE) { return typ,err("can only find month of date type") }; typ = T_STRING

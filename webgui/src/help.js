@@ -63,7 +63,7 @@ export class Help extends React.Component {
 				<h4>Aggregate functions</h4>
 					{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions."}
 					<blockquote>
-						sum  avg  min  max  count
+						sum  avg  min  max  count stdev stdevp
 					</blockquote>
 					Example of functions:
 					<blockquote>
@@ -137,7 +137,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.53 - 10/07/2019
+			version 0.54 - 10/08/2019
 			<hr/>
 			<br/><br/>
 			</div>
