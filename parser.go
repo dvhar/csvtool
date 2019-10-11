@@ -20,7 +20,7 @@
                      | {not} <exprAdd> in ( <expressions> )
                      | {not} ( predicates )
 <from>              -> from filename { nh | noheader } { {as} alias } { nh | noheader } <join>
-<join>              -> { left | right | ε } { inner | outer | ε } join file as alias on <predicates> { <join> }
+<join>              -> { left | inner | ε } { inner | outer | ε } join file as alias on <predicates> { <join> }
 <where>             -> where <predicates> | ε
 <having>            -> having <predicates> | ε
 <groupby>           -> group by <expressions> | ε

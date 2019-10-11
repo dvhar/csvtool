@@ -26,12 +26,11 @@ type Value interface {
 
 type StdDevVal struct {
 	nums []float
-	mean float
 	samp int8
 }
 func (a StdDevVal) Add(other Value) Value       {
 	if _,ok:=other.(float);!ok{return null("")};
-	return StdDevVal{ append(a.nums, other.(float)), a.mean.Add(other.(float)).(float), a.samp }
+	return StdDevVal{ append(a.nums, other.(float)), a.samp }
 }
 func (a StdDevVal) String() string              { return a.Eval().String() }
 func (a StdDevVal) MarshalJSON() ([]byte,error) { return json.Marshal(a.String()) }
@@ -48,7 +47,9 @@ func (a StdDevVal) Pow(other Value) Value       { return a }
 func (a StdDevVal) Eval() Value                 {
 	count := float(len(a.nums))
 	if count == 0 { return null("") }
-	mean := a.mean.Div(count)
+	var mean float = a.nums[0]
+	for i:=1; i<len(a.nums); i++ { mean += a.nums[i] }
+	mean = mean.Div(count).(float)
 	sum := float(0)
 	for _,v := range a.nums { sum = sum.Add(v.Sub(mean).Pow(float(2))).(float) }
 	return sum.Div(count-float(a.samp)).Pow(float(0.5))

@@ -111,8 +111,10 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 		//return earlier aggregated value if in group retrieval stage
 		if q.stage == 1 && (n.tok1.(int) & AGG_BIT)!=0 {
 			agg := q.midRow[n.tok2.(int)]
-			if avg,ok := agg.(AverageVal);ok { return 1, avg.Eval() }
-			if std,ok := agg.(StdDevVal);ok { return 1, std.Eval() }
+			switch a := agg.(type) {
+				case AverageVal: return 1, a.Eval()
+				case StdDevVal:  return 1, a.Eval()
+			}
 			return 1, agg
 		}
 
@@ -189,8 +191,8 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 					switch n.tok1.(int) {
 					case FN_COUNT:  q.toRow[index] = float(1)
 					case FN_AVG:    q.toRow[index] = AverageVal{v1, 1}
-					case FN_STDEV:  q.toRow[index] = StdDevVal{[]float{v1.(float)}, float(v1.(float)), 1}
-					case FN_STDEVP: q.toRow[index] = StdDevVal{[]float{v1.(float)}, float(v1.(float)), 0}
+					case FN_STDEV:  q.toRow[index] = StdDevVal{[]float{v1.(float)}, 1}
+					case FN_STDEVP: q.toRow[index] = StdDevVal{[]float{v1.(float)}, 0}
 					default: q.toRow[index] = v1
 					}
 					if n.tok3!=nil { n.tok3.(*bt.BTree).ReplaceOrInsert(v1) }
@@ -351,7 +353,7 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 				match = expr1.GreatEq(expr3)
 			}
 		case KW_IN:
-			for nn:=n.node2;nn!=nil&&!match;nn=nn.node2 {
+			for nn := n.node2; nn != nil && !match; nn = nn.node2 {
 				_,expr2 = execExpression(q, nn.node1)
 				match = expr1.Equal(expr2)
 			}

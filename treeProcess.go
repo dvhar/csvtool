@@ -324,6 +324,7 @@ func enforceType(n *Node, t int) error {
 		case FN_HOUR:  err = enforceType(n.node1, T_DATE)
 		case FN_STDEVP: fallthrough
 		case FN_STDEV:  err = enforceType(n.node1, T_FLOAT)
+		case FN_AVG: if t == T_INT { t = T_FLOAT }; fallthrough
 		default: err = enforceType(n.node1, t)
 		}
 		return err
