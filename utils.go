@@ -421,8 +421,11 @@ func openFiles(q *QuerySpecs) error {
 			}
 			if err = inferTypes(q, key); err != nil {return err}
 			var reader LineReader
+			globalNoHeader := q.noheader
+			q.noheader = q.files[key].noheader
 			q.files[key].reader = &reader
 			q.files[key].reader.Init(q,key)
+			q.noheader = globalNoHeader
 		}
 	}
 	q.Reset()

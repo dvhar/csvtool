@@ -137,7 +137,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.54 - 10/08/2019
+			version 0.541 - 10/08/2019
 			<hr/>
 			<br/><br/>
 			</div>
