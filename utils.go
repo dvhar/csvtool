@@ -46,6 +46,8 @@ type QuerySpecs struct {
 	intColumn bool
 	groupby bool
 	noheader bool
+	joinSortVals []J2ValPos
+	gettingSortVals bool
 }
 func (q *QuerySpecs) NextTok() *Token {
 	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
@@ -58,6 +60,9 @@ func (q QuerySpecs) PeekTok() *Token {
 func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
 func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
 func (q QuerySpecs) LimitReached() bool { return q.quantityRetrieved >= q.quantityLimit && q.quantityLimit > 0 }
+func (q *QuerySpecs) SaveJoinPos(val Value) {
+	q.joinSortVals = append(q.joinSortVals, J2ValPos{q.files["_f1"].reader.prevPos, q.files["_f2"].reader.prevPos, val})
+}
 
 func intInList(x int, i ...int) bool {
 	for _,j := range i { if x == j { return true } }
@@ -85,9 +90,6 @@ func (l*LineReader) SavePos(value Value) {
 }
 func (l*LineReader) SavePosTo(value Value, arr *[]ValPos) {
 	*arr = append(*arr, ValPos{l.prevPos, value})
-}
-func (l*LineReader) SavePosTo2(value1, value2 Value, arr *[]ValPos2) {
-	*arr = append(*arr, ValPos2{l.prevPos, value1, value2})
 }
 func (l*LineReader) PrepareReRead() {
 	l.lineBytes = make([]byte, l.maxLineSize)
@@ -551,23 +553,18 @@ func eosError(q *QuerySpecs) error {
 	return nil
 }
 
+type J2ValPos struct {
+	pos1 int64
+	pos2 int64
+	val Value
+}
 type ValPos struct {
 	pos int64
 	val Value
 }
-type ValPos2 struct {
-	pos int64
-	val1 Value
-	val2 Value
-}
 type ValRow struct {
 	row []string
 	val Value
-}
-type ValRow2 struct {
-	row []string
-	val1 Value
-	val2 Value
 }
 
 type JoinFinder struct {
@@ -575,7 +572,6 @@ type JoinFinder struct {
 	joinNode *Node
 	baseNode *Node
 	posArr []ValPos //store file position for big file
-	posArr2 []ValPos2 //store file position for big file with 2 comparisons
 	rowArr []ValRow //store whole rows for small file
 	i int
 }

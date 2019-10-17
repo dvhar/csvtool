@@ -103,7 +103,7 @@ func execGroupExpressions(q *QuerySpecs, n *Node, m map[interface{}]interface{})
 	return false
 }
 
-//returns type and value
+//returns case-match and value
 func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 	switch n.label {
 
@@ -289,9 +289,9 @@ func execCasePredList(q *QuerySpecs, n *Node) (int,Value) {
 	if n==nil { return -1,null("") }
 	switch n.label {
 	case N_CPREDLIST:
-		typ, v1 := execCasePredList(q, n.node1)
-		if typ == -1 { return execCasePredList(q, n.node2) }
-		return typ,v1
+		caseMatch, v1 := execCasePredList(q, n.node1)
+		if caseMatch == -1 { return execCasePredList(q, n.node2) }
+		return caseMatch,v1
 	case N_CPRED:
 		if evalPredicates(q,n.node1) { return execExpression(q, n.node2) }
 	}
@@ -302,9 +302,9 @@ func execCaseExprList(q *QuerySpecs, n *Node, testVal Value) (int,Value) {
 	if n==nil { return -1,null("") }
 	switch n.label {
 	case N_CWEXPRLIST:
-		typ, v1 := execCaseExprList(q, n.node1, testVal)
-		if typ==-1 { return execCaseExprList(q, n.node2, testVal) }
-		return typ,v1
+		caseMatch, v1 := execCaseExprList(q, n.node1, testVal)
+		if caseMatch==-1 { return execCaseExprList(q, n.node2, testVal) }
+		return caseMatch,v1
 	case N_CWEXPR:
 		_,v1 := execExpression(q, n.node1)
 		if v1.Equal(testVal) { return execExpression(q, n.node2) }

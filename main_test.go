@@ -38,7 +38,7 @@ func TestAll(t *testing.T){
 	fromSet := 1<<2
 	newSet := 1<<3
 	joinSet := 1<<4
-	thisTest :=  joinSet | newSet | selectSet | fromSet | whereSet
+	thisTest :=  joinSet //| newSet | selectSet | fromSet | whereSet
 	_,_,_,_,_,_,_,_,_ = f1, f2, f5, f3, f4, selectSet, whereSet, fromSet, newSet
 
 	var tests = []Test {
@@ -161,6 +161,7 @@ func TestAll(t *testing.T){
 		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1 and c.c3=l.c1`,"bad join - too many predicates",false,joinSet},
 		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1+c.c3`,"bad join - mixed files",false,joinSet},
 		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3+dog=r.c1+dog`,"good join",true,joinSet},
+		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1 order by c5`,"good ordered join",true,joinSet},
 	}
 
 	for _,t := range tests {

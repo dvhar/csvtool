@@ -37,7 +37,10 @@ func CsvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 		}
 	}()
 
-	if q.sortExpr != nil && !q.groupby {
+	if q.sortExpr != nil && !q.groupby && q.joining {
+		q.gettingSortVals = true
+		err = orderedJoinQuery(q, &res)
+	} else if q.sortExpr != nil && !q.groupby {
 		err = orderedQuery(q, &res)
 	} else if q.joining {
 		err = joinQuery(q, &res)
@@ -181,6 +184,38 @@ func returnGroupedRows(q *QuerySpecs, res *SingleQueryResult) {
 	}
 }
 
+//ordered non-grouping join query
+func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
+	var err error
+	stop = 0
+	reader1 := q.files["_f1"].reader
+	scanJoinFiles(q,q.tree.node2,false)
+	firstJoin := q.tree.node2.node1
+	for {
+		if stop == 1 { stop = 0;  break }
+		_,err = reader1.Read()
+		if err != nil {break}
+		if joinNextFile(q, res, firstJoin) { break }
+	}
+	reader1.PrepareReRead()
+	reader2 := q.files["_f1"].reader
+	reader2.PrepareReRead()
+	message("Sorting Rows...")
+	if !flags.gui() { print("\n") }
+	sort.Slice(q.joinSortVals, func(i, j int) bool {
+		ret := q.joinSortVals[i].val.Greater(q.joinSortVals[j].val)
+		if q.sortWay == 2 { return !ret }
+		return ret
+	})
+	for _,v := range q.joinSortVals {
+		reader1.ReadAtPosition(v.pos1)
+		reader2.ReadAtPosition(v.pos2)
+		execSelect(q, res)
+		if q.LimitReached() { return nil }
+	}
+	return nil
+}
+
 //join query
 func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	var err error
@@ -200,8 +235,13 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 	if nn == nil { //have a line from each file so time to query
 		if evalWhere(q) && evalDistinct(q) && execGroupOrNewRow(q,q.tree.node4) {
-			execSelect(q, res)
-			if q.LimitReached() { return true }
+			if q.gettingSortVals {
+				_,sortExpr := execExpression(q, q.sortExpr)
+				q.SaveJoinPos(sortExpr)
+			} else {
+				execSelect(q, res)
+				if q.LimitReached() { return true }
+			}
 		}
 		return false
 	}
@@ -215,6 +255,7 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 		for pos := jf.FindNextBig(compVal); pos != -1 ; pos = jf.FindNextBig(compVal) {
 			joinFound = true
 			jreader.ReadAtPosition(pos)
+			Println("jreader:",jreader.fromRow)
 			if joinNextFile(q,res,nn.node2) { return true }
 		}
 	//process each match for small file
@@ -234,7 +275,7 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 	return false
 }
 
-//scan and sort values from join files
+//scan and sort values from join files for binary search
 func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 	if n == nil { return }
 	var err error
