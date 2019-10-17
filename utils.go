@@ -118,6 +118,7 @@ func (l*LineReader) ReadAtIndex(lineNo int) ([]string,error) {
 	return l.ReadAtPosition(l.valPositions[lineNo].pos)
 }
 func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
+	l.prevPos = pos
 	l.fp.ReadAt(l.lineBytes, pos)
 	l.byteReader.Seek(0,0)
 	l.csvReader = csv.NewReader(l.byteReader)

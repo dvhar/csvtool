@@ -197,9 +197,7 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if err != nil {break}
 		if joinNextFile(q, res, firstJoin) { break }
 	}
-	reader1.PrepareReRead()
-	reader2 := q.files["_f1"].reader
-	reader2.PrepareReRead()
+	reader2 := q.files["_f2"].reader
 	message("Sorting Rows...")
 	if !flags.gui() { print("\n") }
 	sort.Slice(q.joinSortVals, func(i, j int) bool {
@@ -207,10 +205,15 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		if q.sortWay == 2 { return !ret }
 		return ret
 	})
+	q.quantityRetrieved = 0
+	reader1.PrepareReRead()
+	reader2.PrepareReRead()
 	for _,v := range q.joinSortVals {
 		reader1.ReadAtPosition(v.pos1)
 		reader2.ReadAtPosition(v.pos2)
+		q.toRow = make([]Value, q.colSpec.NewWidth)
 		execSelect(q, res)
+		q.quantityRetrieved++
 		if q.LimitReached() { return nil }
 	}
 	return nil
@@ -234,7 +237,7 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 //returns 'reached limit' bool
 func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 	if nn == nil { //have a line from each file so time to query
-		if evalWhere(q) && evalDistinct(q) && execGroupOrNewRow(q,q.tree.node4) {
+		if evalWhere(q) && evalDistinct(q) && execGroupOrNewRow(q,q.tree.node4) { //TODO:stop redunant newrow on join sort
 			if q.gettingSortVals {
 				_,sortExpr := execExpression(q, q.sortExpr)
 				q.SaveJoinPos(sortExpr)
@@ -255,7 +258,6 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 		for pos := jf.FindNextBig(compVal); pos != -1 ; pos = jf.FindNextBig(compVal) {
 			joinFound = true
 			jreader.ReadAtPosition(pos)
-			Println("jreader:",jreader.fromRow)
 			if joinNextFile(q,res,nn.node2) { return true }
 		}
 	//process each match for small file
