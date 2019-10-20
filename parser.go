@@ -656,8 +656,8 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	switch q.Tok().Lower() {
 		case "join":  n.tok2 = 0
 		case "sjoin": n.tok2 = 0; sizeOverride = true
-		case "bjoin": n.tok2 = 1; sizeOverride = true
-		default: return n,errors.New("Expected 'join'. Found:"+q.Tok().val) 
+		case "bjoin": n.tok2 = 1; sizeOverride = true; q.bigjoin = true
+		default: return n,errors.New("Expected 'join'. Found:"+q.Tok().val)
 	}
 	//file path
 	n.tok3 = q.NextTok().val
@@ -666,6 +666,7 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	//see if file is 100+ megabytes
 	if !sizeOverride && finfo.Size() > 100000000 {
 		n.tok2 = 1
+		q.bigjoin = true
 	}
 	if err=eosError(q);err != nil { return n,err }
 	//alias

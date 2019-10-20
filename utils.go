@@ -46,6 +46,7 @@ type QuerySpecs struct {
 	intColumn bool
 	groupby bool
 	noheader bool
+	bigjoin bool
 	joinSortVals []J2ValPos
 	gettingSortVals bool
 }
@@ -61,7 +62,9 @@ func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
 func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
 func (q QuerySpecs) LimitReached() bool { return q.quantityRetrieved >= q.quantityLimit && q.quantityLimit > 0 }
 func (q *QuerySpecs) SaveJoinPos(val Value) {
-	q.joinSortVals = append(q.joinSortVals, J2ValPos{q.files["_f1"].reader.prevPos, q.files["_f2"].reader.prevPos, val})
+	var j2 int64
+	if q.bigjoin { j2 = q.files["_f2"].reader.prevPos } else { j2 = q.files["_f2"].reader.index }
+	q.joinSortVals = append(q.joinSortVals, J2ValPos{q.files["_f1"].reader.prevPos, j2, val})
 }
 
 func intInList(x int, i ...int) bool {
@@ -74,7 +77,7 @@ type LineReader struct {
 	valPositions []ValPos
 	lineBytes []byte
 	fromRow []string
-	limit int
+	index int64
 	maxLineSize int
 	pos int64
 	prevPos int64
@@ -100,7 +103,6 @@ func (l*LineReader) Init(q *QuerySpecs, f string) {
 	l.valPositions = make([]ValPos,0)
 	l.tee = io.TeeReader(l.fp, &l.lineBuffer)
 	l.csvReader = csv.NewReader(l.tee)
-	if q.quantityLimit == 0 { l.limit = 1<<62 } else { l.limit = q.quantityLimit }
 	if !q.noheader{ l.Read() }
 }
 
@@ -566,6 +568,7 @@ type ValPos struct {
 type ValRow struct {
 	row []string
 	val Value
+	idx int
 }
 
 type JoinFinder struct {
@@ -608,7 +611,7 @@ func (jf *JoinFinder) FindNextBig(val Value) int64 {
 	return -1
 }
 //find matching row in memory for small files
-func (jf *JoinFinder) FindNextSmall(val Value) ([]string,error) {
+func (jf *JoinFinder) FindNextSmall(val Value) *ValRow {
 	//use binary search for leftmost instance
 	r := len(jf.rowArr)-1
 	if jf.i == -1 {
@@ -624,19 +627,19 @@ func (jf *JoinFinder) FindNextSmall(val Value) ([]string,error) {
 		}
 		if jf.rowArr[l].val.Equal(val) {
 			jf.i = l
-			return jf.rowArr[l].row, nil
+			return &jf.rowArr[l]
 		}
 	//check right neighbors for more matches
 	} else {
 		if jf.i < r-1 {
 			jf.i++
 			if jf.rowArr[jf.i].val.Equal(val) {
-				return jf.rowArr[jf.i].row, nil
+				return &jf.rowArr[jf.i]
 			}
 		}
 	}
 	jf.i = -1 //set i to -1 when done so next search is binary
-	return nil, errors.New("none")
+	return nil
 }
 func (jf *JoinFinder) Sort() {
 	sort.Slice(jf.posArr, func(i, j int) bool { return jf.posArr[j].val.Greater(jf.posArr[i].val) })

@@ -161,7 +161,8 @@ func TestAll(t *testing.T){
 		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1 and c.c3=l.c1`,"bad join - too many predicates",false,joinSet},
 		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1+c.c3`,"bad join - mixed files",false,joinSet},
 		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3+dog=r.c1+dog`,"good join",true,joinSet},
-		Test{`nh select top 20 from`+f6+`c bjoin`+f7+`r on c.c3=r.c1 order by c5`,"good ordered join",true,joinSet},
+		Test{`nh select top 20 from`+f6+`c bjoin`+f7+`r on c.c3=r.c1 order by c5`,"good big ordered join",true,joinSet},
+		Test{`nh select top 20 from`+f6+`c join`+f7+`r on c.c3=r.c1 order by c5`,"good small ordered join",true,joinSet},
 	}
 
 	for _,t := range tests {

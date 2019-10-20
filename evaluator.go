@@ -208,9 +208,14 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	q.quantityRetrieved = 0
 	reader1.PrepareReRead()
 	reader2.PrepareReRead()
+	joinRows := firstJoin.node1.node1.tok5.(JoinFinder).rowArr
 	for _,v := range q.joinSortVals {
 		reader1.ReadAtPosition(v.pos1)
-		reader2.ReadAtPosition(v.pos2)
+		if q.bigjoin {
+			reader2.ReadAtPosition(v.pos2)
+		} else {
+			reader2.fromRow = joinRows[v.pos2].row
+		}
 		q.toRow = make([]Value, q.colSpec.NewWidth)
 		execSelect(q, res)
 		q.quantityRetrieved++
@@ -262,9 +267,10 @@ func joinNextFile(q *QuerySpecs, res *SingleQueryResult, nn *Node) bool {
 		}
 	//process each match for small file
 	} else {
-		for row,err := jf.FindNextSmall(compVal); err==nil ; row,err = jf.FindNextSmall(compVal) {
+		for vrow := jf.FindNextSmall(compVal); vrow != nil ; vrow = jf.FindNextSmall(compVal) {
 			joinFound = true
-			jreader.fromRow = row
+			jreader.fromRow = vrow.row
+			jreader.index = int64(vrow.idx)
 			if joinNextFile(q,res,nn.node2) { return true }
 		}
 	}
@@ -301,6 +307,7 @@ func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 				}
 			}
 		} else {
+			rowIdx := 0
 			for {
 				_,err = reader.Read()
 				if err != nil {break}
@@ -308,7 +315,8 @@ func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 				if _,ok := onValue.(null); !ok {
 					newRow := make([]string, len(reader.fromRow))
 					copy(newRow, reader.fromRow)
-					jf.rowArr = append(jf.rowArr, ValRow{newRow, onValue})
+					jf.rowArr = append(jf.rowArr, ValRow{newRow, onValue, rowIdx})
+					rowIdx++
 				}
 			}
 		}
