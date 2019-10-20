@@ -782,8 +782,10 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 				q.NextTok()
 			} else if q.Tok().id != SP_RPAREN {
 				return n,ErrMsg(q.Tok(),"inc() function parameter must be increment amount or empty. Found: "+q.Tok().val)
-			} else { n.tok3 = 1 }
-			Println(q.Tok())
+			} else {
+				n.tok3 = float(1.0)
+				n.tok4 = float(1.0)
+			}
 		default:
 			n.node1, err = parseExprAdd(q)
 		}
@@ -792,6 +794,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	q.NextTok()
 	//groupby if aggregate function
 	if (n.tok1.(int) & AGG_BIT) != 0 { q.groupby = true }
+	Println("func node:",n)
 	return n,err
 }
 

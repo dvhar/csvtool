@@ -20,6 +20,7 @@ func CsvQuery(q *QuerySpecs) (SingleQueryResult, error) {
 	q.showLimit = 20000 / len(q.colSpec.NewNames)
 	q.distinctCheck = bt.New(200)
 	active = true
+	treePrint(q.tree,0)
 
 	//prepare output
 	res:= SingleQueryResult{
