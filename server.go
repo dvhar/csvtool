@@ -177,12 +177,10 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 		case "setState":
 			body, _ := ioutil.ReadAll(r.Body)
 			json.Unmarshal(body,&state)
-			Println("set state:",state)
 		case "getState":
 			if state.OpenDirList.Path == "" { state.OpenDirList.Path = FPaths.OpenPath }
 			if state.SaveDirList.Path == "" { state.SaveDirList.Path = FPaths.SavePath }
 			ret = state
-			Println("returning state:",ret)
 		case "fileClick":
 			var dir DirRequest
 			body, _ := ioutil.ReadAll(r.Body)

@@ -15,7 +15,10 @@ export class Help extends React.Component {
 			{"After running a query, hit the save button. Navigate to where you want to save, type in the file name, and hit the save button to the right. All the queries on the page will run again, but this time they will be saved to csv files. If there are multiple queries on the page, you still only need to specify one file and a number will be added to the filename for each one."}
 			<h3>How to use the query language</h3>
 			<hr/>
-			{"This program uses a custom version of SQL based on TSQL. Some features like Joins are not implemented yet."}
+			{"This program uses a custom version of SQL based on TSQL. Some features like Unions and Subqueries are not implemented yet. The query is ordered like this:"}
+			<br/>
+			{"<selections> <from file> <joins> <where> <group by> <having> <order by>"}
+			<br/>
 			<blockquote>
 				<h4>Specifying a file</h4>
 					{"Click 'Browse Files' to find files, and double click one to add it to the query. You can query different files at the same time by separating queries with a semicolon. If a file has no header, add 'nh' or 'noheader' after the file path or alias, or before 'select'."}
@@ -58,10 +61,12 @@ export class Help extends React.Component {
 					</blockquote>
 					{"The 'abs' function can be used to get the absolute value of a number."}
 					<br/>
+					{"The 'inc' function returns an automatically incrementing number. Leave the parentheses empty like inc() to increment by 1, or include a number to increment by that number like inc(2)."}
 					<br/>
-					{"encrypt(expression, password, cipher) and decrypt(expression, password, cipher) do what you'd think. 'cipher' can be 'aes' if you want strong encryption, or 'rc4' if you want something a government could crack but takes less space."}
+					<br/>
+					{"encrypt(expression, password, cipher) and decrypt(expression, password, cipher) do what you'd think. cipher can be 'aes' if you want strong encryption, or 'rc4' if you want something a government could crack but takes less space."}
 				<h4>Aggregate functions</h4>
-					{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions."}
+					{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions. You can filter with a 'having' clause."}
 					<blockquote>
 						sum  avg  min  max  count stdev stdevp
 					</blockquote>
@@ -137,7 +142,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.55 - 10/19/2019
+			version 0.56 - 10/20/2019
 			<hr/>
 			<br/><br/>
 			</div>

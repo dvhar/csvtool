@@ -794,7 +794,6 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	q.NextTok()
 	//groupby if aggregate function
 	if (n.tok1.(int) & AGG_BIT) != 0 { q.groupby = true }
-	Println("func node:",n)
 	return n,err
 }
 
