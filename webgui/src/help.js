@@ -110,13 +110,13 @@ export class Help extends React.Component {
 						{"select from '/home/user/pets.csv' order by c2*c3"}
 					</blockquote>
 				<h4>Joining Files</h4>
-					{"Any number of files can be joined together. Left and inner joins are allowed, default is inner. One join condition per join file. Each file needs an alias."}
+					{"Any number of files can be joined together. Left and inner joins are allowed, default is inner. One join condition per join file. Each file needs an alias. Joins with many files can be sorted (with order-by clause) if doing aggregate functions, but only joins with 2 files can be sorted if not using aggregates."}
 					<br/><br/>
 					Examples:
 					<blockquote>
 						{"select pet.name, pet.species, code.c1 from '/home/user/pets.csv' pet"
 							+" left join '/home/user/codes.csv' code"
-							+" on pet.species = code.species"}
+							+" on pet.species = code.species order by pet.age"}
 						<br/>
 						{"select pet.name, code.c1, fur.flufftype from '/home/user/pets.csv' pet"
 							+" inner join '/home/user/fur.csv' fur"
@@ -137,7 +137,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.541 - 10/08/2019
+			version 0.55 - 10/19/2019
 			<hr/>
 			<br/><br/>
 			</div>
