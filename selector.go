@@ -163,6 +163,7 @@ func execExpression(q *QuerySpecs, n *Node) (int,Value) {
 				plaintext, _ = n.tok3.(cipher.AEAD).Open(nil, nonce, ciphertext, nil)
 			}
 			v1 = text(plaintext)
+		case FN_INC: num := n.tok4.(float); n.tok4 = num + n.tok3.(float); v1 = num
 		default:
 			t1,v1 = execExpression(q, n.node1)
 		}

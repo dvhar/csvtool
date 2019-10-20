@@ -112,6 +112,7 @@ func typeCheck(n *Node) (int, int, bool, error) {  //returns nodetype, datatype,
 		if err != nil { return 0,0,false,err }
 		switch n.label {
 		case N_FUNCTION:
+			if n.tok1.(int) == FN_INC { return n.label, T_FLOAT, true, nil }
 			t1,err := checkFunctionParamType(n.tok1.(int), t1) //check params and get return type
 			switch n.tok1.(int) { //enforce the ones that are type agnostic on the spot
 			case FN_ENCRYPT:   fallthrough
@@ -311,6 +312,7 @@ func enforceType(n *Node, t int) error {
 	case N_FUNCTION:
 		//blank ones were already enforced
 		switch n.tok1.(int) {
+		case FN_INC: return nil
 		case FN_ENCRYPT:
 		case FN_DECRYPT:
 		case FN_YEAR:      fallthrough

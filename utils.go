@@ -555,6 +555,7 @@ func eosError(q *QuerySpecs) error {
 	if q.PeekTok().id == 255 { return errors.New("Unexpected end of query string") }
 	return nil
 }
+func ErrMsg(t *Token, s string) error { return errors.New(Sprint("Line ",t.line," Col ",t.col,":",s)) }
 
 type J2ValPos struct {
 	pos1 int64

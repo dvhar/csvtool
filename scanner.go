@@ -64,13 +64,14 @@ const (
 	FN_MONTH =    KEYWORD|iota
 	FN_MONTHNAME= KEYWORD|iota
 	FN_WEEK =     KEYWORD|iota
-	FN_WDAY =      KEYWORD|iota
-	FN_WDAYNAME =  KEYWORD|iota
+	FN_WDAY =     KEYWORD|iota
+	FN_WDAYNAME = KEYWORD|iota
 	FN_YDAY =     KEYWORD|iota
 	FN_MDAY =     KEYWORD|iota
 	FN_HOUR =     KEYWORD|iota
 	FN_ENCRYPT =  KEYWORD|iota
 	FN_DECRYPT =  KEYWORD|iota
+	FN_INC =      KEYWORD|iota
 	//special bits
 	SPECIALBIT =  1<<21
 	SPECIAL =      FINAL|SPECIALBIT
@@ -185,6 +186,7 @@ var keywordMap = map[string]int {
 //functions are normal words to avoid taking up too many words
 //use map when parsing not scanning
 var functionMap = map[string]int {
+	"inc" :      FN_INC,
 	"sum" :      FN_SUM,
 	"avg" :      FN_AVG,
 	"min" :      FN_MIN,
@@ -311,6 +313,7 @@ type Token struct {
 	id int
 	val string
 	line int
+	col int
 	quoted bool
 }
 func (t Token) Lower() string {
@@ -330,9 +333,9 @@ func scanner(s* StringLookahead) Token {
 		nextState = table[state][s.peek()]
 		if (nextState & ERROR) != 0 {
 		//end of string
-			if state == 255 { return Token { id: 255, val: "END", line: lineNo } }
+			if state == 255 { return Token { id: 255, val: "END", line: lineNo, col: colNo } }
 			Printf("error peek: %d state: %d nextstates: %d nextchar: %c S: %s\n",s.peek(),state, nextState, nextchar,S)
-			return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo }
+			return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo, col: colNo }
 		}
 
 		if (nextState & FINAL) != 0 {
@@ -340,10 +343,10 @@ func scanner(s* StringLookahead) Token {
 			if nextState == WORD {
 				if kw,ok := keywordMap[strings.ToLower(S)];ok && waitForQuote == 0 {
 					//return keyword token
-					return Token { id: kw, val: S, line: lineNo }
+					return Token { id: kw, val: S, line: lineNo, col: colNo }
 				} else {
 					//return word token
-					return Token { id: nextState, val: S, line: lineNo }
+					return Token { id: nextState, val: S, line: lineNo, col: colNo }
 				}
 			//see if special type or something else
 			} else if nextState == SPECIAL {
@@ -355,14 +358,14 @@ func scanner(s* StringLookahead) Token {
 						waitForQuote = 0
 					}
 					//return special token
-					return Token { id: sp, val: S, line: lineNo }
+					return Token { id: sp, val: S, line: lineNo, col: colNo }
 				} else {
 					println("error: unknown special. peek: "+Itoa(s.peek())+" state: "+Itoa(state)+" ns: "+Itoa(nextState));
 					println(enumMap[nextState])
-					return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo }
+					return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo, col: colNo }
 				}
 			} else {
-				return Token { id: nextState, val: S, line: lineNo }
+				return Token { id: nextState, val: S, line: lineNo, col: colNo }
 			}
 
 		} else {
@@ -377,11 +380,11 @@ func scanner(s* StringLookahead) Token {
 			}
 			if nextchar == '\n' { lineNo++; colNo=0 }
 			if nextchar == EOS {
-				return Token { id: EOS, val: "END", line: lineNo }
+				return Token { id: EOS, val: "END", line: lineNo, col: colNo }
 			}
 		}
 	}
-	return Token { id: EOS, val: "END", line: lineNo }
+	return Token { id: EOS, val: "END", line: lineNo, col: colNo }
 
 
 }
@@ -412,7 +415,7 @@ func scanTokens(q *QuerySpecs) error {
 			S := ""
 			for t = scanner(input); t.id != quote && t.id != EOS ; t = scanner(input) { S += t.val }
 			if t.id != quote { return errors.New("Quote was not terminated") }
-			t = Token{WORD,S,t.line,true}
+			t = Token{WORD,S,t.line,t.col,true}
 		}
 		q.tokArray = append(q.tokArray, t)
 		if t.id == ERROR { return errors.New("scanner error: "+t.val) }

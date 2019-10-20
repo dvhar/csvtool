@@ -31,7 +31,6 @@
 
 package main
 import (
-	"errors"
 	"crypto/aes"
 	"crypto/sha256"
 	"crypto/cipher"
@@ -69,7 +68,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	q.sortExpr,err = parseOrder(q)
 	if err != nil { return n,err }
 
-	if q.Tok().id != EOS { err = errors.New("Expected end of query, got "+q.Tok().val) }
+	if q.Tok().id != EOS { err = ErrMsg(q.Tok(),"Expected end of query, got "+q.Tok().val) }
 	if err != nil { return n,err }
 
 	//add 'having' and 'order by' expressions to selections if grouping
@@ -92,7 +91,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	branchShortener(q, n.node1)
 	columnNamer(q, n.node1)
 	_,f := findAggregateFunctions(q, n.node1)
-	if f { return n,errors.New("Cannot have aggregate function inside an aggregate function") }
+	if f { return n,ErrMsg(q.Tok(),"Cannot have aggregate function inside an aggregate function") }
 
 	//process 'from' section
 	_,_,_,err = typeCheck(n.node2)
@@ -102,7 +101,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	branchShortener(q, n.node2)
 
 	//process 'where' section
-	if e := findAggregateFunction(n.node3);e >0 { return n,errors.New("Cannot have aggregate function in 'where' clause") }
+	if e := findAggregateFunction(n.node3);e >0 { return n,ErrMsg(q.Tok(),"Cannot have aggregate function in 'where' clause") }
 	_,_,_,err = typeCheck(n.node3)
 	if err != nil { return n,err }
 	branchShortener(q, n.node3.node1)
@@ -139,7 +138,7 @@ func parseOptions(q* QuerySpecs) {
 func parseSelect(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
-	if q.Tok().id != KW_SELECT { return n,errors.New("Expected 'select'. Found "+q.Tok().val) }
+	if q.Tok().id != KW_SELECT { return n,ErrMsg(q.Tok(),"Expected 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)
 	if err != nil { return n,err }
@@ -206,7 +205,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 		if !hidden { countSelected++ }
 		//alias = expression
 		if q.PeekTok().id == SP_EQ {
-			if q.Tok().id != WORD { return n,errors.New("Alias must be a word. Found "+q.Tok().val) }
+			if q.Tok().id != WORD { return n,ErrMsg(q.Tok(),"Alias must be a word. Found "+q.Tok().val) }
 			n.tok2 = q.Tok().val
 			q.NextTok()
 			q.NextTok()
@@ -226,7 +225,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 	case KW_FROM:
 		if countSelected == 0 { return selectAll(q) }
 		return nil,nil
-	default: return n,errors.New("Expected a new selection or 'from' clause. Found "+q.Tok().val)
+	default: return n,ErrMsg(q.Tok(),"Expected a new selection or 'from' clause. Found "+q.Tok().val)
 	}
 	return n,err
 }
@@ -308,10 +307,10 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 			n.tok2 = N_EXPRADD
 			n.node1,err = parseExprAdd(q)
 			if err != nil { return n,err }
-			if q.Tok().id != KW_WHEN { return n,errors.New("Expected 'when' after case expression. Found "+q.Tok().val) }
+			if q.Tok().id != KW_WHEN { return n,ErrMsg(q.Tok(),"Expected 'when' after case expression. Found "+q.Tok().val) }
 			n.node2,err = parseCaseWhenExprList(q)
 			if err != nil { return n,err }
-		default: return n,errors.New("Expected expression or 'when'. Found "+q.Tok().val)
+		default: return n,ErrMsg(q.Tok(),"Expected expression or 'when'. Found "+q.Tok().val)
 		}
 
 		switch q.Tok().id {
@@ -321,10 +320,10 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 			q.NextTok()
 			n.node3,err = parseExprAdd(q)
 			if err != nil { return n,err }
-			if q.Tok().id != KW_END { return n,errors.New("Expected 'end' after 'else' expression. Found "+q.Tok().val) }
+			if q.Tok().id != KW_END { return n,ErrMsg(q.Tok(),"Expected 'end' after 'else' expression. Found "+q.Tok().val) }
 			q.NextTok()
 		default:
-			return n,errors.New("Expected 'end' or 'else' after case expression. Found "+q.Tok().val)
+			return n,ErrMsg(q.Tok(),"Expected 'end' or 'else' after case expression. Found "+q.Tok().val)
 		}
 
 	case WORD:
@@ -335,9 +334,9 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 		q.NextTok()
 		n.node1,err = parseExprAdd(q)
 		if err != nil { return n,err }
-		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis. Found "+q.Tok().val) }
+		if q.Tok().id != SP_RPAREN { return n,ErrMsg(q.Tok(),"Expected closing parenthesis. Found "+q.Tok().val) }
 		q.NextTok()
-	default: return n,errors.New("Expected case, value, or expression. Found "+q.Tok().val)
+	default: return n,ErrMsg(q.Tok(),"Expected case, value, or expression. Found "+q.Tok().val)
 	}
 	return n, err
 }
@@ -379,14 +378,14 @@ func parseValue(q* QuerySpecs) (*Node,error) {
 		}
 		//try column number
 		if num,er := Atoi(value); q.intColumn && !tok.quoted && er == nil {
-			if num<1 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
+			if num<1 || num>fdata.width { return n,ErrMsg(q.Tok(),"Column number out of bounds:"+Sprint(num)) }
 			n.tok1 = num-1
 			n.tok2 = 1
 			n.tok3 = fdata.types[num-1]
 			n.tok5 = fdata
 		} else if !tok.quoted && cInt.MatchString(value) {
 			num,_ := Atoi(value[1:])
-			if num<1 || num>fdata.width { return n,errors.New("Column number out of bounds:"+Sprint(num)) }
+			if num<1 || num>fdata.width { return n,ErrMsg(q.Tok(),"Column number out of bounds:"+Sprint(num)) }
 			n.tok1 = num - 1
 			n.tok2 = 1
 			n.tok3 = fdata.types[num-1]
@@ -431,7 +430,7 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 	q.NextTok() //eat when token
 	n.node1,err = parsePredicates(q)
 	if err != nil { return n,err }
-	if q.Tok().id != KW_THEN { return n,errors.New("Expected 'then' after predicate. Found: "+q.Tok().val) }
+	if q.Tok().id != KW_THEN { return n,ErrMsg(q.Tok(),"Expected 'then' after predicate. Found: "+q.Tok().val) }
 	q.NextTok() //eat then token
 	n.node2,err = parseExprAdd(q)
 	return n, err
@@ -464,7 +463,7 @@ func parseJoinPredicates(q* QuerySpecs) (*Node,error) {
 	n.tok3 = 1
 	n.node1,err = parseJoinPredCompare(q)
 	if err != nil { return n,err }
-	if (q.Tok().id & LOGOP) != 0 { return n,errors.New("Only one join condition per file") }
+	if (q.Tok().id & LOGOP) != 0 { return n,ErrMsg(q.Tok(),"Only one join condition per file") }
 	/*
 	if q.Tok().id == KW_AND {
 		n.tok3 = 2
@@ -476,7 +475,7 @@ func parseJoinPredicates(q* QuerySpecs) (*Node,error) {
 			node1: comparison,
 		}
 	} else if (q.Tok().id & LOGOP) != 0 {
-		return n,errors.New("Join conditions support one 'and' operator per join")
+		return n,ErrMsg(q.Tok(),"Join conditions support one 'and' operator per join")
 	}
 	*/
 	return n, err
@@ -487,7 +486,7 @@ func parseJoinPredCompare(q* QuerySpecs) (*Node,error) {
 	var err error
 	n.node1, err = parseExprAdd(q)
 	if err != nil { return n,err }
-	if q.Tok().id != SP_EQ { return n,errors.New("Expected = operator. Found: "+q.Tok().val) }
+	if q.Tok().id != SP_EQ { return n,ErrMsg(q.Tok(),"Expected = operator. Found: "+q.Tok().val) }
 	q.NextTok()
 	n.node2, err = parseExprAdd(q)
 	return n, err
@@ -513,7 +512,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		//try parsing as predicate
 		q.NextTok()
 		n.node1, err = parsePredicates(q)
-		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected cosing parenthesis. Found:"+q.Tok().val) }
+		if q.Tok().id != SP_RPAREN { return n,ErrMsg(q.Tok(),"Expected cosing parenthesis. Found:"+q.Tok().val) }
 		q.NextTok()
 		//if failed, reparse as expression
 		if err != nil {
@@ -527,7 +526,7 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	if q.Tok().id == SP_NEGATE { negate ^= 1; q.NextTok() }
 	n.tok2 = negate
-	if (q.Tok().id & RELOP) == 0 { return n,errors.New("Expected relational operator. Found: "+q.Tok().val) }
+	if (q.Tok().id & RELOP) == 0 { return n,ErrMsg(q.Tok(),"Expected relational operator. Found: "+q.Tok().val) }
 	n.tok1 = q.Tok().id
 	q.NextTok()
 	if n.tok1 == KW_LIKE {
@@ -540,11 +539,11 @@ func parsePredCompare(q* QuerySpecs) (*Node,error) {
 		n.node2 = &Node{label: N_VALUE, tok1: liker{like.(*regexp.Regexp)}, tok2: 0, tok3: 0} //like gets 'null' type because it also doesn't effect operation type
 		q.NextTok()
 	} else if n.tok1 == KW_IN {
-		if q.Tok().id != SP_LPAREN { return n,errors.New("Expected opening parenthesis for expression list. Found: "+q.Tok().val) }
+		if q.Tok().id != SP_LPAREN { return n,ErrMsg(q.Tok(),"Expected opening parenthesis for expression list. Found: "+q.Tok().val) }
 		q.NextTok()
 		n.node2, err = parseExpressionList(q,true)
 		if err != nil { return n,err }
-		if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after expression list. Found: "+q.Tok().val) }
+		if q.Tok().id != SP_RPAREN { return n,ErrMsg(q.Tok(),"Expected closing parenthesis after expression list. Found: "+q.Tok().val) }
 		q.NextTok()
 	} else {
 		n.node2, err = parseExprAdd(q)
@@ -590,7 +589,7 @@ func parseTop(q* QuerySpecs) error {
 	var err error
 	if q.Tok().id == KW_TOP {
 		q.quantityLimit, err = Atoi(q.PeekTok().val)
-		if err != nil { return errors.New("Expected number after 'top'. Found "+q.PeekTok().val) }
+		if err != nil { return ErrMsg(q.Tok(),"Expected number after 'top'. Found "+q.PeekTok().val) }
 		q.NextTok(); q.NextTok()
 	}
 	return nil
@@ -602,7 +601,7 @@ func parseTop(q* QuerySpecs) error {
 func parseFrom(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FROM}
 	var err error
-	if q.Tok().id != KW_FROM { return n,errors.New("Expected 'from'. Found: "+q.Tok().val) }
+	if q.Tok().id != KW_FROM { return n,ErrMsg(q.Tok(),"Expected 'from'. Found: "+q.Tok().val) }
 	tok := strings.Replace(q.NextTok().val, "~/", os.Getenv("HOME")+"/", 1)
 	n.tok1 = tok
 	_,err = os.Stat(Sprint(n.tok1))
@@ -613,10 +612,10 @@ func parseFrom(q* QuerySpecs) (*Node,error) {
 	switch t.id {
 	case KW_AS:
 		t = q.NextTok()
-		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
+		if t.id != WORD { return n,ErrMsg(q.Tok(),"Expected alias after as. Found: "+t.val) }
 		fallthrough
 	case WORD:
-		if _,ok:=joinMap[t.Lower()];ok { return n,errors.New("Join requires file aliases. Found: "+t.val) }
+		if _,ok:=joinMap[t.Lower()];ok { return n,ErrMsg(q.Tok(),"Join requires file aliases. Found: "+t.val) }
 		n.tok2 = t.val
 		q.NextTok()
 	}
@@ -657,7 +656,7 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 		case "join":  n.tok2 = 0
 		case "sjoin": n.tok2 = 0; sizeOverride = true
 		case "bjoin": n.tok2 = 1; sizeOverride = true; q.bigjoin = true
-		default: return n,errors.New("Expected 'join'. Found:"+q.Tok().val)
+		default: return n,ErrMsg(q.Tok(),"Expected 'join'. Found:"+q.Tok().val)
 	}
 	//file path
 	n.tok3 = q.NextTok().val
@@ -675,16 +674,16 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 	switch t.id {
 	case KW_AS:
 		t = q.NextTok()
-		if t.id != WORD { return n,errors.New("Expected alias after as. Found: "+t.val) }
+		if t.id != WORD { return n,ErrMsg(q.Tok(),"Expected alias after as. Found: "+t.val) }
 		fallthrough
 	case WORD:
 		n.tok4 = t.val
 	default:
-		return n,errors.New("Join requires an alias. Found: "+q.Tok().val)
+		return n,ErrMsg(q.Tok(),"Join requires an alias. Found: "+q.Tok().val)
 	}
 	if q.PeekTok().Lower() == "noheader" || q.PeekTok().Lower() == "nh" { q.NextTok() }
-	if _,ok:=q.files[t.val];!ok { return n,errors.New("Could not open file "+n.tok3.(string)) }
-	if q.NextTok().Lower() != "on" { return n,errors.New("Expected 'on'. Found: "+q.Tok().val) }
+	if _,ok:=q.files[t.val];!ok { return n,ErrMsg(q.Tok(),"Could not open file "+n.tok3.(string)) }
+	if q.NextTok().Lower() != "on" { return n,ErrMsg(q.Tok(),"Expected 'on'. Found: "+q.Tok().val) }
 	q.NextTok()
 	n.node1, err = parseJoinPredicates(q)
 	if err != nil { return n,err }
@@ -716,10 +715,13 @@ func parseHaving(q*QuerySpecs) (*Node,error) {
 func parseOrder(q* QuerySpecs) (*Node,error) {
 	if q.Tok().id == EOS { return nil,nil }
 	if q.Tok().id == KW_ORDER {
-		if q.NextTok().id != KW_BY { return nil,errors.New("Expected 'by' after 'order'. Found "+q.Tok().val) }
+		if q.NextTok().id != KW_BY { return nil,ErrMsg(q.Tok(),"Expected 'by' after 'order'. Found "+q.Tok().val) }
 		q.NextTok()
 		expr, err := parseExprAdd(q)
 		if q.Tok().id == KW_ORDHOW { q.NextTok(); q.sortWay = 2 }
+		if _,ok := q.files["_f3"]; ok && q.joining && !q.groupby {
+			return nil, ErrMsg(q.Tok(),"Non-grouping ordered queries can only join 2 files")
+		}
 		return expr, err
 	}
 	return nil,nil
@@ -728,8 +730,8 @@ func parseOrder(q* QuerySpecs) (*Node,error) {
 
 //tok1 is function id
 //tok2 will be intermediate index if aggragate
-//tok3 is distinct btree for count, cipher for encryption
-//tok4 if using aes
+//tok3 is distinct btree for count, cipher for encryption, increment step
+//tok4 true if using aes, increment start number
 //node1 is expression in parens
 func parseFunction(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FUNCTION}
@@ -757,9 +759,9 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 		case FN_ENCRYPT: fallthrough
 		case FN_DECRYPT:
 			n.node1, err = parseExprAdd(q)
-			if q.Tok().id != SP_COMMA { return n,errors.New("encryption function has (value, password, cipher) parameters. No comma found after value.") }
+			if q.Tok().id != SP_COMMA { return n,ErrMsg(q.Tok(),"encryption function has (value, password, cipher) parameters. No comma found after value.") }
 			pass := sha256.Sum256([]byte(q.NextTok().val))
-			if q.NextTok().id != SP_COMMA { return n,errors.New("encryption function has (value, password, cipher) parameters. No comma found after password.") }
+			if q.NextTok().id != SP_COMMA { return n,ErrMsg(q.Tok(),"encryption function has (value, password, cipher) parameters. No comma found after password.") }
 			switch q.NextTok().Lower() {
 			case "rc4":
 				n.tok3 = pass[:]
@@ -769,15 +771,24 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 				n.tok3 = gcm
 				n.tok4 = true
 			default:
-				return n,errors.New("Third parameter to encryption function is aes or rc4")
+				return n,ErrMsg(q.Tok(),"Third parameter to encryption function is aes or rc4")
 			}
 			if err != nil { return n,err }
 			q.NextTok()
+		case FN_INC:
+			if ff, err := ParseFloat(q.Tok().val,64); err == nil {
+				n.tok3 = float(ff)
+				n.tok4 = float(1.0)
+				q.NextTok()
+			} else if q.Tok().id != SP_RPAREN {
+				return n,ErrMsg(q.Tok(),"inc() function parameter must be increment amount or empty. Found: "+q.Tok().val)
+			} else { n.tok3 = 1 }
+			Println(q.Tok())
 		default:
 			n.node1, err = parseExprAdd(q)
 		}
 	}
-	if q.Tok().id != SP_RPAREN { return n,errors.New("Expected closing parenthesis after function. Found: "+q.Tok().val) }
+	if q.Tok().id != SP_RPAREN { return n,ErrMsg(q.Tok(),"Expected closing parenthesis after function. Found: "+q.Tok().val) }
 	q.NextTok()
 	//groupby if aggregate function
 	if (n.tok1.(int) & AGG_BIT) != 0 { q.groupby = true }
