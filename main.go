@@ -22,6 +22,7 @@ var savedLine chan bool
 var fileclick chan string
 var browsersOpen = 0
 var slash string
+var printer Printer
 
 func main() {
 

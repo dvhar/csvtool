@@ -9,6 +9,67 @@ import (
 	"os"
 )
 
+//replacement for state-machine saver
+type Printer struct {
+	state int
+	numTotal int
+	numRecieved int
+	extension *regexp.Regexp
+	savePath string
+	file *os.File
+	err error
+	writer *csv.Writer
+	output []string
+}
+func (p* Printer) SavePrep(num int, path string) {
+	//command line usage saves from stdout redirection
+	if !flags.gui() {
+		p.numTotal = 1
+		p.numRecieved = 0
+		p.state = 1
+		return
+	}
+	p.err = pathChecker(path)
+	if p.err == nil {
+		p.savePath = FPaths.SavePath
+		Println("Saving to ",p.savePath)
+		p.numTotal = num
+		p.numRecieved = 0
+		p.state = 1
+	} else {
+		message(Sprint(p.err))
+	}
+}
+func (p* Printer) PrintHeader(header []string) {
+	if p.state != 1 { return }
+	p.numRecieved++
+	if p.numTotal > 1 {
+		p.savePath = p.extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(p.numRecieved)+`.csv`)
+	}
+	if !flags.gui() {
+		p.file, p.err = os.OpenFile(p.savePath, os.O_CREATE|os.O_WRONLY, 0660)
+	} else {
+		p.file = os.Stdout
+	}
+	p.writer = csv.NewWriter(p.file)
+	p.err = p.writer.Write(header)
+	if p.err != nil { message(Sprint(p.err)) }
+	p.output = make([]string, len(header))
+	p.state = 2
+}
+func (p* Printer) PrintRow(row *[]Value) {
+	if p.state != 2 { return }
+	for i,entry := range *(row) { p.output[i] = entry.String() }
+	p.err = p.writer.Write(p.output)
+}
+func (p* Printer) FinishFile() {
+	p.writer.Flush()
+	p.file.Close()
+	p.state = 1
+}
+func (p* Printer) FinishQuery() {
+	p.state = 0
+}
 
 //use channel to save files directly from query without holding results in memory
 func realtimeCsvSaver() {
