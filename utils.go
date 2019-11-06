@@ -647,3 +647,31 @@ func (jf *JoinFinder) Sort() {
 	sort.Slice(jf.rowArr, func(i, j int) bool { return jf.rowArr[j].val.Greater(jf.rowArr[i].val) })
 	jf.i = -1
 }
+
+//call returned func with (true) to start and (false) to stop
+var START bool = true
+var STOP bool = false
+func TimedNotifier(S... interface{}) func(bool) {
+	var stopper bool
+	return func(active bool){
+		if active {
+			go func(){
+				ticker := time.NewTicker(time.Second)
+				for {
+					<-ticker.C
+					if stopper { return }
+					m := ""
+					for _,v := range S {
+						switch vv := v.(type) {
+						case string:  m += vv
+						case *string: m += *vv
+						case int:     m += Itoa(vv)
+						case *int:    m += Itoa(*vv)
+						}
+					}
+					message(m)
+				}
+			}()
+		} else { stopper = true }
+	}
+}

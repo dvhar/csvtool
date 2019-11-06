@@ -1,7 +1,6 @@
 package main
 import (
 	. "fmt"
-	. "strconv"
 	"sort"
 	bt "github.com/google/btree"
 )
@@ -60,6 +59,8 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	rowsChecked := 0
 	stop = 0
 	reader := q.files["_f1"].reader
+	notifier := TimedNotifier("Scanning line ",&rowsChecked,", ",&q.quantityRetrieved," results so far")
+	notifier(START)
 
 	for {
 		if stop == 1 { stop = 0;  break }
@@ -74,10 +75,9 @@ func normalQuery(q *QuerySpecs, res *SingleQueryResult) error {
 			execSelect(q, res)
 		}
 
-		//periodic updates
 		rowsChecked++
-		if rowsChecked % 10000 == 0 { message("Scanning line "+Itoa(rowsChecked)+", "+Itoa(q.quantityRetrieved)+" results so far") }
 	}
+	notifier(STOP)
 	return nil
 }
 
@@ -95,11 +95,13 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	rowsChecked := 0
 	var match bool
 	var err error
+	notifier := TimedNotifier("Scanning line ",&rowsChecked)
+	notifier(START)
+
 	//initial scan to find line positions
 	for {
 		if stop == 1 { break }
 		rowsChecked++
-		if rowsChecked % 10000 == 0 { message("Scanning line "+Itoa(rowsChecked)) }
 		_,err = reader.Read()
 		if err != nil {break}
 		match = evalWhere(q)
@@ -108,6 +110,7 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 			reader.SavePos(sortExpr)
 		}
 	}
+	notifier(STOP)
 
 	//sort matching line positions
 	message("Sorting Rows...")
@@ -120,6 +123,8 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 
 	//go back and retrieve lines in the right order
 	reader.PrepareReRead()
+	notifier = TimedNotifier("Retrieving line ",&q.quantityRetrieved)
+	notifier(START)
 	for i := range reader.valPositions {
 		if stop == 1 { stop = 0; message("query cancelled"); break }
 		_,err = reader.ReadAtIndex(i)
@@ -128,9 +133,9 @@ func orderedQuery(q *QuerySpecs, res *SingleQueryResult) error {
 			execGroupOrNewRow(q,q.tree.node4)
 			execSelect(q, res)
 			if q.LimitReached() { break }
-			if q.quantityRetrieved % 1000 == 0 { message("Retrieving line "+Itoa(q.quantityRetrieved)) }
 		}
 	}
+	notifier(STOP)
 	return nil
 }
 
@@ -191,12 +196,15 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2,false)
 	firstJoin := q.tree.node2.node1
+	notifier := TimedNotifier("Finding join ",&q.quantityRetrieved)
+	notifier(START)
 	for {
 		if stop == 1 { stop = 0;  break }
 		_,err = reader1.Read()
 		if err != nil {break}
 		if joinNextFile(q, res, firstJoin) { break }
 	}
+	notifier(STOP)
 	reader2 := q.files["_f2"].reader
 	message("Sorting Rows...")
 	if !flags.gui() { print("\n") }
@@ -209,6 +217,9 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader1.PrepareReRead()
 	reader2.PrepareReRead()
 	joinRows := firstJoin.node1.node1.tok5.(JoinFinder).rowArr
+	message("Joining files...")
+	notifier = TimedNotifier("Retrieving joined line ",&q.quantityRetrieved)
+	notifier(START)
 	for _,v := range q.joinSortVals {
 		reader1.ReadAtPosition(v.pos1)
 		if q.bigjoin {
@@ -221,6 +232,7 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 		q.quantityRetrieved++
 		if q.LimitReached() { return nil }
 	}
+	notifier(STOP)
 	return nil
 }
 
@@ -231,12 +243,15 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2,false)
 	firstJoin := q.tree.node2.node1
+	notifier = TimedNotifier("Retrieving joined line ",&q.quantityRetrieved)
+	notifier(START)
 	for {
 		if stop == 1 { stop = 0;  break }
 		_,err = reader1.Read()
 		if err != nil {break}
 		if joinNextFile(q, res, firstJoin) { break }
 	}
+	notifier(STOP)
 	return nil
 }
 //returns 'reached limit' bool
@@ -297,8 +312,12 @@ func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 	if n.label == N_PREDCOMP {
 		reader := q.files[n.tok5.(JoinFinder).jfile].reader
 		jf := n.tok5.(JoinFinder)
+		i := 1
 		if big {
+			notifier := TimedNotifier("Indexing join value ",&i)
+			notifier(START)
 			for {
+				i++
 				_,err = reader.Read()
 				if err != nil {break}
 				_,onValue := execExpression(q, jf.joinNode)
@@ -306,6 +325,7 @@ func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 					reader.SavePosTo(onValue, &jf.posArr)
 				}
 			}
+			notifier(STOP)
 		} else {
 			rowIdx := 0
 			for {
@@ -320,6 +340,7 @@ func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 				}
 			}
 		}
+		message("Sorting indeces...")
 		jf.Sort()
 		reader.PrepareReRead()
 		n.tok5 = jf
