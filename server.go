@@ -76,8 +76,14 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
 
 //webserver
 func httpserver(serverUrl string, done chan bool) {
+	chHeader := func(h http.Handler) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Cache-control","no-store")
+			h.ServeHTTP(w,r)
+		}
+	}
 	println("Starting server at "+serverUrl)
-	http.Handle("/", http.FileServer(rice.MustFindBox("webgui/build").HTTPBox()))
+	http.Handle("/", chHeader(http.FileServer(rice.MustFindBox("webgui/build").HTTPBox())))
 	http.HandleFunc("/query/", queryHandler())
 	http.HandleFunc("/info/", infoHandler())
 	http.HandleFunc("/info", infoHandler())

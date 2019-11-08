@@ -652,14 +652,14 @@ func (jf *JoinFinder) Sort() {
 var START bool = true
 var STOP bool = false
 func TimedNotifier(S... interface{}) func(bool) {
-	var stopper bool
+	var stop bool
 	return func(active bool){
 		if active {
 			go func(){
 				ticker := time.NewTicker(time.Second)
 				for {
 					<-ticker.C
-					if stopper { return }
+					if stop { return }
 					m := ""
 					for _,v := range S {
 						switch vv := v.(type) {
@@ -672,6 +672,6 @@ func TimedNotifier(S... interface{}) func(bool) {
 					message(m)
 				}
 			}()
-		} else { stopper = true }
+		} else { stop = true }
 	}
 }

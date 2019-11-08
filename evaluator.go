@@ -243,7 +243,7 @@ func joinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	reader1 := q.files["_f1"].reader
 	scanJoinFiles(q,q.tree.node2,false)
 	firstJoin := q.tree.node2.node1
-	notifier = TimedNotifier("Retrieving joined line ",&q.quantityRetrieved)
+	notifier := TimedNotifier("Retrieving joined line ",&q.quantityRetrieved)
 	notifier(START)
 	for {
 		if stop == 1 { stop = 0;  break }
