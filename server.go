@@ -131,6 +131,7 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 		returnJSON,_ := json.Marshal(retData)
 		retData = ReturnData{}
 		println("marshalled json")
+		w.Header().Add("Cache-control","no-store")
 		Fprint(w, string(returnJSON))
 		println("sent data to http writer")
 		returnJSON = []byte("")
@@ -202,6 +203,7 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 		}
 
 		returnJSON,_ := json.Marshal(ret)
+		w.Header().Add("Cache-control","no-store")
 		Fprint(w, string(returnJSON))
 	}
 }

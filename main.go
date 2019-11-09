@@ -34,7 +34,7 @@ func main() {
 	flag.Parse()
 
 	readStdin()
-	if *flags.version { println("version 0.57 - 11/5/2019"); os.Exit(0) }
+	if *flags.version { println("version 0.58 - 11/8/2019"); os.Exit(0) }
 
 	messager = make(chan string)
 	fileclick = make(chan string)
@@ -77,7 +77,7 @@ func main() {
 			} else {
 				counter = 0
 			}
-			if counter > 10 { os.Exit(2) }
+			if counter > 60 { os.Exit(2) }
 		}
 	}()
 

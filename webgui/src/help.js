@@ -136,13 +136,13 @@ export class Help extends React.Component {
 			<br/>
 			{"The browser remembers previous queries. In the top-right corner, it will show you which query you are on. You can re-run other queries by hitting the forward and back arrows around the numbers."}
 			<br/>
-			{"To exit the program, just leave the browser page. The program exits if it goes 10 seconds without being viewed in a browser."}
+			{"To exit the program, just leave the browser page. The program exits if it goes 1 minute without being viewed in a browser."}
 			<h3>Waiting for results to load</h3>
 			<hr/>
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.57 - 11/5/2019
+			version 0.58 - 11/8/2019
 			<hr/>
 			<br/><br/>
 			</div>

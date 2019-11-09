@@ -199,7 +199,7 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	notifier := TimedNotifier("Finding join ",&q.quantityRetrieved)
 	notifier(START)
 	for {
-		if stop == 1 { stop = 0;  break }
+		if stop == 1 { stop = 0; return nil }
 		_,err = reader1.Read()
 		if err != nil {break}
 		if joinNextFile(q, res, firstJoin) { break }
@@ -221,6 +221,7 @@ func orderedJoinQuery(q *QuerySpecs, res *SingleQueryResult) error {
 	notifier = TimedNotifier("Retrieving joined line ",&q.quantityRetrieved)
 	notifier(START)
 	for _,v := range q.joinSortVals {
+		if stop == 1 { stop = 0;  break }
 		reader1.ReadAtPosition(v.pos1)
 		if q.bigjoin {
 			reader2.ReadAtPosition(v.pos2)
@@ -320,6 +321,7 @@ func scanJoinFiles(q *QuerySpecs, n *Node, big bool) {
 				i++
 				_,err = reader.Read()
 				if err != nil {break}
+				if stop == 1 { break }
 				_,onValue := execExpression(q, jf.joinNode)
 				if _,ok := onValue.(null); !ok {
 					reader.SavePosTo(onValue, &jf.posArr)
