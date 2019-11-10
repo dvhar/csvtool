@@ -271,3 +271,7 @@ html {
 .dynoTableCell {
   border: 1px solid grey;
   height: 1.5em; }
+
+#scrollBuffer {
+  color: #cccccc;
+  background: #cccccc; }

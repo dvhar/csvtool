@@ -136,7 +136,8 @@ class TableGrid extends React.Component {
 				</span>
 			</td>
 		)});
-		return[<tr className="tableRow">{names}</tr>,<tr className="tableRow">{info}</tr>]
+		info.push( <td id="scrollBuffer">____</td> );
+		return[<tr className="tableRow">{names}</tr>,<tr className="tableRow" id="typeHeader">{info}</tr>]
 	}
 	row(row,idx){
 		return( 
@@ -195,10 +196,7 @@ class TableGrid extends React.Component {
 		//give header table and body the right size
 		tableHeadDivDom.style.margin = 'auto';
 		tableHeadDivDom.style.maxWidth =  tableBodyDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth+15,windoww*1.00)}px`;
-		if (tableBodyDom.offsetWidth > tableBodyDivDom.offsetWidth && tableBodyDom.offsetHeight > tableBodyDivDom.offsetHeight){
-			tableHeadDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth+15,windoww*1.00-30)}px`;
-			tableHeadDivDom.style.margin = 0;
-		} else if (tableBodyDom.offsetHeight <= tableBodyDivDom.offsetHeight)
+		if (tableBodyDom.offsetHeight <= tableBodyDivDom.offsetHeight)
 			tableHeadDivDom.style.maxWidth =  tableBodyDivDom.style.maxWidth = `${Math.min(tableBodyDom.offsetWidth,windoww*1.00)}px`;
 		//make head and body scroll together
 		tableBodyDivDom.addEventListener('scroll',function(){ tableHeadDivDom.scrollLeft = tableBodyDivDom.scrollLeft; });
