@@ -758,11 +758,30 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 			n.node1, err = parseExpressionList(q, true)
 		case FN_ENCRYPT: fallthrough
 		case FN_DECRYPT:
+			//first param is expression to en/decrypt
 			n.node1, err = parseExprAdd(q)
-			if q.Tok().id != SP_COMMA { return n,ErrMsg(q.Tok(),"encryption function has (value, password, cipher) parameters. No comma found after value.") }
-			pass := sha256.Sum256([]byte(q.NextTok().val))
-			if q.NextTok().id != SP_COMMA { return n,ErrMsg(q.Tok(),"encryption function has (value, password, cipher) parameters. No comma found after password.") }
-			switch q.NextTok().Lower() {
+			cipherTok := "aes"
+			needPrompt := true
+			var password string
+			if q.Tok().id == SP_COMMA {
+				//second param is cipher
+				cipherTok = q.NextTok().Lower()
+				commaOrParen := q.NextTok()
+				if commaOrParen.id == SP_COMMA {
+					//password is 3rd param
+					password = q.NextTok().val
+					needPrompt = false
+					q.NextTok()
+				} else if commaOrParen.id != SP_RPAREN {
+					return n,ErrMsg(q.Tok(),"Expected comma or closing parenthesis after cipher in crypto function. Found: "+commaOrParen.val)
+				}
+			} else if q.Tok().id != SP_RPAREN {
+				return n,ErrMsg(q.Tok(),"Expect closing parenthesis or comma after expression in crypto function. Found: "+q.Tok().val)
+			}
+			if q.password == "" && needPrompt { q.password = promptPassword() }
+			if password == "" { password = q.password }
+			pass := sha256.Sum256([]byte(password))
+			switch cipherTok {
 			case "rc4":
 				n.tok3 = pass[:]
 			case "aes":
@@ -771,10 +790,9 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 				n.tok3 = gcm
 				n.tok4 = true
 			default:
-				return n,ErrMsg(q.Tok(),"Third parameter to encryption function is aes or rc4")
+				return n,ErrMsg(q.Tok(),"Second parameter to encryption function is cipher type (aes or rc4). Found: "+cipherTok)
 			}
 			if err != nil { return n,err }
-			q.NextTok()
 		case FN_INC:
 			if ff, err := ParseFloat(q.Tok().val,64); err == nil {
 				n.tok3 = float(ff)
