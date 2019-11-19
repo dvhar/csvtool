@@ -26,15 +26,15 @@ var printer Printer
 
 func main() {
 
-	flags.localPort = flag.String("port", "8060", "Change localhost port")
-	flags.danger = flag.Bool("danger",false, "Allow connections from non-localhost. Dangerous, only use for debugging.")
-	flags.persistent = flag.Bool("stay",false, "Don't stop server when browser closes")
+	flags.localPort = flag.String("p", "8060", "Change localhost port")
+	flags.danger = flag.Bool("l",false, "Allow connections from non-localhost")
+	flags.persistent = flag.Bool("s",false, "Don't stop server when browser closes")
 	flags.command = flag.String("c","", "Run query from command line argument")
-	flags.version = flag.Bool("v",false, "Show version and exit`")
+	flags.version = flag.Bool("v",false, "Show version")
 	flag.Parse()
 
 	readStdin()
-	if *flags.version { println("version 0.58 - 11/8/2019"); os.Exit(0) }
+	if *flags.version { println("version 0.6 - 11/9/2019"); os.Exit(0) }
 
 	messager = make(chan string)
 	fileclick = make(chan string)
