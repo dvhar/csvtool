@@ -275,3 +275,9 @@ html {
 #scrollBuffer {
   color: #cccccc;
   background: #cccccc; }
+
+.passPopup {
+	display: block;
+	width: 400px;
+	height: 400px;
+}

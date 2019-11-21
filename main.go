@@ -17,6 +17,8 @@ import (
 var flags Flags
 var FPaths FilePaths
 var messager chan string
+var gotpass chan string
+var passprompt chan bool
 var saver chan saveData
 var savedLine chan bool
 var fileclick chan string
@@ -37,6 +39,8 @@ func main() {
 	if *flags.version { println("version 0.6 - 11/9/2019"); os.Exit(0) }
 
 	messager = make(chan string)
+	passprompt = make(chan bool)
+	gotpass = make(chan string)
 	fileclick = make(chan string)
 	saver = make(chan saveData)
 	savedLine = make(chan bool)

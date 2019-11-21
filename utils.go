@@ -517,6 +517,7 @@ const (
 	SK_STOP
 	SK_DIRLIST
 	SK_FILECLICK
+	SK_PASS
 )
 type Client struct {
 	conn *websocket.Conn
@@ -679,10 +680,15 @@ func TimedNotifier(S... interface{}) func(bool) {
 }
  func promptPassword() string {
 	if flags.gui() {
+		println("attempting prompt")
+		passprompt <- true
+		println("sent socket")
+		dog := <-gotpass
+		println("recieved pass")
+		println(dog)
 		return "implement this"
 	}
 	println("Enter password for encryption function:")
 	passbytes, _ := terminal.ReadPassword(0)
-	password := string(passbytes)
-	return password
+	return string(passbytes)
  }

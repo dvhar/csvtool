@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {postRequest,getRequest,bit} from './utils.js';
+import {postRequest,getRequest,bit,PassPrompt} from './utils.js';
 import * as command from './command.js';
 import * as display from './display.js';
 import * as help from './help.js';
@@ -154,6 +154,7 @@ class Main extends React.Component {
 			sendSocket = {(request)=>this.sendSocket(request)}
 		/>
 		{this.state.showQuery}
+		<PassPrompt/>
 		{/*<display.TableGrid2/>*/}
 		</div>
 		</>
@@ -176,6 +177,9 @@ class Main extends React.Component {
 				break;
 			case bit.SK_MSG:
 				that.setState({ topMessage : dat.Text }); 
+				break;
+			case bit.SK_PASS:
+				that.setState({ topMessage : "recieve prompt" }); 
 				break;
 			}
 		}
