@@ -14,6 +14,7 @@ import (
 	"errors"
 	"time"
 	"strings"
+	"golang.org/x/crypto/ssh/terminal"
 	d "github.com/araddon/dateparse"
 	bt "github.com/google/btree"
 	. "strconv"
@@ -49,6 +50,7 @@ type QuerySpecs struct {
 	bigjoin bool
 	joinSortVals []J2ValPos
 	gettingSortVals bool
+	password string
 }
 func (q *QuerySpecs) NextTok() *Token {
 	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
@@ -515,6 +517,7 @@ const (
 	SK_STOP
 	SK_DIRLIST
 	SK_FILECLICK
+	SK_PASS
 )
 type Client struct {
 	conn *websocket.Conn
@@ -675,3 +678,17 @@ func TimedNotifier(S... interface{}) func(bool) {
 		} else { stop = true }
 	}
 }
+ func promptPassword() string {
+	if flags.gui() {
+		println("attempting prompt")
+		passprompt <- true
+		println("sent socket")
+		dog := <-gotpass
+		println("recieved pass")
+		println(dog)
+		return "implement this"
+	}
+	println("Enter password for encryption function:")
+	passbytes, _ := terminal.ReadPassword(0)
+	return string(passbytes)
+ }

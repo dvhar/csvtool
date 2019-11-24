@@ -149,7 +149,7 @@ class Browser extends React.Component {
 	render(){
 		var header = [];
 		if (this.props.type === "open")
-			header.push( <><span>To open a file copy the file path, paste into query box, and run a query.</span><br/></> );
+			header.push( <><span>Double click a file you want to query</span><br/></> );
 		if (this.props.type === "save")
 			header.push( <><span>Save queries on page to their own csv file. A number will be added to file name if more than 1.</span>
 				<button className="saveButton" onClick={()=>{

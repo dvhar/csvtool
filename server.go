@@ -25,13 +25,14 @@ func (c* Client) writer(){
 	var sendBytes []byte
 	for {
 		select {
+			case <-passprompt:
+				sendSock = sockMessage{ Type: SK_PASS }
 			case msg := <-messager:
 				sendSock = sockMessage{ Type: SK_MSG, Text:msg }
-				sendBytes,_ = json.Marshal(sendSock)
 			case <-ticker.C:
 				sendSock = sockMessage{ Type: SK_PING }
-				sendBytes,_ = json.Marshal(sendSock)
 		}
+		sendBytes,_ = json.Marshal(sendSock)
 		err := c.conn.WriteMessage(1, sendBytes)
 		if err != nil { println("socket writer failed"); return }
 	}
@@ -52,6 +53,9 @@ func (c* Client) reader(){
 		switch message.Type {
 			case SK_STOP:
 				if active { stop = 1 }
+			case SK_PASS:
+				println("got pass socket")
+				gotpass <- message.Text
 		}
 	}
 }

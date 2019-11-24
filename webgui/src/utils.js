@@ -1,3 +1,5 @@
+import React from 'react';
+import ReactDOM from 'react-dom';
 
 export function validJson(str) {
 	try {
@@ -116,6 +118,7 @@ export const bit = {
 	SK_STOP         : 3,
 	SK_DIRLIST      : 4,
 	SK_FILECLICK    : 5,
+	SK_PASS         : 6,
 
 	T_NULL          : 0,
 	T_INT           : 1,
@@ -128,4 +131,15 @@ export const bit = {
 
 };
 
+
+export class PassPrompt extends React.Component {
+	render() {
+		return (
+		<div className="passPopup">
+		Enter password
+		<input type="password"></input>
+		</div>
+		);
+	}
+}
 export const t = ['Null', 'Int', 'Float', 'Date', 'Duration', 'Text', 'Unknown', ];
