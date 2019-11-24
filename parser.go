@@ -67,6 +67,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	q.sortExpr,err = parseOrder(q)
 	if err != nil { return n,err }
+    parseLimit(q)
 
 	if q.Tok().id != EOS { err = ErrMsg(q.Tok(),"Expected end of query, got "+q.Tok().val) }
 	if err != nil { return n,err }
@@ -584,12 +585,25 @@ func parseCaseWhenExpr(q* QuerySpecs) (*Node,error) {
 	return n, err
 }
 
-//row limit
+//row limit at front of query
 func parseTop(q* QuerySpecs) error {
 	var err error
-	if q.Tok().id == KW_TOP {
+	if q.Tok().Lower() == "top" {
 		q.quantityLimit, err = Atoi(q.PeekTok().val)
 		if err != nil { return ErrMsg(q.Tok(),"Expected number after 'top'. Found "+q.PeekTok().val) }
+		q.NextTok(); q.NextTok()
+	}
+	return nil
+}
+
+//row limit at end of query
+func parseLimit(q* QuerySpecs) error {
+	var err error
+    println(q.Tok().val)
+	if q.Tok().Lower() == "limit" {
+        println("found limit")
+		q.quantityLimit, err = Atoi(q.PeekTok().val)
+		if err != nil { return ErrMsg(q.Tok(),"Expected number after 'limit'. Found "+q.PeekTok().val) }
 		q.NextTok(); q.NextTok()
 	}
 	return nil
@@ -601,7 +615,7 @@ func parseTop(q* QuerySpecs) error {
 func parseFrom(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_FROM}
 	var err error
-	if q.Tok().id != KW_FROM { return n,ErrMsg(q.Tok(),"Expected 'from'. Found: "+q.Tok().val) }
+	if q.Tok().Lower() != "from" { return n,ErrMsg(q.Tok(),"Expected 'from'. Found: "+q.Tok().val) }
 	tok := strings.Replace(q.NextTok().val, "~/", os.Getenv("HOME")+"/", 1)
 	n.tok1 = tok
 	_,err = os.Stat(Sprint(n.tok1))
@@ -695,7 +709,7 @@ func parseJoin(q *QuerySpecs) (*Node,error) {
 func parseWhere(q*QuerySpecs) (*Node,error) {
 	n := &Node{label:N_WHERE}
 	var err error
-	if q.Tok().id != KW_WHERE { return n,nil }
+	if q.Tok().Lower() != "where" { return n,nil }
 	q.NextTok()
 	n.node1,err = parsePredicates(q)
 	return n,err
@@ -705,7 +719,7 @@ func parseWhere(q*QuerySpecs) (*Node,error) {
 func parseHaving(q*QuerySpecs) (*Node,error) {
 	n := &Node{label:N_WHERE}
 	var err error
-	if q.Tok().id != KW_HAVING { return n,nil }
+	if q.Tok().Lower() != "having" { return n,nil }
 	q.NextTok()
 	n.node1,err = parsePredicates(q)
 	return n,err
@@ -714,11 +728,11 @@ func parseHaving(q*QuerySpecs) (*Node,error) {
 //doesn't add to parse tree yet, juset sets q member
 func parseOrder(q* QuerySpecs) (*Node,error) {
 	if q.Tok().id == EOS { return nil,nil }
-	if q.Tok().id == KW_ORDER {
-		if q.NextTok().id != KW_BY { return nil,ErrMsg(q.Tok(),"Expected 'by' after 'order'. Found "+q.Tok().val) }
+	if q.Tok().Lower() == "order" {
+		if q.NextTok().Lower() != "by" { return nil,ErrMsg(q.Tok(),"Expected 'by' after 'order'. Found "+q.Tok().val) }
 		q.NextTok()
 		expr, err := parseExprAdd(q)
-		if q.Tok().id == KW_ORDHOW { q.NextTok(); q.sortWay = 2 }
+		if q.Tok().Lower() == "asc" { q.NextTok(); q.sortWay = 2 }
 		if _,ok := q.files["_f3"]; ok && q.joining && !q.groupby {
 			return nil, ErrMsg(q.Tok(),"Non-grouping ordered queries can only join 2 files")
 		}

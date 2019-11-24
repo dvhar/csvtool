@@ -30,10 +30,10 @@ const (
 	KW_HAVING  =  KEYWORD|iota
 	KW_AS  =      KEYWORD|iota
 	KW_WHERE =    KEYWORD|iota
+	KW_LIMIT =    KEYWORD|iota
 	KW_GROUP =    KEYWORD|iota
 	KW_ORDER =    KEYWORD|iota
 	KW_BY =       KEYWORD|iota
-	KW_TOP =      KEYWORD|iota
 	KW_DISTINCT = KEYWORD|iota
 	KW_ORDHOW =   KEYWORD|iota
 	KW_CASE =     KEYWORD|iota
@@ -122,7 +122,6 @@ var enumMap = map[int]string {
 	KW_ORDER :      "KW_ORDER",
 	KW_BY :         "KW_BY",
 	KW_DISTINCT :   "KW_DISTINCT",
-	KW_TOP :        "KW_TOP",
 	KW_ORDHOW :     "KW_ORDHOW",
 	KW_CASE :       "KW_CASE",
 	KW_WHEN :       "KW_WHEN",
@@ -167,10 +166,10 @@ var keywordMap = map[string]int {
 	"having" :    KW_HAVING,
 	"as" :        KW_AS,
 	"where" :     KW_WHERE,
+	"limit" :     KW_LIMIT,
 	"order" :     KW_ORDER,
 	"by" :        KW_BY,
 	"distinct" :  KW_DISTINCT,
-	"top" :       KW_TOP,
 	"asc" :       KW_ORDHOW,
 	"between" :   KW_BETWEEN,
 	"like" :      KW_LIKE,
