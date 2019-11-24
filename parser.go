@@ -1,5 +1,5 @@
 /*
-<query>             -> <options> <Select> <from> <where> <groupby> <having> <orderby>
+<query>             -> <options> <Select> <from> <where> <groupby> <having> <orderby> { limit # }
 <options>           -> (c | nh | h) <options> | ε
 <Select>            -> Select { top # } <Selections>
 <Selections>        -> * <Selections> | {alias =} <exprAdd> {as alias} <Selections> | ε
@@ -67,7 +67,7 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	if err != nil { return n,err }
 	q.sortExpr,err = parseOrder(q)
 	if err != nil { return n,err }
-    parseLimit(q)
+	parseLimit(q)
 
 	if q.Tok().id != EOS { err = ErrMsg(q.Tok(),"Expected end of query, got "+q.Tok().val) }
 	if err != nil { return n,err }
@@ -139,7 +139,7 @@ func parseOptions(q* QuerySpecs) {
 func parseSelect(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_SELECT}
 	var err error
-	if q.Tok().id != KW_SELECT { return n,ErrMsg(q.Tok(),"Expected 'select'. Found "+q.Tok().val) }
+	if q.Tok().Lower() != "select" { return n,ErrMsg(q.Tok(),"Expected 'select'. Found "+q.Tok().val) }
 	q.NextTok()
 	err = parseTop(q)
 	if err != nil { return n,err }
@@ -214,7 +214,7 @@ func parseSelections(q* QuerySpecs) (*Node,error) {
 		//expression
 		} else {
 			n.node1,err = parseExprAdd(q)
-			if q.Tok().id == KW_AS {
+			if q.Tok().Lower() == "as" {
 				n.tok2 = q.NextTok().val
 				q.NextTok()
 			}
@@ -258,11 +258,12 @@ func parseExprMult(q* QuerySpecs) (*Node,error) {
 	n.node1,err = parseExprNeg(q)
 	if err != nil { return n,err }
 	switch q.Tok().id {
-	case SP_STAR: fallthrough
+	case SP_STAR:
+		if q.PeekTok().Lower() == "from" { break }
+		fallthrough
 	case SP_MOD: fallthrough
 	case SP_CARROT: fallthrough
 	case SP_DIV:
-		if q.PeekTok().id == KW_FROM { break }
 		n.tok1 = q.Tok().id
 		q.NextTok()
 		n.node2,err = parseExprMult(q)
@@ -308,7 +309,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 			n.tok2 = N_EXPRADD
 			n.node1,err = parseExprAdd(q)
 			if err != nil { return n,err }
-			if q.Tok().id != KW_WHEN { return n,ErrMsg(q.Tok(),"Expected 'when' after case expression. Found "+q.Tok().val) }
+			if q.Tok().Lower() != "when" { return n,ErrMsg(q.Tok(),"Expected 'when' after case expression. Found "+q.Tok().val) }
 			n.node2,err = parseCaseWhenExprList(q)
 			if err != nil { return n,err }
 		default: return n,ErrMsg(q.Tok(),"Expected expression or 'when'. Found "+q.Tok().val)
@@ -321,7 +322,7 @@ func parseExprCase(q* QuerySpecs) (*Node,error) {
 			q.NextTok()
 			n.node3,err = parseExprAdd(q)
 			if err != nil { return n,err }
-			if q.Tok().id != KW_END { return n,ErrMsg(q.Tok(),"Expected 'end' after 'else' expression. Found "+q.Tok().val) }
+			if q.Tok().Lower() != "end" { return n,ErrMsg(q.Tok(),"Expected 'end' after 'else' expression. Found "+q.Tok().val) }
 			q.NextTok()
 		default:
 			return n,ErrMsg(q.Tok(),"Expected 'end' or 'else' after case expression. Found "+q.Tok().val)
@@ -416,7 +417,7 @@ func parseCaseWhenPredList(q* QuerySpecs) (*Node,error) {
 	var err error
 	n.node1,err = parseCasePredicate(q)
 	if err != nil { return n,err }
-	if q.Tok().id == KW_WHEN {
+	if q.Tok().Lower() == "when" {
 		n.tok1 = 1
 		n.node2,err = parseCaseWhenPredList(q)
 	}
@@ -431,7 +432,7 @@ func parseCasePredicate(q* QuerySpecs) (*Node,error) {
 	q.NextTok() //eat when token
 	n.node1,err = parsePredicates(q)
 	if err != nil { return n,err }
-	if q.Tok().id != KW_THEN { return n,ErrMsg(q.Tok(),"Expected 'then' after predicate. Found: "+q.Tok().val) }
+	if q.Tok().Lower() != "then" { return n,ErrMsg(q.Tok(),"Expected 'then' after predicate. Found: "+q.Tok().val) }
 	q.NextTok() //eat then token
 	n.node2,err = parseExprAdd(q)
 	return n, err
@@ -565,7 +566,7 @@ func parseCaseWhenExprList(q* QuerySpecs) (*Node,error) {
 	var err error
 	n.node1, err = parseCaseWhenExpr(q)
 	if err != nil { return n,err }
-	if q.Tok().id == KW_WHEN {
+	if q.Tok().Lower() == "when" {
 		n.tok1 = 1
 		n.node2, err = parseCaseWhenExprList(q)
 	}
@@ -589,9 +590,9 @@ func parseCaseWhenExpr(q* QuerySpecs) (*Node,error) {
 func parseTop(q* QuerySpecs) error {
 	var err error
 	if q.Tok().Lower() == "top" {
-		q.quantityLimit, err = Atoi(q.PeekTok().val)
+		q.quantityLimit, err = Atoi(q.NextTok().val)
 		if err != nil { return ErrMsg(q.Tok(),"Expected number after 'top'. Found "+q.PeekTok().val) }
-		q.NextTok(); q.NextTok()
+		q.NextTok()
 	}
 	return nil
 }
@@ -599,12 +600,10 @@ func parseTop(q* QuerySpecs) error {
 //row limit at end of query
 func parseLimit(q* QuerySpecs) error {
 	var err error
-    println(q.Tok().val)
 	if q.Tok().Lower() == "limit" {
-        println("found limit")
-		q.quantityLimit, err = Atoi(q.PeekTok().val)
+		q.quantityLimit, err = Atoi(q.NextTok().val)
 		if err != nil { return ErrMsg(q.Tok(),"Expected number after 'limit'. Found "+q.PeekTok().val) }
-		q.NextTok(); q.NextTok()
+		q.NextTok()
 	}
 	return nil
 }
