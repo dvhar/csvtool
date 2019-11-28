@@ -64,7 +64,7 @@ export class Help extends React.Component {
 					{"The 'inc' function returns an automatically incrementing number. Leave the parentheses empty like inc() to increment by 1, or include a number to increment by that number like inc(2)."}
 					<br/>
 					<br/>
-					{"encrypt(expression, password, cipher) and decrypt(expression, password, cipher) do what you'd think. cipher can be 'aes' if you want strong encryption, or 'rc4' if you want something a government could crack but takes less space."}
+					{"encrypt(expression, cipher, password) and decrypt(expression, cipher, password) encrypt and decrype an expression. cipher can be 'aes' if you want strong encryption, or 'rc4' if you want something a government could crack but takes less space."}
 				<h4>Aggregate functions</h4>
 					{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions. You can filter with a 'having' clause."}
 					<blockquote>
@@ -142,7 +142,7 @@ export class Help extends React.Component {
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.6 - 11/9/2019
+			version 0.61 - 11/27/2019
 			<hr/>
 			<br/><br/>
 			</div>

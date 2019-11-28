@@ -558,7 +558,7 @@ func eosError(q *QuerySpecs) error {
 	if q.PeekTok().id == 255 { return errors.New("Unexpected end of query string") }
 	return nil
 }
-func ErrMsg(t *Token, s string) error { return errors.New(Sprint("Line ",t.line," Col ",t.col,":",s)) }
+func ErrMsg(t *Token, s string) error { return errors.New(Sprint("Line ",t.line," Col ",t.col,": ",s)) }
 
 type J2ValPos struct {
 	pos1 int64
@@ -680,9 +680,9 @@ func TimedNotifier(S... interface{}) func(bool) {
 }
  func promptPassword() string {
 	if flags.gui() {
-		println("attempting prompt")
+		println("attempting passpromt")
 		passprompt <- true
-		println("sent socket")
+		println("sent passpromnt socket")
 		dog := <-gotpass
 		println("recieved pass")
 		println(dog)

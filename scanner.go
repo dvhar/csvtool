@@ -156,7 +156,7 @@ var enumMap = map[int]string {
 //characters of special tokens
 var specials = []int{ '*','=','!','<','>','\'','"','(',')',',','+','-','%','/','^' }
 //non-alphanumeric characters of words
-var others = []int{ '\\',':','_','.','[',']','~' }
+var others = []int{ '\\',':','_','.','[',']','~','{','}' }
 var keywordMap = map[string]int {
 	"and" :       KW_AND,
 	"or" :        KW_OR,
@@ -333,8 +333,7 @@ func scanner(s* StringLookahead) Token {
 		if (nextState & ERROR) != 0 {
 		//end of string
 			if state == 255 { return Token { id: 255, val: "END", line: lineNo, col: colNo } }
-			Printf("error peek: %d state: %d nextstates: %d nextchar: %c S: %s\n",s.peek(),state, nextState, nextchar,S)
-			return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo, col: colNo }
+			return Token{ id: ERROR, val:Sprintf("line: %d,  col: %d, character: %c",lineNo, colNo, s.peek()), line: lineNo, col: colNo }
 		}
 
 		if (nextState & FINAL) != 0 {
@@ -359,8 +358,6 @@ func scanner(s* StringLookahead) Token {
 					//return special token
 					return Token { id: sp, val: S, line: lineNo, col: colNo }
 				} else {
-					println("error: unknown special. peek: "+Itoa(s.peek())+" state: "+Itoa(state)+" ns: "+Itoa(nextState));
-					println(enumMap[nextState])
 					return Token{ id: ERROR, val:"line:"+Itoa(lineNo)+"  col: "+Itoa(colNo), line: lineNo, col: colNo }
 				}
 			} else {
@@ -405,6 +402,8 @@ func (s* StringLookahead) peek() int {
 
 //turn query text into tokens and check if ints are columns or numbers
 func scanTokens(q *QuerySpecs) error {
+	lineNo = 1
+	colNo = 1
 	input := &StringLookahead{Str:q.QueryString}
 	for {
 		t := scanner(input)
@@ -412,7 +411,10 @@ func scanTokens(q *QuerySpecs) error {
 		if t.id == SP_SQUOTE || t.id == SP_DQUOTE {
 			quote := t.id
 			S := ""
-			for t = scanner(input); t.id != quote && t.id != EOS ; t = scanner(input) { S += t.val }
+			for t = scanner(input); t.id != quote && t.id != EOS ; t = scanner(input) {
+				if t.id == ERROR { return errors.New("scanner error: "+t.val) }
+				S += t.val
+			}
 			if t.id != quote { return errors.New("Quote was not terminated") }
 			t = Token{WORD,S,t.line,t.col,true}
 		}

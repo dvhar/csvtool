@@ -154,7 +154,7 @@ class Main extends React.Component {
 			sendSocket = {(request)=>this.sendSocket(request)}
 		/>
 		{this.state.showQuery}
-		<PassPrompt/>
+		{/*<PassPrompt/>*/}
 		{/*<display.TableGrid2/>*/}
 		</div>
 		</>
@@ -179,7 +179,7 @@ class Main extends React.Component {
 				that.setState({ topMessage : dat.Text }); 
 				break;
 			case bit.SK_PASS:
-				that.setState({ topMessage : "recieve prompt" }); 
+				that.setState({ topMessage : "encryption functions need 3 parameters for now" }); 
 				break;
 			}
 		}

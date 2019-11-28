@@ -47,8 +47,6 @@ func parseQuery(q* QuerySpecs) (*Node,error) {
 	_ = Print
 	n := &Node{label:N_QUERY}
 	n.tok1 = q
-	//reset some global vars before parsing each query
-	lineNo = 1
 	err := scanTokens(q)
 	if err != nil { return n,err }
 	err = openFiles(q)
@@ -803,7 +801,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 				n.tok3 = gcm
 				n.tok4 = true
 			default:
-				return n,ErrMsg(q.Tok(),"Second parameter to encryption function is cipher type (aes or rc4). Found: "+cipherTok)
+				return n,ErrMsg(q.Tok(),"Second parameter to encryption function is cipher type (aes or rc4). Found: "+cipherTok+". Use aes for strong but bulky encryption, or rc4 for something a government could probably crack but takes less space.")
 			}
 			if err != nil { return n,err }
 		case FN_INC:
