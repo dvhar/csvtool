@@ -680,13 +680,11 @@ func TimedNotifier(S... interface{}) func(bool) {
 }
  func promptPassword() string {
 	if flags.gui() {
-		println("attempting passpromt")
 		passprompt <- true
-		println("sent passpromnt socket")
-		dog := <-gotpass
+		println("sent passprompt socket")
+		password := <-gotpass
 		println("recieved pass")
-		println(dog)
-		return "implement this"
+		return password
 	}
 	println("Enter password for encryption function:")
 	passbytes, _ := terminal.ReadPassword(0)

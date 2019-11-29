@@ -7,7 +7,7 @@ export class QueryBox extends React.Component {
 		this.state = {clicked:1}
 	}
 	shiftEnter(e){
-		if (e.keyCode == 13 && e.shiftKey) {
+		if (e.keyCode === 13 && e.shiftKey) {
 			e.preventDefault();
 			var query = this.textbox.value;
 			this.props.submitQuery({query : query});
@@ -25,7 +25,7 @@ export class QueryBox extends React.Component {
 					<textarea rows="10" className="queryTextEntry" id="textBoxId" placeholder={`If running multiple queries, separate them with a semicolon;`}>
 					</textarea>
 					<br/>
-					<button className="queryRunButton" onClick={()=>{
+					<button className="queryRunButton dropContent" onClick={()=>{
 						var query = this.textbox.value;
 						this.props.submitQuery({query : query});
 					}}>Submit Query</button>

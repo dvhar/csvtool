@@ -37,7 +37,6 @@ html {
 	background-color: #cccccc;
 	//background: linear-gradient(to bottom, rgba(153,125,96,1) 0%, rgba(218,183,140,1) 45%, rgba(195,169,150,1) 100%);
 	//background-image: url("/bg.jpg");
-	background-attachment: fixed;
 }
 
 //dropdown menu
@@ -200,26 +199,8 @@ html {
 .topButton:hover {
 	background: linear-gradient(to bottom, #e0f3fa 0%,#d8f0fc 50%,#b8e2f6 51%,#b6dffd 100%);
 }
-
-//login section
-.loginBox {
-}
-.loginButtonDiv {
-	padding-left: 9em;
-}
-.LoginShow {
-	padding: 0.3em;
-	background: $loginbg;
-	top: 2.2em;
-	position: absolute;
-}
-.LoginShow label {
-	width: 9em;
-	display: inline-block;
-	text-align: right;
-}
-.LoginShow input {
-	min-width: 20em;
+.popButton {
+	padding: 0.5em;
 }
 
 //save section
@@ -242,6 +223,12 @@ html {
 }
 .saveButton {
 	float: right;
+}
+
+//password popup
+.passPopup {
+	color: red;
+	text-align: center;
 }
 
 //file browser
@@ -271,18 +258,6 @@ html {
 }
 .browseEntry:hover {
 	background-color: bisque;
-}
-
-//mode select section
-.modeShow {
-	padding: 0.3em;
-	background: $loginbg;
-	top: 2.2em;
-	position: absolute;
-}
-.modeButton {
-	padding: 1em;
-	margin: 1em;
 }
 
 //history arrows

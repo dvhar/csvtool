@@ -131,15 +131,4 @@ export const bit = {
 
 };
 
-
-export class PassPrompt extends React.Component {
-	render() {
-		return (
-		<div className="passPopup">
-		Enter password
-		<input type="password"></input>
-		</div>
-		);
-	}
-}
 export const t = ['Null', 'Int', 'Float', 'Date', 'Duration', 'Text', 'Unknown', ];

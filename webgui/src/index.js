@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import './style.css';
-import {postRequest,getRequest,bit,PassPrompt} from './utils.js';
+import {postRequest,getRequest,bit} from './utils.js';
 import * as command from './command.js';
 import * as display from './display.js';
 import * as help from './help.js';
@@ -48,6 +48,7 @@ class Main extends React.Component {
 		}
 		else if (results.Status & bit.DAT_GOOD){
 			this.setState({
+				topDropdown : "nothing",
 				showQuery : results.Entries.map(
 					tab => <display.QueryRender 
 							   table = {tab} 
@@ -154,8 +155,6 @@ class Main extends React.Component {
 			sendSocket = {(request)=>this.sendSocket(request)}
 		/>
 		{this.state.showQuery}
-		{/*<PassPrompt/>*/}
-		{/*<display.TableGrid2/>*/}
 		</div>
 		</>
 		)
@@ -179,7 +178,7 @@ class Main extends React.Component {
 				that.setState({ topMessage : dat.Text }); 
 				break;
 			case bit.SK_PASS:
-				that.setState({ topMessage : "encryption functions need 3 parameters for now" }); 
+				that.setState({ topDropdown : "passShow" });
 				break;
 			}
 		}
