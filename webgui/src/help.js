@@ -64,7 +64,7 @@ export class Help extends React.Component {
 					{"The 'inc' function returns an automatically incrementing number. Leave the parentheses empty like inc() to increment by 1, or include a number to increment by that number like inc(2)."}
 					<br/>
 					<br/>
-					{"encrypt(expression, cipher, password) and decrypt(expression, cipher, password) encrypt and decrype an expression. cipher can be 'aes' if you want strong encryption, or 'rc4' if you want something a government could crack but takes less space."}
+					{"encrypt() and decrypt() functions encrypt and decrypt an expression. Can be used with 1, 2, or 3 parameters. encrypt(expression), encrypt(expression, cipher), and encrypt(expression, cipher, password) are all valid. Cipher can be 'aes' if you want strong encryption, or 'rc4' if you want something a government could crack but takes less space. Default behavior uses the aes cipher and prompts you for a password."}
 				<h4>Aggregate functions</h4>
 					{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions. You can filter with a 'having' clause."}
 					<blockquote>
@@ -136,13 +136,13 @@ export class Help extends React.Component {
 			<br/>
 			{"The browser remembers previous queries. In the top-right corner, it will show you which query you are on. You can re-run other queries by hitting the forward and back arrows around the numbers."}
 			<br/>
-			{"To exit the program, just leave the browser page. The program exits if it goes 1 minute without being viewed in a browser."}
+			{"To exit the program, just leave the browser page. The program exits if it goes 2 minutes without being viewed in a browser."}
 			<h3>Waiting for results to load</h3>
 			<hr/>
 			{"Browsers can take a while to load big results, even when limiting the number of rows. If the results of a query look similar to the results of the previous query, you can confirm that they are new by checkng the query number in between the forward/back arrows in the top-right corner."}
 			<br/><br/>
 			<hr/>
-			version 0.61 - 11/27/2019
+			version 0.7 - 11/29/2019
 			<hr/>
 			<br/><br/>
 			</div>

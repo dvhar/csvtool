@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	readStdin()
-	if *flags.version { println("version 0.61 - 11/27/2019"); os.Exit(0) }
+	if *flags.version { println("version 0.7 - 11/29/2019"); os.Exit(0) }
 
 	messager = make(chan string)
 	passprompt = make(chan bool)
@@ -69,7 +69,7 @@ func main() {
 	done := make(chan bool)
 	go httpserver(serverUrl, done)
 
-	//exit program if it goes 10 seconds without being viewed in a browser
+	//exit program if it goes 2 minutes without being viewed in a browser
 	go func(){
 		if *flags.persistent { return }
 		ticker := time.NewTicker(time.Second)
@@ -81,7 +81,7 @@ func main() {
 			} else {
 				counter = 0
 			}
-			if counter > 60 { os.Exit(2) }
+			if counter > 120 { os.Exit(2) }
 		}
 	}()
 
