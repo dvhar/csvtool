@@ -88,7 +88,7 @@ class Main extends React.Component {
 		this.setState({ historyPosition : position });
 		var textbox = document.getElementById("textBoxId");
 		if (textbox != null) { textbox.value = this.state.queryHistory[position].query; }
-		this.submitQuery({ query : q.query, backtrack : true});
+		//this.submitQuery({ query : q.query, backtrack : true});
 	}
 	topDropReset(e){ 
 		setTimeout(()=>{

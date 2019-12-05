@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	readStdin()
-	if *flags.version { println("version 0.7 - 11/29/2019"); os.Exit(0) }
+	if *flags.version { println("version 0.71 - 12/5/2019"); os.Exit(0) }
 
 	messager = make(chan string)
 	passprompt = make(chan bool)
