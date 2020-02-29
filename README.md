@@ -7,5 +7,6 @@ Executable can be downloaded at davosaur.com/csv
 Here's a demo of some useful features in a pretty useless query:
 
 <img src="demo.png" align="middle"/>
+<img src="architectureDiagram.png" align="middle"/>
 
 MIT license
