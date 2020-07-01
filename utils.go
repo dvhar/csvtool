@@ -1,130 +1,153 @@
 //data structures, constants, helper functions, and whatnot. Should really clean this up
 // _f# is file map key designed to avoid collisions with aliases and file names
 package main
+
 import (
-	"regexp"
-	"net/http"
-	"io"
 	"bytes"
-	"sort"
-	"github.com/gorilla/websocket"
 	"encoding/csv"
-	"path/filepath"
-	"os"
 	"errors"
-	"time"
+	. "fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	. "strconv"
 	"strings"
-	"golang.org/x/crypto/ssh/terminal"
+	"time"
+
 	d "github.com/araddon/dateparse"
 	bt "github.com/google/btree"
-	. "strconv"
-	. "fmt"
+	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type QuerySpecs struct {
-	colSpec Columns
-	QueryString string
-	tokArray []Token
-	aliases bool
-	joining bool
-	tokIdx int
-	quantityLimit int
+	colSpec           Columns
+	QueryString       string
+	tokArray          []Token
+	aliases           bool
+	joining           bool
+	tokIdx            int
+	quantityLimit     int
 	quantityRetrieved int
-	distinctExpr *Node
-	distinctCheck *bt.BTree
-	sortExpr *Node
-	sortWay int
-	save bool
-	showLimit int
-	stage int
-	tree *Node
-	files map[string]*FileData
-	numfiles int
-	fromRow []string
-	toRow []Value
-	midRow []Value
-	midExess int
-	intColumn bool
-	groupby bool
-	noheader bool
-	bigjoin bool
-	joinSortVals []J2ValPos
-	gettingSortVals bool
-	password string
+	distinctExpr      *Node
+	distinctCheck     *bt.BTree
+	sortExpr          *Node
+	sortWay           int
+	save              bool
+	showLimit         int
+	stage             int
+	tree              *Node
+	files             map[string]*FileData
+	numfiles          int
+	fromRow           []string
+	toRow             []Value
+	midRow            []Value
+	midExess          int
+	intColumn         bool
+	distinctAgg       bool
+	groupby           bool
+	noheader          bool
+	bigjoin           bool
+	joinSortVals      []J2ValPos
+	gettingSortVals   bool
+	password          string
 }
+
 func (q *QuerySpecs) NextTok() *Token {
-	if q.tokIdx < len(q.tokArray)-1 { q.tokIdx++ }
+	if q.tokIdx < len(q.tokArray)-1 {
+		q.tokIdx++
+	}
 	return &q.tokArray[q.tokIdx]
 }
 func (q QuerySpecs) PeekTok() *Token {
-	if q.tokIdx < len(q.tokArray)-1 { return &q.tokArray[q.tokIdx+1] }
+	if q.tokIdx < len(q.tokArray)-1 {
+		return &q.tokArray[q.tokIdx+1]
+	}
 	return &q.tokArray[q.tokIdx]
 }
 func (q QuerySpecs) Tok() *Token { return &q.tokArray[q.tokIdx] }
-func (q *QuerySpecs) Reset() { q.tokIdx = 0 }
-func (q QuerySpecs) LimitReached() bool { return q.quantityRetrieved >= q.quantityLimit && q.quantityLimit > 0 }
+func (q *QuerySpecs) Reset()     { q.tokIdx = 0 }
+func (q QuerySpecs) LimitReached() bool {
+	return q.quantityRetrieved >= q.quantityLimit && q.quantityLimit > 0
+}
 func (q *QuerySpecs) SaveJoinPos(val Value) {
 	var j2 int64
-	if q.bigjoin { j2 = q.files["_f2"].reader.prevPos } else { j2 = q.files["_f2"].reader.index }
+	if q.bigjoin {
+		j2 = q.files["_f2"].reader.prevPos
+	} else {
+		j2 = q.files["_f2"].reader.index
+	}
 	q.joinSortVals = append(q.joinSortVals, J2ValPos{q.files["_f1"].reader.prevPos, j2, val})
 }
 
 func intInList(x int, i ...int) bool {
-	for _,j := range i { if x == j { return true } }
+	for _, j := range i {
+		if x == j {
+			return true
+		}
+	}
 	return false
 }
 
 //Random access csv reader
 type LineReader struct {
 	valPositions []ValPos
-	lineBytes []byte
-	fromRow []string
-	index int64
-	maxLineSize int
-	pos int64
-	prevPos int64
-	lineBuffer bytes.Buffer
-	tee io.Reader
-	csvReader *csv.Reader
-	byteReader *bytes.Reader
-	fp *os.File
+	lineBytes    []byte
+	fromRow      []string
+	index        int64
+	maxLineSize  int
+	pos          int64
+	prevPos      int64
+	lineBuffer   bytes.Buffer
+	tee          io.Reader
+	csvReader    *csv.Reader
+	byteReader   *bytes.Reader
+	fp           *os.File
 }
-func (l*LineReader) GetPos() int64 { return l.prevPos }
-func (l*LineReader) SavePos(value Value) {
+
+func (l *LineReader) GetPos() int64 { return l.prevPos }
+func (l *LineReader) SavePos(value Value) {
 	l.valPositions = append(l.valPositions, ValPos{l.prevPos, value})
 }
-func (l*LineReader) SavePosTo(value Value, arr *[]ValPos) {
+func (l *LineReader) SavePosTo(value Value, arr *[]ValPos) {
 	*arr = append(*arr, ValPos{l.prevPos, value})
 }
-func (l*LineReader) PrepareReRead() {
+func (l *LineReader) PrepareReRead() {
 	l.lineBytes = make([]byte, l.maxLineSize)
 	l.byteReader = bytes.NewReader(l.lineBytes)
 }
-func (l*LineReader) Init(q *QuerySpecs, f string) {
-	l.fp,_ = os.Open(q.files[f].fname)
-	l.valPositions = make([]ValPos,0)
+func (l *LineReader) Init(q *QuerySpecs, f string) {
+	l.fp, _ = os.Open(q.files[f].fname)
+	l.valPositions = make([]ValPos, 0)
 	l.tee = io.TeeReader(l.fp, &l.lineBuffer)
 	l.csvReader = csv.NewReader(l.tee)
-	if !q.noheader{ l.Read() }
+	if !q.noheader {
+		l.Read()
+	}
 }
 
-func (l*LineReader) Read() ([]string,error) {
+func (l *LineReader) Read() ([]string, error) {
 	var err error
 	l.fromRow, err = l.csvReader.Read()
 	l.lineBytes, _ = l.lineBuffer.ReadBytes('\n')
 	size := len(l.lineBytes)
-	if l.maxLineSize < size { l.maxLineSize = size }
+	if l.maxLineSize < size {
+		l.maxLineSize = size
+	}
 	l.prevPos = l.pos
 	l.pos += int64(size)
 	return l.fromRow, err
 }
-func (l*LineReader) ReadAtIndex(lineNo int) ([]string,error) {
+func (l *LineReader) ReadAtIndex(lineNo int) ([]string, error) {
 	return l.ReadAtPosition(l.valPositions[lineNo].pos)
 }
-func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
+func (l *LineReader) ReadAtPosition(pos int64) ([]string, error) {
 	l.prevPos = pos
 	l.fp.ReadAt(l.lineBytes, pos)
-	l.byteReader.Seek(0,0)
+	l.byteReader.Seek(0, 0)
 	l.csvReader = csv.NewReader(l.byteReader)
 	var err error
 	l.fromRow, err = l.csvReader.Read()
@@ -132,48 +155,103 @@ func (l*LineReader) ReadAtPosition(pos int64) ([]string,error) {
 }
 
 //return error, return type of certain functions
-func checkFunctionParamType(functionId, typ int) (int,error) {
-	err := func(s string) error { return errors.New(s+", not "+typeMap[typ]) }
+func checkFunctionParamType(functionId, typ int) (int, error) {
+	err := func(s string) error { return errors.New(s + ", not " + typeMap[typ]) }
 	switch functionId {
-	case FN_STDEVP:   fallthrough
-	case FN_STDEV:    if !intInList(typ, T_FLOAT, T_INT) { return typ,err("can only find standard deviation of numbers") }; typ = T_FLOAT
-	case FN_SUM:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only sum numbers") }
-	case FN_AVG:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only average numbers") }; if typ==T_INT { typ=T_FLOAT }
-	case FN_ABS:      if !intInList(typ, T_INT, T_FLOAT, T_DURATION) { return typ,err("can only find absolute value of numbers") }
-	case FN_YEAR:     if !intInList(typ, T_DATE) { return typ,err("can only find year of date type") }; typ = T_INT
-	case FN_MONTHNAME:if !intInList(typ, T_DATE) { return typ,err("can only find month of date type") }; typ = T_STRING
-	case FN_MONTH:    if !intInList(typ, T_DATE) { return typ,err("can only find month of date type") }; typ = T_INT
-	case FN_WEEK:     if !intInList(typ, T_DATE) { return typ,err("can only find week of date type") }; typ = T_INT
-	case FN_WDAYNAME: if !intInList(typ, T_DATE) { return typ,err("can only find day of date type") }; typ = T_STRING
-	case FN_WDAY:     fallthrough
-	case FN_YDAY:     fallthrough
-	case FN_MDAY:     if !intInList(typ, T_DATE) { return typ,err("can only find day of date type") }; typ = T_INT
-	case FN_HOUR:     if !intInList(typ, T_DATE) { return typ,err("can only find hour of date/time type") }; typ = T_INT
+	case FN_STDEVP:
+		fallthrough
+	case FN_STDEV:
+		if !intInList(typ, T_FLOAT, T_INT) {
+			return typ, err("can only find standard deviation of numbers")
+		}
+		typ = T_FLOAT
+	case FN_SUM:
+		if !intInList(typ, T_INT, T_FLOAT, T_DURATION) {
+			return typ, err("can only sum numbers")
+		}
+	case FN_AVG:
+		if !intInList(typ, T_INT, T_FLOAT, T_DURATION) {
+			return typ, err("can only average numbers")
+		}
+		if typ == T_INT {
+			typ = T_FLOAT
+		}
+	case FN_ABS:
+		if !intInList(typ, T_INT, T_FLOAT, T_DURATION) {
+			return typ, err("can only find absolute value of numbers")
+		}
+	case FN_YEAR:
+		if !intInList(typ, T_DATE) {
+			return typ, err("can only find year of date type")
+		}
+		typ = T_INT
+	case FN_MONTHNAME:
+		if !intInList(typ, T_DATE) {
+			return typ, err("can only find month of date type")
+		}
+		typ = T_STRING
+	case FN_MONTH:
+		if !intInList(typ, T_DATE) {
+			return typ, err("can only find month of date type")
+		}
+		typ = T_INT
+	case FN_WEEK:
+		if !intInList(typ, T_DATE) {
+			return typ, err("can only find week of date type")
+		}
+		typ = T_INT
+	case FN_WDAYNAME:
+		if !intInList(typ, T_DATE) {
+			return typ, err("can only find day of date type")
+		}
+		typ = T_STRING
+	case FN_WDAY:
+		fallthrough
+	case FN_YDAY:
+		fallthrough
+	case FN_MDAY:
+		if !intInList(typ, T_DATE) {
+			return typ, err("can only find day of date type")
+		}
+		typ = T_INT
+	case FN_HOUR:
+		if !intInList(typ, T_DATE) {
+			return typ, err("can only find hour of date/time type")
+		}
+		typ = T_INT
 	}
-	return typ,nil
+	return typ, nil
 }
 
 func checkOperatorSemantics(operator, t1, t2 int, l1, l2 bool) error {
 	err := func(s string) error { return errors.New(s) }
 	switch operator {
 	case SP_PLUS:
-		if  t1 == T_DATE && t2 == T_DATE { return err("Cannot add 2 dates") }
+		if t1 == T_DATE && t2 == T_DATE {
+			return err("Cannot add 2 dates")
+		}
 		fallthrough
 	case SP_MINUS:
-		if !isOneOfType(t1,t2,T_INT,T_FLOAT) && !(typeCompute(l1,l2,t1,t2)==T_STRING) &&
+		if !isOneOfType(t1, t2, T_INT, T_FLOAT) && !(typeCompute(l1, l2, t1, t2) == T_STRING) &&
 			!((t1 == T_DATE && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_DATE) ||
-			(t1 == T_DATE && t2 == T_DATE) || t1 == T_DURATION && t2 == T_DURATION) {
-			return err("Cannot add or subtract types "+typeMap[t1]+" and "+typeMap[t2])
-	}
-	case SP_MOD: if (t1!=T_INT || t2!=T_INT) { return err("Modulus operator requires integers") }
+				(t1 == T_DATE && t2 == T_DATE) || t1 == T_DURATION && t2 == T_DURATION) {
+			return err("Cannot add or subtract types " + typeMap[t1] + " and " + typeMap[t2])
+		}
+	case SP_MOD:
+		if t1 != T_INT || t2 != T_INT {
+			return err("Modulus operator requires integers")
+		}
 	case SP_DIV:
-		if t1 == T_INT && t2 == T_DURATION { return err("Cannot divide integer by time duration") }
+		if t1 == T_INT && t2 == T_DURATION {
+			return err("Cannot divide integer by time duration")
+		}
 		fallthrough
 	case SP_STAR:
-		if !isOneOfType(t1,t2,T_INT,T_FLOAT) &&
+		if !isOneOfType(t1, t2, T_INT, T_FLOAT) &&
 			!((t1 == T_INT && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_INT)) &&
-			!((t1 == T_FLOAT && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_FLOAT)){
-			return err("Cannot multiply or divide types "+typeMap[t1]+" and "+typeMap[t2]) }
+			!((t1 == T_FLOAT && t2 == T_DURATION) || (t1 == T_DURATION && t2 == T_FLOAT)) {
+			return err("Cannot multiply or divide types " + typeMap[t1] + " and " + typeMap[t2])
+		}
 	}
 	return nil
 }
@@ -204,58 +282,60 @@ const (
 	N_EXPRESSIONS
 	N_DEXPRESSIONS
 )
+
 //tree node labels for debugging
-var treeMap = map[int]string {
-	N_QUERY:      "N_QUERY",
-	N_SELECT:     "N_SELECT",
-	N_SELECTIONS: "N_SELECTIONS",
-	N_FROM:       "N_FROM",
-	N_WHERE:      "N_WHERE",
-	N_ORDER:      "N_ORDER",
-	N_EXPRADD:    "N_EXPRADD",
-	N_EXPRMULT:   "N_EXPRMULT",
-	N_EXPRNEG:    "N_EXPRNEG",
-	N_CPREDLIST:  "N_CPREDLIST",
-	N_CPRED:      "N_CPRED",
-	N_PREDICATES: "N_PREDICATES",
-	N_PREDCOMP:   "N_PREDCOMP",
-	N_CWEXPRLIST: "N_CWEXPRLIST",
-	N_CWEXPR:     "N_CWEXPR",
-	N_EXPRCASE:   "N_EXPRCASE",
-	N_VALUE:      "N_VALUE",
-	N_FUNCTION:   "N_FUNCTION",
-	N_GROUPBY:    "N_GROUPBY",
-	N_EXPRESSIONS:"N_EXPRESSIONS",
-	N_JOINCHAIN:  "N_JOINCHAIN",
-	N_JOIN:       "N_JOIN",
-	N_DEXPRESSIONS:"N_DEXPRESSIONS",
+var treeMap = map[int]string{
+	N_QUERY:        "N_QUERY",
+	N_SELECT:       "N_SELECT",
+	N_SELECTIONS:   "N_SELECTIONS",
+	N_FROM:         "N_FROM",
+	N_WHERE:        "N_WHERE",
+	N_ORDER:        "N_ORDER",
+	N_EXPRADD:      "N_EXPRADD",
+	N_EXPRMULT:     "N_EXPRMULT",
+	N_EXPRNEG:      "N_EXPRNEG",
+	N_CPREDLIST:    "N_CPREDLIST",
+	N_CPRED:        "N_CPRED",
+	N_PREDICATES:   "N_PREDICATES",
+	N_PREDCOMP:     "N_PREDCOMP",
+	N_CWEXPRLIST:   "N_CWEXPRLIST",
+	N_CWEXPR:       "N_CWEXPR",
+	N_EXPRCASE:     "N_EXPRCASE",
+	N_VALUE:        "N_VALUE",
+	N_FUNCTION:     "N_FUNCTION",
+	N_GROUPBY:      "N_GROUPBY",
+	N_EXPRESSIONS:  "N_EXPRESSIONS",
+	N_JOINCHAIN:    "N_JOINCHAIN",
+	N_JOIN:         "N_JOIN",
+	N_DEXPRESSIONS: "N_DEXPRESSIONS",
 }
-var typeMap = map[int]string {
-	T_NULL:      "null",
-	T_INT:       "integer",
-	T_FLOAT:     "float",
-	T_DATE:      "date",
-	T_DURATION:  "duration",
-	T_STRING:    "string",
+var typeMap = map[int]string{
+	T_NULL:     "null",
+	T_INT:      "integer",
+	T_FLOAT:    "float",
+	T_DATE:     "date",
+	T_DURATION: "duration",
+	T_STRING:   "string",
 }
+
 type FileData struct {
-	fname string
-	names []string
-	types []int
-	width int
-	key string
-	id int
+	fname    string
+	names    []string
+	types    []int
+	width    int
+	key      string
+	id       int
 	noheader bool
-	reader *LineReader
-	fromRow []string
+	reader   *LineReader
+	fromRow  []string
 }
 type Node struct {
 	label int
-	tok1 interface{}
-	tok2 interface{}
-	tok3 interface{}
-	tok4 interface{}
-	tok5 interface{}
+	tok1  interface{}
+	tok2  interface{}
+	tok3  interface{}
+	tok4  interface{}
+	tok5  interface{}
 	node1 *Node
 	node2 *Node
 	node3 *Node
@@ -263,12 +343,13 @@ type Node struct {
 	node5 *Node
 }
 type Columns struct {
-	NewNames []string
-	NewTypes []int
-	NewPos []int
-	NewWidth int
+	NewNames       []string
+	NewTypes       []int
+	NewPos         []int
+	NewWidth       int
 	AggregateCount int
 }
+
 const (
 	T_NULL = iota
 	T_INT
@@ -277,103 +358,146 @@ const (
 	T_DURATION
 	T_STRING
 )
+
 func max(a int, b int) int {
-	if a>b { return a }
+	if a > b {
+		return a
+	}
 	return b
 }
 func getColumnIdx(colNames []string, column string) (int, error) {
-	for i,col := range colNames {
-		if strings.ToLower(col) == strings.ToLower(column) { return i, nil }
+	for i, col := range colNames {
+		if strings.ToLower(col) == strings.ToLower(column) {
+			return i, nil
+		}
 	}
 	return 0, errors.New("Column " + column + " not found")
 }
+
 var countSelected int
 
 //infer type of single string value
 var LeadingZeroString *regexp.Regexp = regexp.MustCompile(`^0\d+$`)
+
 func getNarrowestType(value string, startType int) int {
 	entry := strings.TrimSpace(value)
 	if strings.ToLower(entry) == "null" || entry == "NA" || entry == "" {
-	  startType = max(T_NULL, startType)
-	} else if LeadingZeroString.MatchString(entry)       { startType = T_STRING
-	} else if _, err := Atoi(entry); err == nil          { startType = max(T_INT, startType)
-	} else if _, err := ParseFloat(entry,64); err == nil { startType = max(T_FLOAT, startType)
-	} else if _,err := d.ParseAny(entry); err == nil     { startType = max(T_DATE, startType)
-	  //in case duration gets mistaken for a date
-	   if _,err := parseDuration(entry); err == nil      { startType = max(T_DURATION, startType)}
-	} else if _,err := parseDuration(entry); err == nil  { startType = max(T_DURATION, startType)
-	} else                                               { startType = T_STRING }
+		startType = max(T_NULL, startType)
+	} else if LeadingZeroString.MatchString(entry) {
+		startType = T_STRING
+	} else if _, err := Atoi(entry); err == nil {
+		startType = max(T_INT, startType)
+	} else if _, err := ParseFloat(entry, 64); err == nil {
+		startType = max(T_FLOAT, startType)
+	} else if _, err := d.ParseAny(entry); err == nil {
+		startType = max(T_DATE, startType)
+		//in case duration gets mistaken for a date
+		if _, err := parseDuration(entry); err == nil {
+			startType = max(T_DURATION, startType)
+		}
+	} else if _, err := parseDuration(entry); err == nil {
+		startType = max(T_DURATION, startType)
+	} else {
+		startType = T_STRING
+	}
 	return startType
 }
+
 //infer types of all infile columns
 func inferTypes(q *QuerySpecs, key string) error {
 	//open file
-	fp,err := os.Open(q.files[key].fname)
-	if err != nil { return errors.New("problem opening input file") }
-	defer func(){ fp.Seek(0,0); fp.Close() }()
+	fp, err := os.Open(q.files[key].fname)
+	if err != nil {
+		return errors.New("problem opening input file")
+	}
+	defer func() { fp.Seek(0, 0); fp.Close() }()
 	cread := csv.NewReader(fp)
 	line, err := cread.Read()
-	if err != nil { return errors.New("problem reading input file") }
+	if err != nil {
+		return errors.New("problem reading input file")
+	}
 	//get col names and initialize blank types
-	for i,entry := range line {
+	for i, entry := range line {
 		if q.noheader || q.files[key].noheader {
-			q.files[key].names = append(q.files[key].names, Sprintf("col%d",i+1))
+			q.files[key].names = append(q.files[key].names, Sprintf("col%d", i+1))
 		} else {
 			q.files[key].names = append(q.files[key].names, entry)
 		}
 		q.files[key].types = append(q.files[key].types, 0)
-		q.files[key].width = i+1
+		q.files[key].width = i + 1
 	}
 	//get samples and infer types from them
-	if !q.noheader && !q.files[key].noheader { line, err = cread.Read() }
+	if !q.noheader && !q.files[key].noheader {
+		line, err = cread.Read()
+	}
 	var e error
-	for j:=0;j<10000;j++ {
-		for i,cell := range line {
+	for j := 0; j < 10000; j++ {
+		for i, cell := range line {
 			q.files[key].types[i] = getNarrowestType(cell, q.files[key].types[i])
 		}
 		line, e = cread.Read()
-		if e != nil { break }
+		if e != nil {
+			break
+		}
 	}
-	return  err
+	return err
 }
+
 var durationPattern *regexp.Regexp = regexp.MustCompile(`^(\d+|\d+\.\d+)\s(seconds|second|minutes|minute|hours|hour|days|day|weeks|week|years|year|s|m|h|d|w|y)$`)
+
 func parseDuration(str string) (time.Duration, error) {
 	dur, err := time.ParseDuration(str)
-	if err == nil { return dur, err }
-	if !durationPattern.MatchString(str) { return 0, errors.New("Error: Could not parse '"+str+"' as a time duration") }
-	times := strings.Split(str," ")
-	quantity,_ := ParseFloat(times[0],64)
+	if err == nil {
+		return dur, err
+	}
+	if !durationPattern.MatchString(str) {
+		return 0, errors.New("Error: Could not parse '" + str + "' as a time duration")
+	}
+	times := strings.Split(str, " ")
+	quantity, _ := ParseFloat(times[0], 64)
 	unit := times[1]
 	switch unit {
-		case "y":    fallthrough
-		case "year": fallthrough
-		case "years":
-			quantity *= 52
-			fallthrough
-		case "w":    fallthrough
-		case "week": fallthrough
-		case "weeks":
-			quantity *= 7
-			fallthrough
-		case "d":   fallthrough
-		case "day": fallthrough
-		case "days":
-			quantity *= 24
-			fallthrough
-		case "h":    fallthrough
-		case "hour": fallthrough
-		case "hours":
-			quantity *= 60
-			fallthrough
-		case "m":      fallthrough
-		case "minute": fallthrough
-		case "minutes":
-			quantity *= 60
-			fallthrough
-		case "s":      fallthrough
-		case "second": fallthrough
-		case "seconds":
-			return time.Second * time.Duration(quantity), nil
+	case "y":
+		fallthrough
+	case "year":
+		fallthrough
+	case "years":
+		quantity *= 52
+		fallthrough
+	case "w":
+		fallthrough
+	case "week":
+		fallthrough
+	case "weeks":
+		quantity *= 7
+		fallthrough
+	case "d":
+		fallthrough
+	case "day":
+		fallthrough
+	case "days":
+		quantity *= 24
+		fallthrough
+	case "h":
+		fallthrough
+	case "hour":
+		fallthrough
+	case "hours":
+		quantity *= 60
+		fallthrough
+	case "m":
+		fallthrough
+	case "minute":
+		fallthrough
+	case "minutes":
+		quantity *= 60
+		fallthrough
+	case "s":
+		fallthrough
+	case "second":
+		fallthrough
+	case "seconds":
+		return time.Second * time.Duration(quantity), nil
 	}
 	//find a way to implement month math
 	return 0, errors.New("Error: Unable to calculate months")
@@ -385,7 +509,7 @@ func openFiles(q *QuerySpecs) error {
 	q.files = make(map[string]*FileData)
 	q.numfiles = 0
 	parsingOptions := true
-	for ; q.Tok().id != EOS ; q.NextTok() {
+	for ; q.Tok().id != EOS; q.NextTok() {
 		//parse options here because they can effect file prep
 		if parsingOptions {
 			switch q.Tok().Lower() {
@@ -393,7 +517,8 @@ func openFiles(q *QuerySpecs) error {
 				q.intColumn = true
 			case "header":
 			case "h":
-			case "noheader": fallthrough
+			case "noheader":
+				fallthrough
 			case "nh":
 				q.noheader = true
 			case "select":
@@ -401,11 +526,11 @@ func openFiles(q *QuerySpecs) error {
 			}
 		}
 		tok := strings.Replace(q.Tok().val, "~/", os.Getenv("HOME")+"/", 1)
-		_,err := os.Stat(tok)
+		_, err := os.Stat(tok)
 		//open file and add to file map
 		if err == nil && extension.MatchString(tok) {
 			q.numfiles++
-			file := &FileData{fname : tok, id : q.numfiles}
+			file := &FileData{fname: tok, id: q.numfiles}
 			filename := filepath.Base(file.fname)
 			key := "_f" + Sprint(q.numfiles)
 			file.key = key
@@ -415,28 +540,32 @@ func openFiles(q *QuerySpecs) error {
 				q.NextTok()
 				q.files[key].noheader = true
 			}
-			if _,ok:=joinMap[q.PeekTok().Lower()];!ok && q.NextTok().id==WORD {
+			if _, ok := joinMap[q.PeekTok().Lower()]; !ok && q.NextTok().id == WORD {
 				q.files[q.Tok().val] = file
 				q.aliases = true
 			}
-			if _,ok:=joinMap[q.PeekTok().Lower()];!ok && q.Tok().Lower()=="as" && q.NextTok().id==WORD {
+			if _, ok := joinMap[q.PeekTok().Lower()]; !ok && q.Tok().Lower() == "as" && q.NextTok().id == WORD {
 				q.files[q.Tok().val] = file
 				q.aliases = true
 			}
 			if q.PeekTok().Lower() == "noheader" || q.PeekTok().Lower() == "nh" {
 				q.files[key].noheader = true
 			}
-			if err = inferTypes(q, key); err != nil {return err}
+			if err = inferTypes(q, key); err != nil {
+				return err
+			}
 			var reader LineReader
 			globalNoHeader := q.noheader
 			q.noheader = q.files[key].noheader
 			q.files[key].reader = &reader
-			q.files[key].reader.Init(q,key)
+			q.files[key].reader.Init(q, key)
 			q.noheader = globalNoHeader
 		}
 	}
 	q.Reset()
-	if q.numfiles == 0 { return errors.New("Could not find file") }
+	if q.numfiles == 0 {
+		return errors.New("Could not find file")
+	}
 	return nil
 }
 
@@ -448,64 +577,69 @@ const (
 	CH_NEXT
 	CH_SAVPREP
 )
+
 type saveData struct {
 	Message string
-	Number int
-	Type int
-	Header []string
-	Row *[]Value
+	Number  int
+	Type    int
+	Header  []string
+	Row     *[]Value
 }
+
 //one SingleQueryResult struct holds the results of one query
 type SingleQueryResult struct {
-	Numrows int
+	Numrows   int
 	ShowLimit int
-	Numcols int
-	Types []int
-	Colnames []string
-	Pos []int
-	Vals [][]Value
-	Status int
-	Query string
+	Numcols   int
+	Types     []int
+	Colnames  []string
+	Pos       []int
+	Vals      [][]Value
+	Status    int
+	Query     string
 }
 
 //query return data struct and codes
 const (
-	DAT_ERROR = 1 << iota
-	DAT_GOOD = 1 << iota
+	DAT_ERROR   = 1 << iota
+	DAT_GOOD    = 1 << iota
 	DAT_BADPATH = 1 << iota
-	DAT_IOERR = 1 << iota
-	DAT_BLANK = 0
+	DAT_IOERR   = 1 << iota
+	DAT_BLANK   = 0
 )
+
 type ReturnData struct {
-	Entries []SingleQueryResult
-	Status int
+	Entries       []SingleQueryResult
+	Status        int
 	OriginalQuery string
-	Clipped bool
-	Message string
+	Clipped       bool
+	Message       string
 }
 
 //file io struct and codes
 const (
-	FP_SERROR = 1 << iota
+	FP_SERROR   = 1 << iota
 	FP_SCHANGED = 1 << iota
-	FP_OERROR = 1 << iota
+	FP_OERROR   = 1 << iota
 	FP_OCHANGED = 1 << iota
-	FP_CWD = 0
-	F_CSV = 1 << iota
-	F_JSON = 1 << iota
-	F_OPEN = 1 << iota
-	F_SAVE = 1 << iota
+	FP_CWD      = 0
+	F_CSV       = 1 << iota
+	F_JSON      = 1 << iota
+	F_OPEN      = 1 << iota
+	F_SAVE      = 1 << iota
 )
+
 type FilePaths struct {
 	SavePath string
 	OpenPath string
-	Status int
+	Status   int
 }
+
 //struct that matches incoming json requests
 type webQueryRequest struct {
-	Query string
-	Qamount int
-	FileIO int
+	Query    string
+	Qamount  int
+	FileIO   int
 	SavePath string
 }
 
@@ -519,10 +653,11 @@ const (
 	SK_FILECLICK
 	SK_PASS
 )
+
 type Client struct {
 	conn *websocket.Conn
-	w http.ResponseWriter
-	r *http.Request
+	w    http.ResponseWriter
+	r    *http.Request
 }
 type sockMessage struct {
 	Type int
@@ -531,39 +666,47 @@ type sockMessage struct {
 }
 type sockDirMessage struct {
 	Type int
-	Dir Directory
+	Dir  Directory
 }
 type Flags struct {
-	localPort *string
-	danger *bool
+	localPort  *string
+	danger     *bool
 	persistent *bool
-	command *string
-	version *bool
+	command    *string
+	version    *bool
 }
+
 var Testing bool
+
 func (f Flags) gui() bool {
-    if f.command == nil { return false }
-    return *f.command == "" && Testing == false
+	if f.command == nil {
+		return false
+	}
+	return *f.command == "" && Testing == false
 }
 
 func message(s string) {
 	if flags.gui() {
-		go func(){ messager <- s }()
+		go func() { messager <- s }()
 	} else {
-		print("\r"+s)
+		print("\r" + s)
 	}
 }
 
 func eosError(q *QuerySpecs) error {
-	if q.PeekTok().id == 255 { return errors.New("Unexpected end of query string") }
+	if q.PeekTok().id == 255 {
+		return errors.New("Unexpected end of query string")
+	}
 	return nil
 }
-func ErrMsg(t *Token, s string) error { return errors.New(Sprint("Line ",t.line," Col ",t.col,": ",s)) }
+func ErrMsg(t *Token, s string) error {
+	return errors.New(Sprint("Line ", t.line, " Col ", t.col, ": ", s))
+}
 
 type J2ValPos struct {
 	pos1 int64
 	pos2 int64
-	val Value
+	val  Value
 }
 type ValPos struct {
 	pos int64
@@ -576,22 +719,23 @@ type ValRow struct {
 }
 
 type JoinFinder struct {
-	jfile string
+	jfile    string
 	joinNode *Node
 	baseNode *Node
-	posArr []ValPos //store file position for big file
-	rowArr []ValRow //store whole rows for small file
-	i int
+	posArr   []ValPos //store file position for big file
+	rowArr   []ValRow //store whole rows for small file
+	i        int
 }
+
 //find matching file position for big files
 func (jf *JoinFinder) FindNextBig(val Value) int64 {
 	//use binary search for leftmost instance
-	r := len(jf.posArr)-1
+	r := len(jf.posArr) - 1
 	if jf.i == -1 {
 		l := 0
 		var m int
-		for ;l<r; {
-			m = (l+r)/2
+		for l < r {
+			m = (l + r) / 2
 			if jf.posArr[m].val.Less(val) {
 				l = m + 1
 			} else {
@@ -602,7 +746,7 @@ func (jf *JoinFinder) FindNextBig(val Value) int64 {
 			jf.i = l
 			return jf.posArr[l].pos
 		}
-	//check right neighbors for more matches
+		//check right neighbors for more matches
 	} else {
 		if jf.i < r-1 {
 			jf.i++
@@ -614,15 +758,16 @@ func (jf *JoinFinder) FindNextBig(val Value) int64 {
 	jf.i = -1 //set i to -1 when done so next search is binary
 	return -1
 }
+
 //find matching row in memory for small files
 func (jf *JoinFinder) FindNextSmall(val Value) *ValRow {
 	//use binary search for leftmost instance
-	r := len(jf.rowArr)-1
+	r := len(jf.rowArr) - 1
 	if jf.i == -1 {
 		l := 0
 		var m int
-		for ;l<r; {
-			m = (l+r)/2
+		for l < r {
+			m = (l + r) / 2
 			if jf.rowArr[m].val.Less(val) {
 				l = m + 1
 			} else {
@@ -633,7 +778,7 @@ func (jf *JoinFinder) FindNextSmall(val Value) *ValRow {
 			jf.i = l
 			return &jf.rowArr[l]
 		}
-	//check right neighbors for more matches
+		//check right neighbors for more matches
 	} else {
 		if jf.i < r-1 {
 			jf.i++
@@ -654,31 +799,40 @@ func (jf *JoinFinder) Sort() {
 //call returned func with (true) to start and (false) to stop
 var START bool = true
 var STOP bool = false
-func TimedNotifier(S... interface{}) func(bool) {
+
+func TimedNotifier(S ...interface{}) func(bool) {
 	var stop bool
-	return func(active bool){
+	return func(active bool) {
 		if active {
-			go func(){
+			go func() {
 				ticker := time.NewTicker(time.Second)
 				for {
 					<-ticker.C
-					if stop { return }
+					if stop {
+						return
+					}
 					m := ""
-					for _,v := range S {
+					for _, v := range S {
 						switch vv := v.(type) {
-						case string:  m += vv
-						case *string: m += *vv
-						case int:     m += Itoa(vv)
-						case *int:    m += Itoa(*vv)
+						case string:
+							m += vv
+						case *string:
+							m += *vv
+						case int:
+							m += Itoa(vv)
+						case *int:
+							m += Itoa(*vv)
 						}
 					}
 					message(m)
 				}
 			}()
-		} else { stop = true }
+		} else {
+			stop = true
+		}
 	}
 }
- func promptPassword() string {
+func promptPassword() string {
 	if flags.gui() {
 		passprompt <- true
 		println("sent passprompt socket")
@@ -689,4 +843,4 @@ func TimedNotifier(S... interface{}) func(bool) {
 	println("Enter password for encryption function:")
 	passbytes, _ := terminal.ReadPassword(0)
 	return string(passbytes)
- }
+}

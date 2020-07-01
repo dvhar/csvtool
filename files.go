@@ -1,27 +1,29 @@
 package main
+
 import (
 	"encoding/csv"
-	"path/filepath"
-	"regexp"
-	. "strconv"
 	"errors"
 	. "fmt"
 	"os"
+	"path/filepath"
+	"regexp"
+	. "strconv"
 )
 
 //replacement for state-machine saver
 type Printer struct {
-	state int
-	numTotal int
+	state       int
+	numTotal    int
 	numRecieved int
-	extension *regexp.Regexp
-	savePath string
-	file *os.File
-	err error
-	writer *csv.Writer
-	output []string
+	extension   *regexp.Regexp
+	savePath    string
+	file        *os.File
+	err         error
+	writer      *csv.Writer
+	output      []string
 }
-func (p* Printer) SavePrep(num int, path string) {
+
+func (p *Printer) SavePrep(num int, path string) {
 	//command line usage saves from stdout redirection
 	if !flags.gui() {
 		p.numTotal = 1
@@ -32,7 +34,7 @@ func (p* Printer) SavePrep(num int, path string) {
 	p.err = pathChecker(path)
 	if p.err == nil {
 		p.savePath = FPaths.SavePath
-		Println("Saving to ",p.savePath)
+		Println("Saving to ", p.savePath)
 		p.numTotal = num
 		p.numRecieved = 0
 		p.state = 1
@@ -40,8 +42,10 @@ func (p* Printer) SavePrep(num int, path string) {
 		message(Sprint(p.err))
 	}
 }
-func (p* Printer) PrintHeader(header []string) {
-	if p.state != 1 { return }
+func (p *Printer) PrintHeader(header []string) {
+	if p.state != 1 {
+		return
+	}
 	p.numRecieved++
 	if p.numTotal > 1 {
 		p.savePath = p.extension.ReplaceAllString(FPaths.SavePath, `-`+Itoa(p.numRecieved)+`.csv`)
@@ -53,21 +57,27 @@ func (p* Printer) PrintHeader(header []string) {
 	}
 	p.writer = csv.NewWriter(p.file)
 	p.err = p.writer.Write(header)
-	if p.err != nil { message(Sprint(p.err)) }
+	if p.err != nil {
+		message(Sprint(p.err))
+	}
 	p.output = make([]string, len(header))
 	p.state = 2
 }
-func (p* Printer) PrintRow(row *[]Value) {
-	if p.state != 2 { return }
-	for i,entry := range *(row) { p.output[i] = entry.String() }
+func (p *Printer) PrintRow(row *[]Value) {
+	if p.state != 2 {
+		return
+	}
+	for i, entry := range *(row) {
+		p.output[i] = entry.String()
+	}
 	p.err = p.writer.Write(p.output)
 }
-func (p* Printer) FinishFile() {
+func (p *Printer) FinishFile() {
 	p.writer.Flush()
 	p.file.Close()
 	p.state = 1
 }
-func (p* Printer) FinishQuery() {
+func (p *Printer) FinishQuery() {
 	p.state = 0
 }
 
@@ -96,7 +106,7 @@ func realtimeCsvSaver() {
 			err = pathChecker(c.Message)
 			if err == nil {
 				savePath = FPaths.SavePath
-				Println("Saving to ",savePath)
+				Println("Saving to ", savePath)
 				numTotal = c.Number
 				numRecieved = 0
 				state = 1
@@ -124,7 +134,9 @@ func realtimeCsvSaver() {
 
 		case CH_ROW:
 			if state == 2 {
-				for i,entry := range *(c.Row) { output[i] = entry.String() }
+				for i, entry := range *(c.Row) {
+					output[i] = entry.String()
+				}
 				err = writer.Write(output)
 				savedLine <- true
 			}
@@ -137,11 +149,11 @@ func realtimeCsvSaver() {
 		case CH_DONE:
 			state = 0
 		}
-		if err != nil { message(Sprint(err)) }
+		if err != nil {
+			message(Sprint(err))
+		}
 	}
 }
-
-
 
 func pathChecker(savePath string) error {
 
@@ -155,24 +167,27 @@ func pathChecker(savePath string) error {
 		_, err := os.Stat(filepath.Dir(savePath))
 		//if base path doesn't exist
 		if err != nil {
-			return errors.New("Invalid path: "+savePath)
+			return errors.New("Invalid path: " + savePath)
 		} //else given new file
 	}
 	//set savepath and append csv extension if needed
 	FPaths.SavePath = savePath
 	extension := regexp.MustCompile(`\.csv$`)
-	if !extension.MatchString(FPaths.SavePath) { FPaths.SavePath += `.csv` }
+	if !extension.MatchString(FPaths.SavePath) {
+		FPaths.SavePath += `.csv`
+	}
 	return nil
 }
 
 //payload type sent to and from the browser
 type Directory struct {
-	Path string
+	Path   string
 	Parent string
-	Mode string
-	Files []string
-	Dirs []string
+	Mode   string
+	Files  []string
+	Dirs   []string
 }
+
 //send directory payload to socket writer when given a path
 func fileBrowser(pathRequest Directory) Directory {
 	extension := regexp.MustCompile(`\.csv$`)
@@ -180,18 +195,20 @@ func fileBrowser(pathRequest Directory) Directory {
 
 	//clean directory path, get parent, and prepare output
 	path := filepath.Clean(pathRequest.Path)
-	files, _ := filepath.Glob(path+slash+"*")
+	files, _ := filepath.Glob(path + slash + "*")
 	_, err := os.Open(path)
 	if err != nil {
-		message("invalid path: "+path)
+		message("invalid path: " + path)
 		return Directory{}
 	}
-	thisDir := Directory{Path: path+slash, Parent: filepath.Dir(path), Mode: pathRequest.Mode}
+	thisDir := Directory{Path: path + slash, Parent: filepath.Dir(path), Mode: pathRequest.Mode}
 
 	//get subdirs and csv files
-	for _,file := range files {
+	for _, file := range files {
 		ps, err := os.Stat(file)
-		if err != nil { continue }
+		if err != nil {
+			continue
+		}
 		if ps.Mode().IsDir() && !hiddenDir.MatchString(file) {
 			thisDir.Dirs = append(thisDir.Dirs, file+slash)
 		} else if extension.MatchString(file) {

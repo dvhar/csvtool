@@ -1,22 +1,25 @@
 package main
+
 import (
-	"github.com/GeertJohan/go.rice"
 	"encoding/json"
+	. "fmt"
 	"io/ioutil"
 	"net/http"
-	"runtime"
-	"strings"
-	. "fmt"
-	"time"
 	"os/exec"
+	"runtime"
 	. "strconv"
+	"strings"
+	"time"
+
+	rice "github.com/GeertJohan/go.rice"
 	"github.com/gorilla/websocket"
 )
+
 //write loop for each websocket client
-func (c* Client) writer(){
+func (c *Client) writer() {
 	ticker := time.NewTicker(time.Second)
 	browsersOpen++
-	defer func(){
+	defer func() {
 		browsersOpen--
 		c.conn.Close()
 		ticker.Stop()
@@ -25,20 +28,24 @@ func (c* Client) writer(){
 	var sendBytes []byte
 	for {
 		select {
-			case <-passprompt:
-				sendSock = sockMessage{ Type: SK_PASS }
-			case msg := <-messager:
-				sendSock = sockMessage{ Type: SK_MSG, Text:msg }
-			case <-ticker.C:
-				sendSock = sockMessage{ Type: SK_PING }
+		case <-passprompt:
+			sendSock = sockMessage{Type: SK_PASS}
+		case msg := <-messager:
+			sendSock = sockMessage{Type: SK_MSG, Text: msg}
+		case <-ticker.C:
+			sendSock = sockMessage{Type: SK_PING}
 		}
-		sendBytes,_ = json.Marshal(sendSock)
+		sendBytes, _ = json.Marshal(sendSock)
 		err := c.conn.WriteMessage(1, sendBytes)
-		if err != nil { println("socket writer failed"); return }
+		if err != nil {
+			println("socket writer failed")
+			return
+		}
 	}
 }
+
 //read loop for each websocket client
-func (c* Client) reader(){
+func (c *Client) reader() {
 	var message sockMessage
 	for {
 		_, messageBytes, err := c.conn.ReadMessage()
@@ -51,17 +58,19 @@ func (c* Client) reader(){
 		json.Unmarshal(messageBytes, &message)
 		//Printf("%+v\n",message)
 		switch message.Type {
-			case SK_STOP:
-				if active { stop = 1 }
-			case SK_PASS:
-				println("got pass socket")
-				gotpass <- message.Text
+		case SK_STOP:
+			if active {
+				stop = 1
+			}
+		case SK_PASS:
+			println("got pass socket")
+			gotpass <- message.Text
 		}
 	}
 }
 
 //each new client gets a websocket
-func socketHandler() (func(http.ResponseWriter, *http.Request)) {
+func socketHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader := websocket.Upgrader{
 			ReadBufferSize:  4096,
@@ -72,7 +81,7 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
 			Println("upgrade:", err)
 			return
 		}
-		client := &Client{ w : w, r : r, conn: sconn }
+		client := &Client{w: w, r: r, conn: sconn}
 		go client.writer()
 		go client.reader()
 	}
@@ -82,11 +91,11 @@ func socketHandler() (func(http.ResponseWriter, *http.Request)) {
 func httpserver(serverUrl string, done chan bool) {
 	chHeader := func(h http.Handler) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("Cache-control","no-store")
-			h.ServeHTTP(w,r)
+			w.Header().Add("Cache-control", "no-store")
+			h.ServeHTTP(w, r)
 		}
 	}
-	println("Starting server at "+serverUrl)
+	println("Starting server at " + serverUrl)
 	http.Handle("/", chHeader(http.FileServer(rice.MustFindBox("webgui/build").HTTPBox())))
 	http.HandleFunc("/query/", queryHandler())
 	http.HandleFunc("/info/", infoHandler())
@@ -98,8 +107,9 @@ func httpserver(serverUrl string, done chan bool) {
 
 //want only one set of results in memory at once, so global var
 var retData ReturnData
+
 //returns handler function for query requests from the webgui
-func queryHandler() (func(http.ResponseWriter, *http.Request)) {
+func queryHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		body, _ := ioutil.ReadAll(r.Body)
@@ -108,16 +118,16 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 		var req webQueryRequest
 		var err error
 		retData = ReturnData{}
-		json.Unmarshal(body,&req)
+		json.Unmarshal(body, &req)
 		retData.Status = DAT_BLANK
 		retData.OriginalQuery = req.Query
 
 		println("attempting queries")
-		retData.Entries,err = runQueries(&req)
+		retData.Entries, err = runQueries(&req)
 		successMessage := "Query successful. Returning data"
 		if (req.FileIO & F_CSV) != 0 {
-			saver <- saveData{Type : CH_DONE}
-			successMessage = "Saved to "+FPaths.SavePath
+			saver <- saveData{Type: CH_DONE}
+			successMessage = "Saved to " + FPaths.SavePath
 		}
 
 		println("finished queries")
@@ -131,11 +141,13 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
 		rowLimit(&retData)
 		println("finished row limit")
-		if (retData.Status & DAT_GOOD)!=0 && retData.Clipped && req.FileIO == 0 { message("Showing only top "+Itoa(maxLimit)) }
-		returnJSON,_ := json.Marshal(retData)
+		if (retData.Status&DAT_GOOD) != 0 && retData.Clipped && req.FileIO == 0 {
+			message("Showing only top " + Itoa(maxLimit))
+		}
+		returnJSON, _ := json.Marshal(retData)
 		retData = ReturnData{}
 		println("marshalled json")
-		w.Header().Add("Cache-control","no-store")
+		w.Header().Add("Cache-control", "no-store")
 		Fprint(w, string(returnJSON))
 		println("sent data to http writer")
 		returnJSON = []byte("")
@@ -146,12 +158,17 @@ func queryHandler() (func(http.ResponseWriter, *http.Request)) {
 
 //limit the amount of rows returned to the browser because browsers are slow
 var maxLimit int
+
 func rowLimit(retData *ReturnData) {
 	maxLimit = 0
 	for i, query := range retData.Entries {
 		if query.Numrows > query.ShowLimit {
-			if query.ShowLimit > maxLimit { maxLimit = query.ShowLimit }
-			if query.ShowLimit > len(query.Vals) { continue }
+			if query.ShowLimit > maxLimit {
+				maxLimit = query.ShowLimit
+			}
+			if query.ShowLimit > len(query.Vals) {
+				continue
+			}
 			retData.Entries[i].Vals = query.Vals[:query.ShowLimit]
 			retData.Clipped = true
 			runtime.GC()
@@ -160,7 +177,7 @@ func rowLimit(retData *ReturnData) {
 }
 
 //get misc info from server like state and path info - replace some socket functions
-func infoHandler() (func(http.ResponseWriter, *http.Request)) {
+func infoHandler() func(http.ResponseWriter, *http.Request) {
 	type DirRequest struct {
 		Path string `json:"path"`
 		Mode string `json:"mode"`
@@ -169,10 +186,10 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 		Query string `json:"query"`
 	}
 	type StateInfo struct {
-		HaveInfo bool         `json:"haveInfo"`
-		History []HistoryUnit `json:"history"`
-		OpenDirList Directory `json:"openDirList"`
-		SaveDirList Directory `json:"saveDirList"`
+		HaveInfo    bool          `json:"haveInfo"`
+		History     []HistoryUnit `json:"history"`
+		OpenDirList Directory     `json:"openDirList"`
+		SaveDirList Directory     `json:"saveDirList"`
 	}
 	type StateSetReq struct {
 		StateInfo
@@ -182,21 +199,27 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var ret interface{}
 		params := r.URL.Query()["info"]
-		if len(params) < 1 { return }
+		if len(params) < 1 {
+			return
+		}
 
 		switch params[0] {
 		case "setState":
 			body, _ := ioutil.ReadAll(r.Body)
-			json.Unmarshal(body,&state)
+			json.Unmarshal(body, &state)
 		case "getState":
-			if state.OpenDirList.Path == "" { state.OpenDirList.Path = FPaths.OpenPath }
-			if state.SaveDirList.Path == "" { state.SaveDirList.Path = FPaths.SavePath }
+			if state.OpenDirList.Path == "" {
+				state.OpenDirList.Path = FPaths.OpenPath
+			}
+			if state.SaveDirList.Path == "" {
+				state.SaveDirList.Path = FPaths.SavePath
+			}
 			ret = state
 		case "fileClick":
 			var dir DirRequest
 			body, _ := ioutil.ReadAll(r.Body)
 			json.Unmarshal(body, &dir)
-			newDirs := fileBrowser(Directory{Path : dir.Path, Mode : dir.Mode})
+			newDirs := fileBrowser(Directory{Path: dir.Path, Mode: dir.Mode})
 			switch newDirs.Mode {
 			case "open":
 				state.OpenDirList = newDirs
@@ -206,8 +229,8 @@ func infoHandler() (func(http.ResponseWriter, *http.Request)) {
 			ret = newDirs
 		}
 
-		returnJSON,_ := json.Marshal(ret)
-		w.Header().Add("Cache-control","no-store")
+		returnJSON, _ := json.Marshal(ret)
+		w.Header().Add("Cache-control", "no-store")
 		Fprint(w, string(returnJSON))
 	}
 }
@@ -249,4 +272,3 @@ func launch(url string) error {
 	args = append(args, url)
 	return exec.Command(cmd, args...).Start()
 }
-
