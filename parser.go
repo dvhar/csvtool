@@ -762,6 +762,7 @@ func parseFunction(q* QuerySpecs) (*Node,error) {
 	} else {
 		if (n.tok1.(int) & AGG_BIT) != 0 && q.Tok().Lower() == "distinct" {
 			n.tok3 = bt.New(200)
+			q.distinctAgg = true
 			q.NextTok()
 		}
 		switch n.tok1.(int) {
@@ -832,6 +833,9 @@ func parseGroupby(q* QuerySpecs) (*Node,error) {
 	n := &Node{label:N_GROUPBY}
 	var err error
 	if !(q.Tok().Lower() == "group" && q.PeekTok().Lower() == "by") { return nil,nil }
+	if q.distinctAgg {
+		return n, errors.New("Cannot use distinct in aggregate function when using 'group by'")
+	}
 	q.NextTok()
 	q.NextTok()
 	n.node1, err = parseExpressionList(q,false)
