@@ -292,7 +292,6 @@ func parseSelections(q *QuerySpecs) (*Node, error) {
 	default:
 		return n, ErrMsg(q.Tok(), "Expected a new selection or 'from' clause. Found "+q.Tok().val)
 	}
-	return n, err
 }
 
 //node1 is exprMult
@@ -1009,7 +1008,7 @@ func parseFunction(q *QuerySpecs) (*Node, error) {
 			pass := sha256.Sum256([]byte(password))
 			switch cipherTok {
 			case "rc4":
-				n.tok3 = pass[:]
+				return n, errors.New("Stream cipher disabled due to insecure implementation. Use aes instead.")
 			case "aes":
 				c, _ := aes.NewCipher(pass[:])
 				gcm, _ := cipher.NewGCM(c)

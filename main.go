@@ -36,7 +36,7 @@ func main() {
 
 	readStdin()
 	if *flags.version {
-		println("version 0.73 - 7/1/2020")
+		println("version 0.74 - 10/25/2020")
 		os.Exit(0)
 	}
 

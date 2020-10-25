@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"crypto/rc4"
 	"encoding/base64"
+	"errors"
 
 	bt "github.com/google/btree"
 )
@@ -163,10 +164,12 @@ func execExpression(q *QuerySpecs, n *Node) (int, Value) {
 			t1, v1 = execExpression(q, n.node1)
 			plaintext := []byte(v1.String())
 			var ciphertext []byte
-			if n.tok4 == nil { // rc4 is insecure but could be useful for obfuscation
+			if n.tok4 == nil { // disabled becausee not properly implemented
 				ciphertext = make([]byte, len(plaintext)+2)
 				nonce := n.tok3.([]byte)[:2]
-				rand.Read(nonce)
+				if uniqueNonce(nonce) != nil {
+					return 0, null("")
+				}
 				copy(ciphertext[:2], nonce)
 				c, _ := rc4.NewCipher(n.tok3.([]byte))
 				c.XORKeyStream(ciphertext[2:], plaintext)
@@ -501,4 +504,30 @@ func evalPredicates(q *QuerySpecs, n *Node) bool {
 		return !match
 	}
 	return match
+}
+
+var uniqueNonces bt.BTree
+
+type i16 int16
+
+func (i i16) Less(j bt.Item) bool {
+	return i < j.(i16)
+}
+
+func uniqueNonce(nonce []byte) error {
+	var un i16
+	rand.Read(nonce)
+	un |= i16(nonce[0])
+	un |= i16(nonce[1]) << 8
+	i := 0
+	for uniqueNonces.ReplaceOrInsert(un) == nil {
+		un++
+		i++
+		if i > 1024*16 {
+			return errors.New("Not enough unique nonces. Use a different crypto solution.")
+		}
+	}
+	nonce[0] = byte(un)
+	nonce[1] = byte(un >> 8)
+	return nil
 }
