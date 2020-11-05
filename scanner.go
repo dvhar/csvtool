@@ -400,12 +400,6 @@ func scanner(s *StringLookahead) Token {
 				//see if special type or something else
 			} else if nextState == SPECIAL {
 				if sp, ok := specialMap[S]; ok {
-					//find out if these tokens are in a quote to preserve whitespace
-					if (sp == SP_SQUOTE || sp == SP_DQUOTE) && waitForQuote == 0 {
-						waitForQuote = sp
-					} else if (sp == SP_SQUOTE || sp == SP_DQUOTE) && waitForQuote == sp {
-						waitForQuote = 0
-					}
 					//return special token
 					return Token{id: sp, val: S, line: lineNo, col: colNo}
 				} else {
@@ -419,11 +413,8 @@ func scanner(s *StringLookahead) Token {
 			state = nextState
 			nextchar = s.getc()
 			colNo++
-			//include whitespace in the token when waiting for a closing quote
-			if waitForQuote != 0 {
-				S += string(nextchar)
-			} else if nextchar != ' ' && nextchar != '\t' && nextchar != '\n' && nextchar != ';' {
-				S += string(nextchar)
+			if nextchar != ' ' && nextchar != '\t' && nextchar != '\n' && nextchar != ';' {
+				S += string(rune(nextchar))
 			}
 			if nextchar == '\n' {
 				lineNo++
@@ -465,6 +456,7 @@ func quotedTok(s *StringLookahead, q string) (Token, error) {
 		return Token{}, errors.New("Unterminated quote")
 	}
 	s.idx = start + end + 1
+	colNo += end
 	return Token{WORD, s.Str[start : start+end], lineNo, colNo, true}, nil
 }
 
