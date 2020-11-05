@@ -458,6 +458,16 @@ func (s *StringLookahead) peek() int {
 	return int(s.Str[s.idx])
 }
 
+func quotedTok(s *StringLookahead, q string) (Token, error) {
+	start := s.idx
+	end := strings.Index(s.Str[start:], q)
+	if end == -1 {
+		return Token{}, errors.New("Unterminated quote")
+	}
+	s.idx = start + end + 1
+	return Token{WORD, s.Str[start : start+end], lineNo, colNo, true}, nil
+}
+
 //turn query text into tokens and check if ints are columns or numbers
 func scanTokens(q *QuerySpecs) error {
 	lineNo = 1
@@ -467,18 +477,11 @@ func scanTokens(q *QuerySpecs) error {
 		t := scanner(input)
 		//turn tokens inside quotes into single token
 		if t.id == SP_SQUOTE || t.id == SP_DQUOTE {
-			quote := t.id
-			S := ""
-			for t = scanner(input); t.id != quote && t.id != EOS; t = scanner(input) {
-				if t.id == ERROR {
-					return errors.New("scanner error: " + t.val)
-				}
-				S += t.val
+			var err error
+			t, err = quotedTok(input, t.val)
+			if err != nil {
+				return err
 			}
-			if t.id != quote {
-				return errors.New("Quote was not terminated")
-			}
-			t = Token{WORD, S, t.line, t.col, true}
 		}
 		q.tokArray = append(q.tokArray, t)
 		if t.id == ERROR {
