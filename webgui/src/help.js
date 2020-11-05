@@ -64,7 +64,7 @@ export class Help extends React.Component {
 					{"The 'inc' function returns an automatically incrementing number. Leave the parentheses empty like inc() to increment by 1, or include a number to increment by that number like inc(2)."}
 					<br/>
 					<br/>
-					{"encrypt() and decrypt() functions encrypt and decrypt an expression. Can be used with 1, 2, or 3 parameters. encrypt(expression), encrypt(expression, cipher), and encrypt(expression, cipher, password) are all valid. Cipher can be 'aes' if you want strong encryption, or 'rc4' if you want something a government could crack but takes less space. Default behavior uses the aes cipher and prompts you for a password."}
+					{"encrypt() and decrypt() functions encrypt and decrypt an expression. Can be used with 1 or 2 parameters. encrypt(expression) and encrypt(expression, password) are valid. It will prompt for a password if not passed as a parameter."}
 				<h4>Aggregate functions</h4>
 					{"These functions are used to do calculations with multiple rows. They can be used with a 'group by' clause, which goes after the 'from' clause and before the 'order by' clause. Without a 'group by' clause, all rows will be calculated together into a single result row. You can group by multiple expressions. You can filter with a 'having' clause."}
 					<blockquote>

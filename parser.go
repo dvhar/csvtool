@@ -949,7 +949,7 @@ func parseOrder(q *QuerySpecs) (*Node, error) {
 
 //tok1 is function id
 //tok2 will be intermediate index if aggragate
-//tok3 is distinct btree for count, cipher for encryption, increment step
+//tok3 is distinct btree for count, increment step
 //tok4 true if using aes, increment start number
 //node1 is expression in parens
 func parseFunction(q *QuerySpecs) (*Node, error) {
@@ -981,21 +981,13 @@ func parseFunction(q *QuerySpecs) (*Node, error) {
 		case FN_DECRYPT:
 			//first param is expression to en/decrypt
 			n.node1, err = parseExprAdd(q)
-			cipherTok := "aes"
 			needPrompt := true
 			var password string
 			if q.Tok().id == SP_COMMA {
-				//second param is cipher
-				cipherTok = q.NextTok().Lower()
-				commaOrParen := q.NextTok()
-				if commaOrParen.id == SP_COMMA {
-					//password is 3rd param
-					password = q.NextTok().val
-					needPrompt = false
-					q.NextTok()
-				} else if commaOrParen.id != SP_RPAREN {
-					return n, ErrMsg(q.Tok(), "Expected comma or closing parenthesis after cipher in crypto function. Found: "+commaOrParen.val)
-				}
+				//second param is password
+				password = q.NextTok().val
+				needPrompt = false
+				q.NextTok()
 			} else if q.Tok().id != SP_RPAREN {
 				return n, ErrMsg(q.Tok(), "Expect closing parenthesis or comma after expression in crypto function. Found: "+q.Tok().val)
 			}
@@ -1006,17 +998,10 @@ func parseFunction(q *QuerySpecs) (*Node, error) {
 				password = q.password
 			}
 			pass := sha256.Sum256([]byte(password))
-			switch cipherTok {
-			case "rc4":
-				return n, errors.New("Stream cipher disabled due to insecure implementation. Use aes instead.")
-			case "aes":
-				c, _ := aes.NewCipher(pass[:])
-				gcm, _ := cipher.NewGCM(c)
-				n.tok3 = gcm
-				n.tok4 = true
-			default:
-				return n, ErrMsg(q.Tok(), "Second parameter to encryption function is cipher type (aes or rc4). Found: "+cipherTok+". Use aes for strong but bulky encryption, or rc4 for something a government could probably crack but takes less space.")
-			}
+			c, _ := aes.NewCipher(pass[:])
+			gcm, _ := cipher.NewGCM(c)
+			n.tok3 = gcm
+			n.tok4 = true
 			if err != nil {
 				return n, err
 			}
